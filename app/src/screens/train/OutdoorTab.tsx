@@ -12,11 +12,12 @@ import {
 } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
+import { WalkMap } from './WalkMap';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
 // the pieces the audit found missing built for real: Douglas-Peucker before
-// save, per-km splits, elevation gain. No map tile yet (honest absence —
-// the stats ARE the recording); the map card lands with a tile dependency.
+// save, per-km splits, elevation gain, and the map tile on summaries
+// (dark OSM-data raster, single accent route, per the prototype).
 
 type Mode =
   | { kind: 'idle' }
@@ -26,7 +27,7 @@ type Mode =
   | { kind: 'ready'; last: GpsFix }
   | { kind: 'tracking'; started: number; points: GpsFix[]; last: GpsFix }
   | { kind: 'saving' }
-  | { kind: 'summary'; distanceM: number; durationS: number; avgPace: number | null; elevation: number | null; splits: Split[]; saved: boolean }
+  | { kind: 'summary'; distanceM: number; durationS: number; avgPace: number | null; elevation: number | null; splits: Split[]; route: { lat: number; lng: number; t: number }[]; saved: boolean }
   | { kind: 'error'; message: string };
 
 export function OutdoorTab() {
@@ -34,6 +35,7 @@ export function OutdoorTab() {
   const [mode, setMode] = useState<Mode>({ kind: 'idle' });
   const [now, setNow] = useState(Date.now());
   const [recent, setRecent] = useState<WalkRow[]>([]);
+  const [openWalkId, setOpenWalkId] = useState<string | null>(null);
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -136,6 +138,7 @@ export function OutdoorTab() {
       avgPace: s.avgPaceSecPerKm,
       elevation: s.elevationGainM,
       splits: s.splits,
+      route: s.simplified,
       saved: saved.ok,
     });
     if (saved.ok) {
@@ -219,6 +222,7 @@ export function OutdoorTab() {
         {mode.kind === 'summary' ? (
           <>
             <ReceiptHeader label="Walk saved" summary={mode.saved ? undefined : 'SAVE FAILED — shown locally only'} />
+            <WalkMap route={mode.route} />
             <View style={styles.statRow}>
               <Stat k="Distance" v={(mode.distanceM / 1000).toFixed(2)} u="km" />
               <Stat k="Time" v={mmss(mode.durationS)} />
@@ -244,18 +248,26 @@ export function OutdoorTab() {
         <ReceiptHeader label="Recent walks" />
         {recent.length > 0 ? (
           recent.map((w, i) => (
-            <ReceiptRow
-              key={w.id}
-              name={`${(w.distanceM / 1000).toFixed(2)} km walk`}
-              meta={[
-                new Date(w.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }),
-                w.avgPaceSecPerKm ? `${paceText(w.avgPaceSecPerKm)} /km` : null,
-                w.elevationGainM !== null ? `+${w.elevationGainM} m` : null,
-              ].filter(Boolean).join(' · ')}
-              value={mmss(w.durationS)}
-              unit="duration"
-              last={i === recent.length - 1}
-            />
+            <View key={w.id}>
+              <Pressable
+                onPress={() => setOpenWalkId((cur) => (cur === w.id ? null : w.id))}
+                disabled={!w.route || w.route.length < 2}
+              >
+                <ReceiptRow
+                  name={`${(w.distanceM / 1000).toFixed(2)} km walk`}
+                  meta={[
+                    new Date(w.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }),
+                    w.avgPaceSecPerKm ? `${paceText(w.avgPaceSecPerKm)} /km` : null,
+                    w.elevationGainM !== null ? `+${w.elevationGainM} m` : null,
+                    w.route && w.route.length >= 2 ? (openWalkId === w.id ? 'hide map' : 'map') : null,
+                  ].filter(Boolean).join(' · ')}
+                  value={mmss(w.durationS)}
+                  unit="duration"
+                  last={i === recent.length - 1}
+                />
+              </Pressable>
+              {openWalkId === w.id && w.route ? <WalkMap route={w.route} height={170} /> : null}
+            </View>
           ))
         ) : (
           <EmptyState>No walks recorded yet. The first one starts the ledger.</EmptyState>
