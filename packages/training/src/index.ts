@@ -7,3 +7,5 @@ export * from './e1rm';
 export * from './guided-timer';
 export * from './exercises';
 export * from './plates';
+export * from './gps';
+export * from './walks';

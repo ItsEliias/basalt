@@ -51,6 +51,12 @@
         {
           "cameraPermission": "Basalt uses the camera to scan food barcodes."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Basalt records your walks with GPS so you can see your route, pace and splits."
+        }
       ]
     ]
   }
