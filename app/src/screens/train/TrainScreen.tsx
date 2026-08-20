@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow,
-  ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag,
+  ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav,
   GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput,
   color, mono, mmss, groupInt,
 } from '@basalt/ui';
@@ -18,12 +18,31 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
 import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './model';
+import { OutdoorTab } from './OutdoorTab';
 
 // Train — the relational set logger. Prev values ghost as editable defaults,
 // completion is a typographic state change with a quiet PR mark, rest timers
 // remember per exercise, timed movements get the guided set timer.
 
 export function TrainScreen() {
+  const [sub, setSub] = useState('Session');
+  if (sub === 'Outdoor') {
+    return (
+      <View style={{ flex: 1, backgroundColor: color.bg }}>
+        <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
+        <OutdoorTab />
+      </View>
+    );
+  }
+  return (
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
+      <SessionTab />
+    </View>
+  );
+}
+
+function SessionTab() {
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
