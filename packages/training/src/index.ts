@@ -1,0 +1,7 @@
+// @basalt/training — the set_entry relational model (sessions →
+// session_exercises → set_entries), e1RM/PR math, and the guided set timer
+// engine. Ported in shape from Oathbound; gamification left behind.
+export * from './types';
+export * from './sessions';
+export * from './e1rm';
+export * from './guided-timer';
