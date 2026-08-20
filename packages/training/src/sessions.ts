@@ -251,3 +251,17 @@ export async function listRecentSessions(
   if (error) return err(error.message);
   return ok((data ?? []).map(mapSession));
 }
+
+/** Set or clear an exercise's superset group (A1/A2 chaining). */
+export async function setSupersetGroup(
+  client: SupabaseClient,
+  sessionExerciseId: string,
+  group: number | null,
+): Promise<Result<void>> {
+  const { error } = await client
+    .from('basalt_session_exercises')
+    .update({ superset_group: group })
+    .eq('id', sessionExerciseId);
+  if (error) return err(error.message);
+  return ok(undefined);
+}

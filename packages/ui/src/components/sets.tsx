@@ -41,7 +41,8 @@ export function SetsHeader({ columns }: { columns: string[] }) {
 }
 
 export function SetRow({
-  setNumber, prev, kg, reps, rir, ghost, pr, onChangeKg, onChangeReps, onChangeRir, onCommit,
+  setNumber, prev, kg, reps, rir, ghost, pr, hasComment, onPressSet,
+  onChangeKg, onChangeReps, onChangeRir, onCommit,
 }: {
   setNumber: string;
   prev: string;
@@ -52,6 +53,10 @@ export function SetRow({
   ghost?: boolean;
   /** Quiet PR mark on the reps cell. */
   pr?: boolean;
+  /** A saved per-set comment shows as a quiet mark on the set cell. */
+  hasComment?: boolean;
+  /** Tapping the set number (e.g. to open a comment sheet). */
+  onPressSet?: () => void;
   onChangeKg?: (v: string) => void;
   onChangeReps?: (v: string) => void;
   onChangeRir?: (v: string) => void;
@@ -60,7 +65,12 @@ export function SetRow({
   const valueStyle = [styles.cellValue, ghost && { color: color.faint }];
   return (
     <View style={styles.row}>
-      <Text style={[styles.cellSet, styles.cellFirst]}>{setNumber}</Text>
+      <Pressable onPress={onPressSet} style={styles.cellFirstWrap} hitSlop={6}>
+        <Text style={styles.cellSet}>
+          {setNumber}
+          {hasComment ? <Text style={styles.commentMark}> ✎</Text> : null}
+        </Text>
+      </Pressable>
       <Text style={[styles.cellPrev, styles.cellRight]}>{prev}</Text>
       <TextInput
         style={[...valueStyle, styles.cellRight, styles.cellInput]}
@@ -124,6 +134,7 @@ const styles = StyleSheet.create({
   },
   headCell: { fontFamily: mono, fontSize: 9.5, letterSpacing: 0.95, color: color.faint },
   cellFirst: { flex: 0.8, textAlign: 'left' },
+  cellFirstWrap: { flex: 0.8 },
   cellRight: { flex: 1, textAlign: 'right' },
   row: {
     flexDirection: 'row',
@@ -138,6 +149,7 @@ const styles = StyleSheet.create({
   cellInput: { paddingVertical: 4, paddingHorizontal: 0, textAlign: 'right' },
   repsWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   pr: { fontFamily: mono, color: color.carbs, fontSize: 9, letterSpacing: 0.72 },
+  commentMark: { fontFamily: mono, color: color.faint, fontSize: 9 },
   rest: {
     flexDirection: 'row',
     justifyContent: 'space-between',

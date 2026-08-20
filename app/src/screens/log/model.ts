@@ -116,3 +116,27 @@ export function conflictLine(conflicts: DietaryConflict[]): string | null {
     .map(([allergen, flags]) => `contains ${allergen} — conflicts with ${flags.join(', ')}`)
     .join(' · ');
 }
+
+// ─── Copy yesterday ─────────────────────────────────────────────────────────
+
+const MEAL_ORDER: MealType[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
+const MEAL_LABEL: Record<MealType, string> = {
+  breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks',
+};
+
+export type YesterdayMeal = { meal: MealType; label: string; count: number; calories: number };
+
+/** Yesterday's meals grouped for the tap-to-copy card; empty meals vanish. */
+export function yesterdayMeals(
+  entries: { mealType: MealType; calories: number }[],
+): YesterdayMeal[] {
+  return MEAL_ORDER.map((meal) => {
+    const rows = entries.filter((e) => e.mealType === meal);
+    return {
+      meal,
+      label: MEAL_LABEL[meal],
+      count: rows.length,
+      calories: Math.round(rows.reduce((s, e) => s + e.calories, 0)),
+    };
+  }).filter((m) => m.count > 0);
+}

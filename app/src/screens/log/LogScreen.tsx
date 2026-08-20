@@ -11,11 +11,12 @@ import {
   type OFFProduct, type FoodEntryInput, type FoodFavorite, type LoggedFood,
 } from '@basalt/nutrition';
 import { isoDay } from '@basalt/core-data';
+import type { MealType } from '@basalt/nutrition';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import {
   barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts,
-  conflictLine, mealForHour,
+  conflictLine, mealForHour, yesterdayMeals, type YesterdayMeal,
 } from './model';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 
@@ -44,6 +45,7 @@ export function LogScreen() {
   const [draft, setDraft] = useState<DraftEntry | null>(null);
   const [favorites, setFavorites] = useState<FoodFavorite[]>([]);
   const [frequent, setFrequent] = useState<{ foodName: string; count: number; calories: number }[]>([]);
+  const [yesterday, setYesterday] = useState<YesterdayMeal[]>([]);
   const lastScanRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
 
   const dietaryFlags = profile?.dietaryFlags ?? [];
@@ -68,6 +70,11 @@ export function LogScreen() {
       logged.push({ foodName: r.food_name, createdAt: r.created_at, calories: Number(r.calories ?? 0) }),
     );
     setFrequent(frequentAtHour(logged, new Date().getHours()).slice(0, 3));
+
+    const yd = new Date();
+    yd.setDate(yd.getDate() - 1);
+    const yEntries = await getFoodEntriesForDay(supabase, isoDay(yd));
+    setYesterday(yesterdayMeals(yEntries.ok ? yEntries.data : []));
   }, []);
 
   useEffect(() => {
@@ -140,6 +147,25 @@ export function LogScreen() {
       barcode: f.barcode ?? undefined,
       source: 'search',
     });
+  };
+
+  const copyYesterdayMeal = async (meal: MealType) => {
+    const yd = new Date();
+    yd.setDate(yd.getDate() - 1);
+    const yEntries = await getFoodEntriesForDay(supabase, isoDay(yd));
+    if (!yEntries.ok) return;
+    for (const e of yEntries.data.filter((x) => x.mealType === meal)) {
+      await addFoodEntry(supabase, {
+        mealType: e.mealType, foodName: e.foodName, brand: e.brand ?? undefined,
+        calories: e.calories, protein: e.protein, carbs: e.carbs, fat: e.fat,
+        fiber: e.fiber, sugar: e.sugar, sodiumMg: e.sodiumMg, saturatedFat: e.saturatedFat,
+        servingSize: e.servingSize, servingUnit: e.servingUnit, quantity: e.quantity,
+        barcode: e.barcode ?? undefined, source: e.source === 'barcode' ? 'barcode' : 'manual',
+        micros: e.micros ?? undefined,
+      });
+    }
+    bumpToday();
+    void refreshLists();
   };
 
   const runSearch = async () => {
@@ -288,6 +314,24 @@ export function LogScreen() {
               </Pressable>
             );
           })}
+        </Card>
+      ) : null}
+
+      {/* ── Copy yesterday ─────────────────────────────────────────── */}
+      {yesterday.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Yesterday" summary="tap a meal to copy it to today" />
+          {yesterday.map((m, i) => (
+            <Pressable key={m.meal} onPress={() => void copyYesterdayMeal(m.meal)}>
+              <ReceiptRow
+                name={`Copy yesterday's ${m.label.toLowerCase()}`}
+                meta={`${m.count} ${m.count === 1 ? 'entry' : 'entries'}`}
+                value={groupInt(m.calories)}
+                unit="kcal"
+                last={i === yesterday.length - 1}
+              />
+            </Pressable>
+          ))}
         </Card>
       ) : null}
 
