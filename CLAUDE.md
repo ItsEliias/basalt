@@ -54,8 +54,16 @@ reference/            gitignored quarry files kept for porting reference only
 ## Backend (Supabase)
 
 - Project `ezsrwwfieihelfekgclz` — **shared with the Arise app** (free-tier
-  limit; user-approved deviation). Every Basalt table is prefixed `basalt_`;
-  never touch un-prefixed tables — they belong to Arise.
+  limit; user-approved, reaffirmed 2026-08-21). Every Basalt table is prefixed
+  `basalt_`; never touch un-prefixed tables — they belong to Arise.
+- **Migration-safety rule: no destructive SQL that isn't scoped to
+  `basalt_`-prefixed objects, ever.** No drop/delete/truncate/alter against
+  any un-prefixed table, function, policy or extension — including "harmless"
+  cleanup. If a statement can't name its `basalt_` target explicitly, it
+  doesn't run.
+- The move to a dedicated project follows `docs/DECOMMISSION.md`; triggers:
+  first external tester, store submission, or resumed Arise schema work —
+  whichever comes first.
 - RLS `auth.uid() = user_id` on every table. No gamification columns anywhere.
 - **No secrets in the client bundle, ever.** AI calls and privileged operations
   (account deletion) go through Supabase Edge Functions. The client gets only
