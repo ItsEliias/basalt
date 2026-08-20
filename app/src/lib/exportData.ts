@@ -20,6 +20,11 @@ export const EXPORT_TABLES = [
   'basalt_sleep_stages',
   'basalt_hydration_logs',
   'basalt_mindfulness_sessions',
+  'basalt_recipes',
+  'basalt_recipe_ingredients',
+  'basalt_recipe_steps',
+  'basalt_meal_plans',
+  'basalt_grocery_items',
 ] as const;
 
 export async function collectExport(): Promise<ExportBundle> {

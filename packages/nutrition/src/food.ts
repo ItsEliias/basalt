@@ -32,7 +32,7 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
  * open via the `${string}` template so any HC origin fits.
  */
 export type FoodSource =
-  | 'search' | 'barcode' | 'quick_add' | 'photo' | 'manual'
+  | 'search' | 'barcode' | 'quick_add' | 'photo' | 'manual' | 'recipe'
   | 'health_connect'
   | `health_connect:${string}`;
 
