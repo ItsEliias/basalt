@@ -52,3 +52,36 @@ export function platesText(b: PlateBreakdown): string {
   const parts = b.perSide.flatMap((p) => Array.from({ length: p.count }, () => String(p.plateKg)));
   return `${parts.join(' + ')} per side · ${b.barKg} kg bar`;
 }
+
+// ─── Warm-up calculator ─────────────────────────────────────────────────────
+//
+// Published ramp (a standard strength scheme, stated in the UI):
+//   empty bar × 10 · 55% × 5 · 70% × 3 · 85% × 1 · then work sets.
+// Percentages are of the working weight, rounded to the smallest plate pair
+// (2.5 kg). Steps that land at or below the previous step are dropped, so a
+// light working weight gets a shorter ramp instead of fictional variety.
+
+export const WARMUP_SCHEME = [
+  { pct: 0, reps: 10 },
+  { pct: 0.55, reps: 5 },
+  { pct: 0.7, reps: 3 },
+  { pct: 0.85, reps: 1 },
+] as const;
+
+export type WarmupSet = { kg: number; reps: number; label: string };
+
+export function warmupSets(workingKg: number, barKg = DEFAULT_BAR_KG): WarmupSet[] {
+  if (!isFinite(workingKg) || workingKg <= barKg) {
+    return [{ kg: barKg, reps: 10, label: 'empty bar' }];
+  }
+  const out: WarmupSet[] = [];
+  let last = 0;
+  for (const step of WARMUP_SCHEME) {
+    const raw = step.pct === 0 ? barKg : workingKg * step.pct;
+    const kg = Math.max(barKg, Math.round(raw / 2.5) * 2.5);
+    if (kg <= last || kg >= workingKg) continue;
+    last = kg;
+    out.push({ kg, reps: step.reps, label: step.pct === 0 ? 'empty bar' : `${Math.round(step.pct * 100)}%` });
+  }
+  return out;
+}
