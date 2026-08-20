@@ -7,9 +7,10 @@ import {
 import {
   listMealPlans, addMealPlan, deleteMealPlan, listRecipes, getRecipeDetail, logRecipeServing,
   listGroceryItems, setGroceryChecked, clearCheckedGroceries, groupByAisle, fmtQty,
-  type MealPlan, type Recipe, type GroceryItem, type MealType,
+  loadPlanOutcomes, OUTCOME_TEXT,
+  type MealPlan, type Recipe, type GroceryItem, type MealType, type ReconciledPlan,
 } from '@basalt/nutrition';
-import { isoDay } from '@basalt/core-data';
+import { isoDay, todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 
@@ -42,6 +43,7 @@ export function PlannerTab() {
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [grocery, setGrocery] = useState<GroceryItem[]>([]);
+  const [reconciled, setReconciled] = useState<ReconciledPlan[]>([]);
   const [adding, setAdding] = useState(false);
   const [addDate, setAddDate] = useState(nextDays(1)[0]!.date);
   const [addSlot, setAddSlot] = useState<MealType>('dinner');
@@ -49,14 +51,19 @@ export function PlannerTab() {
   const days = nextDays(7);
 
   const refresh = useCallback(async () => {
-    const [p, r, g] = await Promise.all([
+    const today = todayISO();
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 6);
+    const [p, r, g, rec] = await Promise.all([
       listMealPlans(supabase, days[0]!.date, days[days.length - 1]!.date),
       listRecipes(supabase),
       listGroceryItems(supabase),
+      loadPlanOutcomes(supabase, isoDay(weekAgo), today, today),
     ]);
     if (p.ok) setPlans(p.data);
     if (r.ok) setRecipes(r.data);
     if (g.ok) setGrocery(g.data);
+    if (rec.ok) setReconciled(rec.data.filter((x) => x.outcome !== 'pending'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
@@ -148,6 +155,24 @@ export function PlannerTab() {
           <SrcNote>Save a recipe first — planning starts from your recipes</SrcNote>
         )}
       </Card>
+
+      {/* ── Planned vs eaten — trailing week, facts only ───────────── */}
+      {reconciled.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Planned vs eaten" summary="last 7 days" />
+          {reconciled.map((p, i) => (
+            <ReceiptRow
+              key={p.id}
+              name={p.recipeTitle ?? p.note ?? 'Planned meal'}
+              meta={`${new Date(`${p.date}T00:00:00`).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric' })} · ${p.mealSlot}`}
+              value={OUTCOME_TEXT[p.outcome]}
+              valueColor={p.outcome === 'as_planned' ? color.carbs : p.outcome === 'not_logged' ? color.faint : color.ink2}
+              last={i === reconciled.length - 1}
+            />
+          ))}
+          <SrcNote>Reconciled from the diary · a swap is a fact, not a fault · today stays pending until it's over</SrcNote>
+        </Card>
+      ) : null}
 
       {/* ── Grocery list ───────────────────────────────────────────── */}
       <Card>
