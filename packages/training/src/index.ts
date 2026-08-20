@@ -12,3 +12,4 @@ export * from './walks';
 export * from './route-map';
 export * from './condition-bias';
 export * from './progression';
+export * from './pr-matrix';

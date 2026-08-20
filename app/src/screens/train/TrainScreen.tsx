@@ -10,7 +10,7 @@ import {
 } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
-  platesFor, platesText, biasOrder, suggestionText,
+  platesFor, platesText, biasOrder, suggestionText, warmupSets,
   describe as describeGuided,
   type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
@@ -166,6 +166,7 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
   const restHere = session.rest?.sessionExerciseId === ex.sessionExerciseId;
   const [commentFor, setCommentFor] = useState<number | null>(null);
   const [platesOpen, setPlatesOpen] = useState(false);
+  const [prsOpen, setPrsOpen] = useState(false);
 
   const supersetLabel = (() => {
     if (ex.supersetGroup === null) return null;
@@ -266,6 +267,11 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
         <Pressable onPress={() => setPlatesOpen(true)}>
           <Text style={styles.addSet}>PLATES</Text>
         </Pressable>
+        {ex.repPrs.length > 0 ? (
+          <Pressable onPress={() => setPrsOpen(true)}>
+            <Text style={styles.addSet}>PRS</Text>
+          </Pressable>
+        ) : null}
       </View>
       {restHere && session.rest ? (
         <RestTimerBar time={mmss(session.rest.remaining)} onSkip={session.skipRest} />
@@ -300,6 +306,7 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
         onClose={() => setPlatesOpen(false)}
         targetKgText={[...ex.rows].reverse().find((r) => r.kg.trim() !== '')?.kg ?? ''}
       />
+      <PrsSheet open={prsOpen} onClose={() => setPrsOpen(false)} ex={ex} />
     </Card>
   );
 }
@@ -322,6 +329,29 @@ function CommentSheet({ open, initial, setNumber, onClose, onSave }: {
           autoFocus
         />
         <CTA label="Save note" onPress={() => onSave(text)} />
+      </View>
+    </Modal>
+  );
+}
+
+function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; ex: SessionExerciseState }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.dim} onPress={onClose} />
+      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={styles.sheetTitle}>REP PRS — {ex.exercise.name.toUpperCase()}</Text>
+        {ex.repPrs.map((pr, i) => (
+          <ReceiptRow
+            key={pr.reps}
+            name={`${pr.reps} ${pr.reps === 1 ? 'rep' : 'reps'}`}
+            meta={new Date(pr.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+            value={String(pr.weightKg)}
+            unit="kg"
+            last={i === ex.repPrs.length - 1}
+          />
+        ))}
+        <SrcNote>Best real weight at each rep count · from your working sets only · untrained rep counts don't appear</SrcNote>
       </View>
     </Modal>
   );
@@ -355,7 +385,18 @@ function PlatesSheet({ open, onClose, targetKgText }: {
         ) : kgText.trim() !== '' ? (
           <Text style={styles.platesResidual}>below bar weight — nothing to load</Text>
         ) : null}
-        <SrcNote>Per-side loading · plates 25 / 20 / 15 / 10 / 5 / 2.5 / 1.25 kg</SrcNote>
+        {breakdown && isFinite(target) && target > barKg ? (
+          <>
+            <Text style={styles.warmupTitle}>WARM-UP RAMP</Text>
+            {warmupSets(target, barKg).map((w) => (
+              <Text key={w.label} style={styles.warmupLine}>
+                {`${w.kg} kg × ${w.reps}`}
+                <Text style={styles.warmupPct}>{`  ·  ${w.label}`}</Text>
+              </Text>
+            ))}
+          </>
+        ) : null}
+        <SrcNote>Per-side loading · plates 25 / 20 / 15 / 10 / 5 / 2.5 / 1.25 kg · ramp: bar ×10 · 55% ×5 · 70% ×3 · 85% ×1</SrcNote>
       </View>
     </Modal>
   );
@@ -494,6 +535,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5, overflow: 'hidden',
   },
   fbChipOn: { color: color.ink, borderColor: color.ink2 },
+  warmupTitle: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, marginTop: 16 },
+  warmupLine: { fontFamily: mono, fontSize: 13, color: color.ink, marginTop: 6, fontVariant: ['tabular-nums'] },
+  warmupPct: { fontSize: 10, color: color.faint },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
     backgroundColor: color.surface,

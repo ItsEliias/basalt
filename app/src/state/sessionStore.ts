@@ -4,8 +4,8 @@ import {
   startSession, endSession, addSessionExercise, logSet, getPrevExerciseSets,
   setExerciseRest, setSupersetGroup, bestE1rm, isSetPr, e1rm,
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
-  collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback,
-  type Suggestion, type ExerciseFeedback,
+  collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
+  type Suggestion, type ExerciseFeedback, type RepPr,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
@@ -39,6 +39,8 @@ export type SessionExerciseState = {
   guided: GuidedState | null;
   /** Deterministic next-session hint — a suggestion, never a mandate. */
   suggestion: Suggestion | null;
+  /** Best real weight per rep count, from all history. Empty = hidden. */
+  repPrs: RepPr[];
   /** One-tap post-exercise feedback, feeding the next suggestion. */
   feedback: ExerciseFeedback | null;
 };
@@ -131,7 +133,7 @@ function ensureTicking(get: () => SessionState & { _tick: (elapsedS?: number) =>
   }, 1000);
 }
 
-async function historyBestFor(exerciseId: string): Promise<number | null> {
+async function historyFor(exerciseId: string): Promise<{ bestE1rm: number | null; repPrs: RepPr[] }> {
   // All prior sets for this exercise: session_exercises ids → set rows.
   const ex = await supabase
     .from('basalt_session_exercises')
@@ -139,7 +141,7 @@ async function historyBestFor(exerciseId: string): Promise<number | null> {
     .eq('exercise_id', exerciseId)
     .limit(100);
   const ids = (ex.data ?? []).map((r: any) => r.id);
-  if (ids.length === 0) return null;
+  if (ids.length === 0) return { bestE1rm: null, repPrs: [] };
   const sets = await supabase
     .from('basalt_set_entries')
     .select('*')
@@ -152,7 +154,12 @@ async function historyBestFor(exerciseId: string): Promise<number | null> {
     rir: r.rir == null ? null : Number(r.rir), rpe: r.rpe == null ? null : Number(r.rpe),
     restS: r.rest_s ?? null, comment: r.comment ?? null, completedAt: r.completed_at,
   }));
-  return bestE1rm(mapped);
+  return {
+    bestE1rm: bestE1rm(mapped),
+    repPrs: repPrMatrix(
+      mapped.map((m) => ({ setType: m.setType, reps: m.reps, weightKg: m.weightKg, completedAt: m.completedAt })),
+    ),
+  };
 }
 
 function applyGuidedEvents(
@@ -216,7 +223,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     }
     const prev = await getPrevExerciseSets(supabase, exercise.id);
     const prevSets = prev.ok && prev.data ? prev.data.sets : [];
-    const historyBest = await historyBestFor(exercise.id);
+    const history = await historyFor(exercise.id);
     const suggestion = timed
       ? null
       : suggestNext({
@@ -255,7 +262,8 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           prevPerformedAt: prev.ok && prev.data ? prev.data.performedAt : null,
           restSeconds: (prev.ok && prev.data?.restSeconds) || 120,
           supersetGroup: null,
-          historyBestE1rm: historyBest,
+          historyBestE1rm: history.bestE1rm,
+          repPrs: history.repPrs,
           timed,
           guided: timed ? createGuidedTimer({ leadInS: 5, workS: 50, restS: 20, sets: 4 }) : null,
           suggestion,
