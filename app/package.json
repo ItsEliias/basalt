@@ -28,6 +28,7 @@
     "expo-haptics": "^56.0.3",
     "expo-keep-awake": "~56.0.3",
     "expo-location": "^57.0.1",
+    "expo-notifications": "~56.0.24",
     "expo-sharing": "~56.0.25",
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",

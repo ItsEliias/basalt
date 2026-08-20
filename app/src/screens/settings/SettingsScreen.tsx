@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -13,6 +13,9 @@ import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
+import {
+  disableWeekReviewNotif, enableWeekReviewNotif, isWeekReviewNotifEnabled,
+} from '../../lib/weekReviewNotif';
 import { buildJson, buildSectionedCsv } from '../../lib/exportFormat';
 import { recomputeTargetsFromProfile } from '../../lib/recomputeTargets';
 import {
@@ -39,6 +42,27 @@ export function SettingsScreen() {
   const [hcStatus, setHcStatus] = useState<string | null>(null);
   const [confirmText, setConfirmText] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [weekNotif, setWeekNotif] = useState<boolean | null>(null);
+  const [weekNotifNote, setWeekNotifNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    void isWeekReviewNotifEnabled().then(setWeekNotif);
+  }, []);
+
+  const toggleWeekNotif = async () => {
+    if (weekNotif === null) return;
+    setBusy('notif');
+    if (weekNotif) {
+      await disableWeekReviewNotif();
+      setWeekNotif(false);
+      setWeekNotifNote(null);
+    } else {
+      const r = await enableWeekReviewNotif();
+      setWeekNotif(r.ok);
+      setWeekNotifNote(r.ok ? null : (r.reason ?? null));
+    }
+    setBusy(null);
+  };
 
   const save = async (patch: Partial<ProfileRecord>, recompute = false) => {
     setBusy('save');
@@ -182,6 +206,17 @@ export function SettingsScreen() {
         {hcStatus ? <SrcNote>{hcStatus}</SrcNote> : (
           <SrcNote>Steps, sleep, vitals and more — read-only, every synced value shows its source</SrcNote>
         )}
+        <ObChipLabel>Week in review</ObChipLabel>
+        <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null}>
+          <ReceiptRow
+            name="Sunday 18:00 notification"
+            meta={weekNotifNote ?? 'a fixed prompt — never data in the notification itself'}
+            metaAccent={weekNotifNote ? color.fat : undefined}
+            value={weekNotif === null ? '…' : weekNotif ? 'on' : 'off'}
+            valueColor={weekNotif ? color.carbs : color.faint}
+            last
+          />
+        </Pressable>
       </Card>
 
       {/* ── Your data ──────────────────────────────────────────────── */}
