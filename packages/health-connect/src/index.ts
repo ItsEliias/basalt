@@ -35,3 +35,5 @@ export { MINDFULNESS_EXERCISE_TYPES } from './types';
 // Full Android manifest permission list — the app's app.json must declare
 // every entry (the source app's 1-of-28 manifest bug lives in infamy).
 export { ANDROID_HEALTH_PERMISSIONS, ANDROID_PERMISSION_FOR, ALL_HEALTH_PERMISSIONS } from './manifest';
+// Ledger sync — provider-injected, idempotent, tested against fakes.
+export { syncHealthData, type SyncReport } from './sync';

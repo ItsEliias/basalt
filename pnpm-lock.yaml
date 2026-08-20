@@ -136,6 +136,12 @@ importers:
       '@basalt/core-data':
         specifier: workspace:*
         version: link:../core-data
+      '@basalt/nutrition':
+        specifier: workspace:*
+        version: link:../nutrition
+      '@supabase/supabase-js':
+        specifier: ^2.106.2
+        version: 2.112.3
       react-native:
         specifier: 0.85.3
         version: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8)

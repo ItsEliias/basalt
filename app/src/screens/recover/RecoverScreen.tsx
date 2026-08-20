@@ -9,6 +9,7 @@ import {
 import { healthService, labelForPackage, type SleepSessionSummary } from '@basalt/health-connect';
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
+import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
 
@@ -41,16 +42,49 @@ function VitalsTab() {
 
   useEffect(() => {
     void (async () => {
+      void runHealthSync();
       const w = await listWeightEntries(supabase, 14);
       if (w.ok) setWeights(w.data);
 
       const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
+
+      // Persisted sleep first — the sync job writes sessions + stages into
+      // the ledger; a live HC read is only the fallback.
+      const persisted = await supabase
+        .from('basalt_sleep_sessions')
+        .select('id, bedtime, waketime, source, ext_id, date')
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (persisted.data?.bedtime && persisted.data?.waketime) {
+        const stagesQ = await supabase
+          .from('basalt_sleep_stages')
+          .select('stage, start_time, end_time')
+          .eq('session_id', persisted.data.id)
+          .order('start_time', { ascending: true });
+        const stages = (stagesQ.data ?? []).map((s: any) => ({
+          stage: s.stage,
+          startTime: s.start_time,
+          endTime: s.end_time,
+          minutes: (Date.parse(s.end_time) - Date.parse(s.start_time)) / 60000,
+        }));
+        out.sleep = {
+          id: persisted.data.ext_id ?? persisted.data.id,
+          startTime: persisted.data.bedtime,
+          endTime: persisted.data.waketime,
+          hours: (Date.parse(persisted.data.waketime) - Date.parse(persisted.data.bedtime)) / 3_600_000,
+          stages,
+          hasRealStages: stages.length > 0,
+          dataOrigin: String(persisted.data.source ?? '').replace(/^health_connect:?/, ''),
+        };
+      }
+
       const avail = await healthService.isAvailable();
       if (avail.ok && avail.data === 'available') {
         out.available = true;
         const granted = await healthService.getGrantedPermissions();
         out.granted = granted.ok ? granted.data : [];
-        if (out.granted.includes('sleep')) {
+        if (!out.sleep && out.granted.includes('sleep')) {
           const s = await healthService.getSleepSessionForNight();
           if (s.ok) out.sleep = s.data;
         }

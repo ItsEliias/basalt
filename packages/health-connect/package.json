@@ -5,7 +5,9 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@basalt/core-data": "workspace:*"
+    "@basalt/core-data": "workspace:*",
+    "@basalt/nutrition": "workspace:*",
+    "@supabase/supabase-js": "^2.106.2"
   },
   "peerDependencies": {
     "react-native": "0.85.3",
