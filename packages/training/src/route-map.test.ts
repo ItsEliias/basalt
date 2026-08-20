@@ -96,3 +96,19 @@ describe('buildWalkMapStyle', () => {
     expect(style.layers[1].type).toBe('raster');
   });
 });
+
+describe('tile config injection', () => {
+  it('a supplied provider replaces URL and attribution together', () => {
+    const style = buildWalkMapStyle(ROUTE, COLORS, {
+      url: 'https://tiles.example.com/{z}/{x}/{y}.png?api_key=K',
+      attribution: '© Example © OpenStreetMap contributors',
+    }) as any;
+    expect(style.sources.basemap.tiles).toEqual(['https://tiles.example.com/{z}/{x}/{y}.png?api_key=K']);
+    expect(style.sources.basemap.attribution).toBe('© Example © OpenStreetMap contributors');
+  });
+
+  it('the default stays the dev CARTO tiles — pinned so a swap is loud', () => {
+    const style = buildWalkMapStyle(ROUTE, COLORS) as any;
+    expect(style.sources.basemap.tiles[0]).toContain('basemaps.cartocdn.com/dark_all');
+  });
+});

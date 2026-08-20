@@ -2,7 +2,14 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Camera, Map, type StyleSpecification } from '@maplibre/maplibre-react-native';
 import { SrcNote, color } from '@basalt/ui';
-import { buildWalkMapStyle, cameraForRoute, type RoutePt } from '@basalt/training';
+import { buildWalkMapStyle, cameraForRoute, DEV_TILES, type RoutePt, type TileConfig } from '@basalt/training';
+
+// Licensed tile provider via env (see route-map.ts for documented options);
+// without both vars set, the dev CARTO tiles apply.
+const TILES: TileConfig =
+  process.env.EXPO_PUBLIC_TILE_URL && process.env.EXPO_PUBLIC_TILE_ATTRIBUTION
+    ? { url: process.env.EXPO_PUBLIC_TILE_URL, attribution: process.env.EXPO_PUBLIC_TILE_ATTRIBUTION }
+    : DEV_TILES;
 
 // The walk map tile — a thin native shell around the pure builders in
 // @basalt/training (style JSON, camera fit). Static by design: a summary,
@@ -13,7 +20,7 @@ import { buildWalkMapStyle, cameraForRoute, type RoutePt } from '@basalt/trainin
 export function WalkMap({ route, height = 210 }: { route: RoutePt[]; height?: number }) {
   const [width, setWidth] = useState(0);
   const mapStyle = useMemo(
-    () => buildWalkMapStyle(route, { bg: color.bg, accent: color.carbs }) as StyleSpecification,
+    () => buildWalkMapStyle(route, { bg: color.bg, accent: color.carbs }, TILES) as StyleSpecification,
     [route],
   );
   const cam = useMemo(
@@ -47,7 +54,7 @@ export function WalkMap({ route, height = 210 }: { route: RoutePt[]; height?: nu
           </Map>
         ) : null}
       </View>
-      <SrcNote>Map © OpenStreetMap contributors · © CARTO · route from your GPS only</SrcNote>
+      <SrcNote>{`Map ${TILES.attribution} · route from your GPS only`}</SrcNote>
     </>
   );
 }

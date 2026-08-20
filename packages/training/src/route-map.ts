@@ -97,26 +97,42 @@ export function cameraForRoute(
 // ─── Style JSON ─────────────────────────────────────────────────────────────
 
 /**
- * OSM-data raster base in its dark rendering (CARTO dark_all — data
- * © OpenStreetMap contributors, tiles © CARTO), named in the source
- * attribution and echoed by the srcnote under the map.
+ * Tile provider — injectable so the app can supply a licensed commercial
+ * provider via env without touching this package. The default is CARTO's
+ * free dark_all raster (data © OpenStreetMap contributors): fine for
+ * development, NOT licensed for a published commercial app — the swap is
+ * on docs/SUBMISSION-CHECKLIST.md.
+ *
+ * Documented commercial options (both OSM-data, both dark, both raster —
+ * drop the URL + key into app/.env as EXPO_PUBLIC_TILE_URL/_ATTRIBUTION):
+ *
+ *   Stadia Maps — Alidade Smooth Dark (closest match to Basalt's palette):
+ *     https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}@2x.png?api_key=KEY
+ *     attribution: © Stadia Maps © OpenMapTiles © OpenStreetMap contributors
+ *
+ *   MapTiler — Dataviz Dark:
+ *     https://api.maptiler.com/maps/dataviz-dark/{z}/{x}/{y}@2x.png?key=KEY
+ *     attribution: © MapTiler © OpenStreetMap contributors
  */
+export type TileConfig = { url: string; attribution: string };
+
 export const WALK_TILE_URL = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png';
 export const WALK_TILE_ATTRIBUTION = '© OpenStreetMap contributors · © CARTO';
+export const DEV_TILES: TileConfig = { url: WALK_TILE_URL, attribution: WALK_TILE_ATTRIBUTION };
 
 export function buildWalkMapStyle(
   points: RoutePt[],
   colors: RouteMapColors,
-  tileUrl: string = WALK_TILE_URL,
+  tiles: TileConfig = DEV_TILES,
 ): object {
   return {
     version: 8,
     sources: {
       basemap: {
         type: 'raster',
-        tiles: [tileUrl],
+        tiles: [tiles.url],
         tileSize: TILE_SIZE,
-        attribution: WALK_TILE_ATTRIBUTION,
+        attribution: tiles.attribution,
       },
       route: { type: 'geojson', data: routeLineGeoJson(points) },
       endpoints: { type: 'geojson', data: routeEndpointsGeoJson(points) },
