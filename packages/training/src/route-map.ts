@@ -4,6 +4,8 @@
 // accent route line, hollow start / filled end markers, per the prototype's
 // map treatment. The RN component stays a thin shell around these.
 
+import { haversineM } from './gps';
+
 export type RoutePt = { lat: number; lng: number };
 
 export type RouteMapColors = {
@@ -173,4 +175,63 @@ export function buildWalkMapStyle(
       },
     ],
   };
+}
+
+// ─── Flat projection for the share card ─────────────────────────────────────
+//
+// The share card draws the route as pure geometry (no tiles): deterministic,
+// capture-safe, and free of tile-attribution requirements on the image.
+
+export type ProjectedRoute = {
+  /** Route in card pixel space, aspect-correct, centered. */
+  points: [number, number][];
+  start: [number, number] | null;
+  end: [number, number] | null;
+  /** A round-number scale bar that fits the card. */
+  scaleBar: { px: number; label: string } | null;
+};
+
+const NICE_METERS = [100, 250, 500, 1000, 2000, 5000];
+
+export function projectRoute(
+  route: RoutePt[],
+  viewport: { widthPx: number; heightPx: number; padPx?: number },
+): ProjectedRoute {
+  if (route.length < 2) return { points: [], start: null, end: null, scaleBar: null };
+  const pad = viewport.padPx ?? 16;
+  const xs = route.map((p) => p.lng / 360 + 0.5);
+  const ys = route.map((p) => {
+    const phi = (Math.max(-85, Math.min(85, p.lat)) * Math.PI) / 180;
+    return 0.5 - Math.log(Math.tan(Math.PI / 4 + phi / 2)) / (2 * Math.PI);
+  });
+  const xMin = Math.min(...xs);
+  const yMin = Math.min(...ys);
+  const xSpan = Math.max(1e-12, Math.max(...xs) - xMin);
+  const ySpan = Math.max(1e-12, Math.max(...ys) - yMin);
+  const availW = viewport.widthPx - 2 * pad;
+  const availH = viewport.heightPx - 2 * pad;
+  const scale = Math.min(availW / xSpan, availH / ySpan);
+  const offX = pad + (availW - xSpan * scale) / 2;
+  const offY = pad + (availH - ySpan * scale) / 2;
+  const points = route.map((_, i) => [
+    offX + (xs[i]! - xMin) * scale,
+    offY + (ys[i]! - yMin) * scale,
+  ] as [number, number]);
+
+  // Meters-per-pixel from the real route span (haversine over the bbox width).
+  const west = { lat: route[0]!.lat, lng: Math.min(...route.map((p) => p.lng)) };
+  const east = { lat: route[0]!.lat, lng: Math.max(...route.map((p) => p.lng)) };
+  const bboxMeters = haversineM(west, east);
+  const mPerPx = bboxMeters > 0 ? bboxMeters / (xSpan * scale) : 0;
+  let scaleBar: ProjectedRoute['scaleBar'] = null;
+  if (mPerPx > 0) {
+    for (const m of NICE_METERS) {
+      const px = m / mPerPx;
+      if (px >= 50 && px <= 140) {
+        scaleBar = { px: Math.round(px), label: m >= 1000 ? `${m / 1000} km` : `${m} m` };
+        break;
+      }
+    }
+  }
+  return { points, start: points[0] ?? null, end: points[points.length - 1] ?? null, scaleBar };
 }

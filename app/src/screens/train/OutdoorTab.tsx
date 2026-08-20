@@ -13,6 +13,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { WalkMap } from './WalkMap';
+import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
 // the pieces the audit found missing built for real: Douglas-Peucker before
@@ -36,6 +37,7 @@ export function OutdoorTab() {
   const [now, setNow] = useState(Date.now());
   const [recent, setRecent] = useState<WalkRow[]>([]);
   const [openWalkId, setOpenWalkId] = useState<string | null>(null);
+  const [shareWalk, setShareWalk] = useState<WalkRow | null>(null);
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -266,13 +268,25 @@ export function OutdoorTab() {
                   last={i === recent.length - 1}
                 />
               </Pressable>
-              {openWalkId === w.id && w.route ? <WalkMap route={w.route} height={170} /> : null}
+              {openWalkId === w.id && w.route ? (
+                <>
+                  <WalkMap route={w.route} height={170} />
+                  <Pressable onPress={() => setShareWalk(w)}>
+                    <Text style={styles.shareLink}>SHARE AS IMAGE →</Text>
+                  </Pressable>
+                </>
+              ) : null}
             </View>
           ))
         ) : (
           <EmptyState>No walks recorded yet. The first one starts the ledger.</EmptyState>
         )}
       </Card>
+      {shareWalk ? (
+        <ShareSheet open onClose={() => setShareWalk(null)} filename="basalt-walk.png">
+          <WalkShareCard walk={shareWalk} />
+        </ShareSheet>
+      ) : null}
     </ScrollView>
   );
 }
@@ -313,6 +327,7 @@ function KeepAwakeWhileTracking() {
 }
 
 const styles = StyleSheet.create({
+  shareLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

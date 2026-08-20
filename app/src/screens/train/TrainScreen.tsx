@@ -21,6 +21,7 @@ import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './
 import { OutdoorTab } from './OutdoorTab';
 import { AdaptSheet } from './AdaptSheet';
 import { timerServiceFailed } from '../../lib/timerService';
+import { PrShareCard, ShareSheet } from '../../components/ShareCards';
 
 // Train — the relational set logger. Prev values ghost as editable defaults,
 // completion is a typographic state change with a quiet PR mark, rest timers
@@ -344,6 +345,14 @@ function CommentSheet({ open, initial, setNumber, onClose, onSave }: {
 
 function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; ex: SessionExerciseState }) {
   const insets = useSafeAreaInsets();
+  const [sharing, setSharing] = useState(false);
+  if (sharing) {
+    return (
+      <ShareSheet open onClose={() => setSharing(false)} filename="basalt-prs.png">
+        <PrShareCard exerciseName={ex.exercise.name} repPrs={ex.repPrs} bestE1rm={ex.historyBestE1rm} />
+      </ShareSheet>
+    );
+  }
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
@@ -359,6 +368,9 @@ function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; e
             last={i === ex.repPrs.length - 1}
           />
         ))}
+        <Pressable onPress={() => setSharing(true)}>
+          <Text style={styles.addSet}>SHARE AS IMAGE →</Text>
+        </Pressable>
         <SrcNote>Best real weight at each rep count · from your working sets only · untrained rep counts don't appear</SrcNote>
       </View>
     </Modal>
