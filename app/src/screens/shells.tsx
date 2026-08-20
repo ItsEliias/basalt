@@ -30,7 +30,7 @@ export function RecoverShell() {
 export function TrendsShell() {
   return <Shell label="Trends" message="Trends draw from your logged history. Nothing to show until there is history." />;
 }
-export function SettingsShell() {
+function SettingsShell_unused() {
   return <Shell label="Settings" message="Profile editing, export and account deletion land in this milestone." />;
 }
 function OnboardingShell_unused() {

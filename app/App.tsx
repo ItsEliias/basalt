@@ -16,8 +16,10 @@ import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
 import { TodayScreen } from './src/screens/today/TodayScreen';
 import { LogScreen } from './src/screens/log/LogScreen';
 import { TrainScreen } from './src/screens/train/TrainScreen';
+import { SettingsScreen } from './src/screens/settings/SettingsScreen';
+import { WeightSheet } from './src/components/WeightSheet';
 import {
-  RecoverShell, TrendsShell, SettingsShell,
+  RecoverShell, TrendsShell,
 } from './src/screens/shells';
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
@@ -40,6 +42,7 @@ function MainShell() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<TabKey>('today');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [weightOpen, setWeightOpen] = useState(false);
   const quickLogOpen = useAppStore((s) => s.quickLogOpen);
   const setQuickLogOpen = useAppStore((s) => s.setQuickLogOpen);
   const bumpToday = useAppStore((s) => s.bumpToday);
@@ -58,7 +61,7 @@ function MainShell() {
     if (a === 'scan' || a === 'meal' || a === 'relog' || a === 'manual') setTab('log');
     if (a === 'session') setTab('train');
     if (a === 'breathwork') setTab('recover');
-    if (a === 'weight') setTab('today');
+    if (a === 'weight') { setWeightOpen(true); return; }
     setSettingsOpen(false);
   };
 
@@ -68,7 +71,7 @@ function MainShell() {
     train: <TrainScreen />,
     recover: <RecoverShell />,
     trends: <TrendsShell />,
-    settings: <SettingsShell />,
+    settings: <SettingsScreen />,
   };
 
   const today = new Date();
@@ -99,6 +102,7 @@ function MainShell() {
         onClose={() => setQuickLogOpen(false)}
         onAction={onQuickAction}
       />
+      <WeightSheet open={weightOpen} onClose={() => setWeightOpen(false)} onLogged={bumpToday} />
     </View>
   );
 }
