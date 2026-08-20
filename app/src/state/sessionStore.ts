@@ -5,7 +5,8 @@ import {
   setExerciseRest, setSupersetGroup, bestE1rm, isSetPr, e1rm,
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
   collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
-  type Suggestion, type ExerciseFeedback, type RepPr,
+  removeSessionExercise,
+  type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
@@ -68,6 +69,8 @@ type SessionState = {
   guidedConfigure: (sessionExerciseId: string, patch: Partial<{ leadInS: number; workS: number; restS: number; sets: number }>) => void;
   guidedToggle: (sessionExerciseId: string) => void;
   giveFeedback: (sessionExerciseId: string, feedback: ExerciseFeedback) => Promise<void>;
+  /** Apply a confirmed Adapt proposal. Exercises with logged sets arrive as 'keep'. */
+  applyAdapt: (changes: AdaptChange<Exercise>[]) => Promise<void>;
 };
 
 let interval: ReturnType<typeof setInterval> | null = null;
@@ -379,6 +382,30 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
         return { ...e, guided: createGuidedTimer(config) };
       }),
     })),
+
+  applyAdapt: async (changes) => {
+    for (const change of changes) {
+      if (change.action === 'trim' && change.toSets !== undefined) {
+        set((s) => ({
+          exercises: s.exercises.map((e) => {
+            if (e.sessionExerciseId !== change.id) return e;
+            const kept: typeof e.rows = [];
+            for (const row of e.rows) {
+              if (row.committed || kept.length < change.toSets!) kept.push(row);
+            }
+            return { ...e, rows: kept.map((r, i) => ({ ...r, setNumber: i + 1 })) };
+          }),
+        }));
+      }
+      if (change.action === 'drop' || change.action === 'swap') {
+        await removeSessionExercise(supabase, change.id);
+        set((s) => ({ exercises: s.exercises.filter((e) => e.sessionExerciseId !== change.id) }));
+        if (change.action === 'swap' && change.replacement) {
+          await get().addExercise(change.replacement, false);
+        }
+      }
+    }
+  },
 
   giveFeedback: async (id, feedback) => {
     set((s) => ({

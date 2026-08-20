@@ -266,3 +266,10 @@ export async function setSupersetGroup(
   if (error) return err(error.message);
   return ok(undefined);
 }
+
+/** Remove an exercise (and its cascade of sets) from a session. */
+export async function removeSessionExercise(client: SupabaseClient, sessionExerciseId: string): Promise<Result<void>> {
+  const { error } = await client.from('basalt_session_exercises').delete().eq('id', sessionExerciseId);
+  if (error) return err(error.message);
+  return ok(undefined);
+}
