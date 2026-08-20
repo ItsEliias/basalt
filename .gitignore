@@ -1,0 +1,26 @@
+# Secrets — never committed
+.env
+.env.local
+.env.*.local
+
+# Dependencies & build output
+node_modules/
+dist/
+build/
+.expo/
+*.tsbuildinfo
+
+# Quarry porting reference (local only, never committed)
+reference/
+
+# Local tooling & runtime data (ruflo/claude session artifacts)
+.claude/
+.claude-flow/
+.swarm/
+.agents/
+ruvector.db
+basalt-handoff-pack/
+basalt-handoff-pack.zip
+
+# OS
+.DS_Store

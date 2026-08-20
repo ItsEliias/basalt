@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Basalt</title>
+<style>
+  :root{
+    --bg:#0F1115; --surface:#16181D; --surface2:#1B1E24; --border:#22262E; --border2:#2A2F38;
+    --ink:#F4F5F6; --ink2:#B6BCC6; --mute:#8A909B; --faint:#565D69;
+    --protein:#C08432; --carbs:#3E9B78; --fat:#BE5540; --recovery:#5E72E4;
+    --recovery-deep:#3B4BC8; --recovery-light:#8B99F0;
+    --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:#000;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;display:flex;justify-content:center}
+  /* app shell: full-bleed on phones, framed on wide screens */
+  #app{width:100%;max-width:430px;height:100dvh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+  @media(min-width:520px){
+    body{align-items:center;background:#0a0b0d}
+    #app{height:min(880px,94vh);border:1px solid var(--border2);border-radius:40px;box-shadow:0 32px 80px rgba(0,0,0,.55)}
+  }
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .num{font-family:var(--mono)}
+
+  /* ============ chrome ============ */
+  .statusbar{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--faint);padding:16px 22px 0}
+  .apphead{display:flex;justify-content:space-between;align-items:baseline;padding:10px 22px 4px}
+  .apphead .t{font-size:21px;font-weight:650;letter-spacing:-.01em}
+  .apphead .d{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase}
+  main{flex:1;overflow-y:auto;padding:0 16px 24px;scrollbar-width:none}
+  main::-webkit-scrollbar{display:none}
+  .view{display:none}
+  .view.on{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .tabbar{display:flex;border-top:1px solid var(--border);padding:12px 6px calc(14px + env(safe-area-inset-bottom));justify-content:space-around;background:var(--bg)}
+  .tab{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;text-align:center;cursor:pointer;user-select:none;padding:4px 10px;border:0;background:none}
+  .tab.on{color:var(--ink)}
+  .tab i{display:block;width:4px;height:4px;border-radius:2px;background:transparent;margin:0 auto 6px}
+  .tab.on i{background:var(--ink)}
+
+  /* ============ primitives ============ */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:12px}
+  .microlabel{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+  .kv{display:flex;justify-content:space-between;align-items:baseline}
+  .ratio{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink2)}
+  .ratio .of{color:var(--faint)}
+  .bar{height:3px;border-radius:2px;background:var(--border);margin-top:7px;position:relative;overflow:hidden}
+  .bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+  .dotkey{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:7px;vertical-align:1px}
+  .hero-num{font-size:50px;font-weight:640;letter-spacing:-.03em;line-height:1}
+  .hero-num small{font-size:15px;font-weight:450;color:var(--mute);letter-spacing:0;margin-left:6px}
+  .hero-sub{font-family:var(--mono);font-size:11.5px;color:var(--mute);margin-top:10px}
+  .hero-sub b{color:var(--ink2);font-weight:500}
+  .stack{height:6px;border-radius:3px;margin-top:14px;display:flex;gap:2px}
+  .stack i{border-radius:2px}
+  .stack .rest{background:var(--border);flex:1;border-radius:2px}
+  .macro{margin-top:13px}
+  .macro:first-of-type{margin-top:2px}
+  .macro .kv .n{font-size:12.5px;color:var(--ink2)}
+  .receipt-h{display:flex;justify-content:space-between;align-items:baseline}
+  .receipt-h .sum{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .rrow{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--border)}
+  .rrow:last-child{border-bottom:0;padding-bottom:2px}
+  .rrow .l .n{font-size:13px;font-weight:480}
+  .rrow .l .m{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:3px}
+  .rrow .l:has(.thumb){display:flex;align-items:center;gap:11px;min-width:0}
+  .thumb{width:30px;height:30px;border-radius:7px;border:1px solid var(--border2);flex-shrink:0;background:linear-gradient(135deg,#2b2620,#1c1f1a 55%,#23201c)}
+  .thumb.t2{background:linear-gradient(135deg,#20262b,#1a1e16 55%,#26221c)}
+  .thumb.t3{background:linear-gradient(135deg,#2b2026,#161a1e 55%,#1c2622)}
+  .rrow .r{text-align:right;flex-shrink:0;padding-left:12px}
+  .rrow .r .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
+  .rrow .r .u{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:3px}
+  .mealtag{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--mute);text-transform:uppercase;padding:14px 0 2px;display:block}
+  .receipt .mealtag:first-of-type{padding-top:6px}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:0}
+  .tile .microlabel{display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .tile .microlabel em{font-style:normal;font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.04em;flex-shrink:0}
+  .tile .v{font-size:23px;font-weight:620;letter-spacing:-.02em;margin-top:9px;white-space:nowrap}
+  .tile .v small{font-size:12px;font-weight:450;color:var(--mute);margin-left:3px}
+  .tile .delta{font-family:var(--mono);font-size:10.5px;margin-top:5px;color:var(--mute)}
+  .tile .delta.up{color:var(--carbs)}
+  .tile .delta.dn{color:var(--fat)}
+  .tile svg{display:block;margin-top:10px;width:100%}
+  .tile.empty .v{font-size:12.5px;font-weight:450;color:var(--faint);letter-spacing:0;line-height:1.5;margin-top:10px;white-space:normal}
+  .ticks{display:flex;gap:3px;margin-top:14px}
+  .ticks i{flex:1;height:14px;border-radius:2.5px;background:var(--border);transition:background .15s}
+  .ticks i.on{background:var(--recovery)}
+  .tickcap{display:flex;justify-content:space-between;margin-top:8px;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .tickcap b{color:var(--ink2);font-weight:500;cursor:pointer}
+  .srcnote{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:10px;letter-spacing:.03em;line-height:1.6}
+
+  /* viewfinder */
+  .vf{position:relative;border-radius:14px;overflow:hidden;margin-top:12px;background:
+      radial-gradient(120% 90% at 30% 20%, #23262d 0%, #101216 58%, #0a0c0f 100%);height:300px;border:1px solid var(--border)}
+  .vf .grain{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.012) 2px 3px)}
+  .reticle{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);width:230px;height:142px}
+  .reticle b{position:absolute;width:18px;height:18px;border:0 solid #E8EAEE}
+  .reticle b:nth-child(1){left:0;top:0;border-left-width:1.5px;border-top-width:1.5px}
+  .reticle b:nth-child(2){right:0;top:0;border-right-width:1.5px;border-top-width:1.5px}
+  .reticle b:nth-child(3){left:0;bottom:0;border-left-width:1.5px;border-bottom-width:1.5px}
+  .reticle b:nth-child(4){right:0;bottom:0;border-right-width:1.5px;border-bottom-width:1.5px}
+  .scanline{position:absolute;left:8px;right:8px;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(232,234,238,.65),transparent);animation:scan 2.6s ease-in-out infinite}
+  @keyframes scan{0%,100%{top:22%}50%{top:78%}}
+  .vf .hint{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+  .vf .modes{position:absolute;top:12px;left:0;right:0;display:flex;justify-content:center;gap:18px;font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase}
+  .vf .modes span{color:var(--faint)}
+  .vf .modes span.on{color:var(--ink);border-bottom:1px solid var(--ink);padding-bottom:3px}
+  .result{display:flex;justify-content:space-between;align-items:center;padding:11px 0;gap:10px}
+  .result .n{font-size:13px;font-weight:480}
+  .result .s{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:3px}
+  .result .add{font-family:var(--mono);font-size:11px;color:var(--ink2);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;flex-shrink:0;cursor:pointer}
+
+  /* training */
+  .exhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .exhead .n{font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .exhead .meta{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+  .ss-link{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+  .ss-link .line{width:2px;height:14px;background:var(--protein);border-radius:1px;margin-left:2px}
+  .ss-link span{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;color:var(--protein);text-transform:uppercase}
+  table.sets{width:100%;border-collapse:collapse;margin-top:10px}
+  table.sets th{font-family:var(--mono);font-size:9.5px;font-weight:400;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;text-align:right;padding:0 0 8px;border-bottom:1px solid var(--border)}
+  table.sets th:first-child{text-align:left}
+  table.sets td{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;text-align:right;padding:10px 0;border-bottom:1px solid var(--border)}
+  table.sets td:first-child{text-align:left;color:var(--mute);font-size:11px}
+  table.sets tr.ghost td{color:var(--faint)}
+  table.sets tr:last-child td{border-bottom:0}
+  table.sets td .pr{color:var(--carbs);font-size:9px;letter-spacing:.08em;margin-left:6px;vertical-align:2px}
+  table.sets td.prevcol{color:var(--faint);font-size:11px}
+
+  /* splits */
+  .split{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .split:last-child{border-bottom:0}
+  .split .km{font-family:var(--mono);font-size:10px;color:var(--faint);width:26px;flex-shrink:0}
+  .split .sbar{flex:1;height:3px;border-radius:2px;background:var(--border);position:relative}
+  .split .sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--carbs)}
+  .split .pace{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink);width:44px;text-align:right;flex-shrink:0}
+  .split .ele{font-family:var(--mono);font-size:9.5px;color:var(--faint);width:34px;text-align:right;flex-shrink:0}
+
+  /* micros */
+  .micro{display:flex;align-items:center;gap:12px;padding:7px 0}
+  .micro .mn{font-size:12px;color:var(--ink2);width:88px;flex-shrink:0}
+  .micro .mbar{flex:1;height:2px;border-radius:1px;background:var(--border);position:relative}
+  .micro .mbar i{position:absolute;left:0;top:0;bottom:0;border-radius:1px;background:var(--mute)}
+  .micro .mv{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;color:var(--mute);width:40px;text-align:right;flex-shrink:0}
+  .micro.full .mbar i{background:var(--carbs)}
+  .micro.full .mv{color:var(--carbs)}
+
+  /* body map */
+  .bodymap{display:flex;gap:18px;align-items:center;margin-top:14px}
+  .bodymap svg{flex-shrink:0}
+  .bm-list{flex:1}
+  .bm-row{display:flex;align-items:center;gap:10px;padding:5px 0}
+  .bm-row .bn{font-size:11.5px;color:var(--ink2);width:66px;flex-shrink:0}
+  .bm-row .bb{flex:1;height:3px;border-radius:2px;background:var(--border);position:relative}
+  .bm-row .bb i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--protein)}
+  .bm-row .bv{font-family:var(--mono);font-size:10.5px;color:var(--mute);width:44px;text-align:right;flex-shrink:0}
+  .resttimer{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;margin-top:12px}
+  .resttimer .t{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:18px;font-weight:500}
+  .resttimer .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
+  .resttimer .skip{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.08em;cursor:pointer}
+  .prev-note{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:10px}
+  .prev-note b{color:var(--mute);font-weight:400}
+
+  /* guided set timer */
+  .gt-num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:64px;font-weight:560;letter-spacing:-.03em;line-height:1;text-align:center;margin-top:18px}
+  .gt-num.warn{color:var(--fat)}
+  .gt-num.rest{color:var(--recovery)}
+  .gt-phase{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--mute);text-transform:uppercase;text-align:center;margin-top:10px}
+  .gt-bar{height:3px;border-radius:2px;background:var(--border);margin-top:16px;position:relative;overflow:hidden}
+  .gt-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--ink2);transition:width 1s linear}
+  .gt-sets{display:flex;gap:5px;margin-top:14px;justify-content:center}
+  .gt-sets i{width:26px;height:4px;border-radius:2px;background:var(--border)}
+  .gt-sets i.done{background:var(--protein)}
+  .gt-sets i.now{background:var(--ink2)}
+  .gt-cfg{display:flex;justify-content:center;gap:16px;margin-top:14px;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .gt-cfg b{color:var(--ink2);font-weight:500}
+
+  /* sleep */
+  .stagebar{display:flex;height:26px;gap:2px;margin-top:14px}
+  .stagebar i{border-radius:2.5px}
+  .stagekey{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap}
+  .stagekey span{font-family:var(--mono);font-size:10px;color:var(--mute);display:flex;align-items:center;gap:6px}
+  .stagekey i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .timescale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:8px}
+
+  /* segmented sub-nav */
+  .seg{display:flex;gap:20px;padding:10px 6px 0;border-bottom:1px solid var(--border);margin:0 2px}
+  .seg button{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);background:none;border:0;padding:6px 0 10px;cursor:pointer;border-bottom:1px solid transparent;margin-bottom:-1px}
+  .seg button.on{color:var(--ink);border-bottom-color:var(--ink)}
+  .sub{display:none}
+  .sub.on{display:block;animation:fade .18s ease}
+
+  /* library / plans */
+  .search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-top:12px}
+  .search svg{flex-shrink:0}
+  .search span{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.04em}
+  .chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);border:1px solid var(--border);border-radius:8px;padding:6px 11px;cursor:pointer}
+  .chip.on{color:var(--ink);border-color:var(--border2);background:var(--surface)}
+  .newrow{display:flex;justify-content:space-between;align-items:center;border:1px dashed var(--border2);border-radius:14px;padding:14px 16px;margin-top:12px;cursor:pointer}
+  .newrow .n{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink2);text-transform:uppercase}
+  .newrow .p{font-family:var(--mono);font-size:14px;color:var(--faint)}
+  .planweek{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;padding:16px 4px 0;display:block}
+
+  /* recipe detail */
+  .backlink{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--mute);text-transform:uppercase;padding:12px 4px 0;display:inline-block;cursor:pointer}
+  .tagrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--carbs);border:1px solid rgba(62,155,120,.35);border-radius:6px;padding:4px 8px}
+  .tag.warn{color:var(--fat);border-color:rgba(190,85,64,.35)}
+  .stepper{display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:10px;overflow:hidden}
+  .stepper button{width:38px;height:34px;background:var(--surface2);border:0;color:var(--ink2);font-size:16px;cursor:pointer;font-family:var(--mono)}
+  .stepper .val{font-family:var(--mono);font-size:13px;min-width:74px;text-align:center;color:var(--ink)}
+  .checkrow{display:flex;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}
+  .checkrow:last-child{border-bottom:0}
+  .checkrow .box{width:14px;height:14px;border:1px solid var(--border2);border-radius:4px;flex-shrink:0;position:relative;top:2px}
+  .checkrow.done .box{background:var(--surface2);border-color:var(--faint)}
+  .checkrow.done .box::after{content:'✓';position:absolute;inset:0;font-size:10px;color:var(--mute);display:flex;align-items:center;justify-content:center}
+  .checkrow .qty{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink2);min-width:74px;flex-shrink:0}
+  .checkrow .ing{font-size:13px;color:var(--ink)}
+  .checkrow.done .ing,.checkrow.done .qty{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--border2)}
+  .cta{display:block;width:100%;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:13px;margin-top:12px;cursor:pointer;text-align:center}
+  .steps-list{counter-reset:st;margin-top:4px}
+  .steps-list p{font-size:13px;line-height:1.6;color:var(--ink2);padding:10px 0;border-bottom:1px solid var(--border);counter-increment:st;display:flex;gap:12px}
+  .steps-list p:last-child{border-bottom:0}
+  .steps-list p::before{content:counter(st,decimal-leading-zero);font-family:var(--mono);font-size:10px;color:var(--faint);position:relative;top:3px}
+
+  /* onboarding */
+  #onboard{position:absolute;inset:0;background:var(--bg);z-index:10;display:flex;flex-direction:column;padding:0 22px}
+  #onboard.off{display:none}
+  .ob-top{display:flex;justify-content:space-between;align-items:center;padding:22px 0 0}
+  .ob-brand{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--ink)}
+  .ob-skip{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint);cursor:pointer}
+  .ob-dots{display:flex;gap:6px;margin-top:26px}
+  .ob-dots i{height:2px;flex:1;background:var(--border);border-radius:1px}
+  .ob-dots i.on{background:var(--ink)}
+  .ob-step{display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden}
+  .ob-step.on{display:flex;animation:fade .2s ease}
+  .ob-q{font-size:24px;font-weight:650;letter-spacing:-.015em;margin-top:34px;line-height:1.25}
+  .ob-sub{font-size:13px;color:var(--mute);margin-top:10px;line-height:1.55;max-width:300px}
+  .ob-opts{margin-top:26px}
+  .ob-opt{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:10px;cursor:pointer}
+  .ob-opt .n{font-size:14px;font-weight:550}
+  .ob-opt .s{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:4px}
+  .ob-opt .mark{width:16px;height:16px;border:1px solid var(--border2);border-radius:50%;flex-shrink:0}
+  .ob-opt.on{border-color:var(--ink2);background:var(--surface)}
+  .ob-opt.on .mark{border-color:var(--ink);background:var(--ink)}
+  .ob-chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
+  .ob-chips .chip{font-size:11px;padding:10px 14px;border-radius:10px}
+  .ob-note{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.04em;line-height:1.7;margin-top:22px}
+  .ob-cta{margin-top:auto;margin-bottom:34px}
+  .ob-scroll{flex:1;overflow-y:auto;scrollbar-width:none;margin-bottom:10px;min-height:0}
+  .ob-scroll::-webkit-scrollbar{display:none}
+  .ob-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--ink);font-family:var(--sans);font-size:14px;margin-top:10px;outline:none}
+  .ob-input::placeholder{color:var(--faint)}
+  .ob-input:focus{border-color:var(--border2)}
+  .ob-inrow{display:flex;gap:10px}
+  .ob-inrow .ob-input{flex:1}
+  .ob-chiplabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--mute);text-transform:uppercase;margin-top:20px}
+  .ob-chiplabel:first-child{margin-top:14px}
+  #onboard .ob-chips{margin-top:10px}
+  .ob-opt .mark.sq{border-radius:5px}
+  .ob-opt.on .mark.sq{background:var(--ink);border-color:var(--ink);position:relative}
+  .ob-opt.on .mark.sq::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--bg)}
+
+  /* outdoor / map */
+  .map{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--border);margin-top:12px;background:#101216}
+  .map svg{display:block;width:100%}
+  .map .live{position:absolute;top:12px;left:12px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--carbs);display:flex;align-items:center;gap:6px}
+  .map .live i{width:6px;height:6px;border-radius:50%;background:var(--carbs);animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .map .scale{position:absolute;bottom:10px;right:12px;font-family:var(--mono);font-size:9px;color:var(--faint);border-bottom:1px solid var(--faint);padding:0 14px 3px}
+  .statrow{display:flex;justify-content:space-between;margin-top:14px}
+  .statrow div{text-align:left}
+  .statrow .k{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase}
+  .statrow .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:17px;font-weight:520;margin-top:5px}
+  .statrow .n small{font-size:10px;color:var(--mute)}
+
+  /* mind / breathing */
+  .pacer{display:flex;flex-direction:column;align-items:center;padding:26px 0 8px}
+  .pacer-ring{width:150px;height:150px;border-radius:50%;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;position:relative}
+  .pacer-fill{position:absolute;inset:0;border-radius:50%;background:rgba(94,114,228,.10);border:1.5px solid var(--recovery);animation:breathe 16s ease-in-out infinite;transform:scale(.62)}
+  @keyframes breathe{0%{transform:scale(.62)}25%{transform:scale(1)}50%{transform:scale(1)}75%{transform:scale(.62)}100%{transform:scale(.62)}}
+  .pacer-label{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--ink2);text-transform:uppercase;z-index:1}
+  .pacer-count{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:18px;letter-spacing:.1em}
+
+  /* quick-log */
+  .tab.plus{position:relative;top:-4px}
+  .tab.plus .pbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border2);background:var(--surface2);color:var(--ink);font-size:19px;font-weight:300;display:flex;align-items:center;justify-content:center;margin:0 auto;font-family:var(--mono)}
+  #qsheet{position:absolute;inset:0;z-index:9;display:none}
+  #qsheet.on{display:block}
+  #qsheet .dim{position:absolute;inset:0;background:rgba(5,6,8,.6)}
+  #qsheet .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:10px 20px calc(22px + env(safe-area-inset-bottom));animation:up .22s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+  #qsheet .grab{width:34px;height:3px;border-radius:2px;background:var(--border2);margin:4px auto 14px}
+  .qgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .qitem{border:1px solid var(--border);border-radius:12px;padding:14px 6px;text-align:center;cursor:pointer}
+  .qitem .qi{font-size:16px;color:var(--ink2);font-family:var(--mono)}
+  .qitem .qn{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--mute);text-transform:uppercase;margin-top:8px}
+  .qhint{font-family:var(--mono);font-size:9.5px;color:var(--faint);text-align:center;margin-top:14px;letter-spacing:.06em}
+
+  /* consistency calendar */
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:14px;justify-items:center}
+  .calgrid i{width:9px;height:9px;border-radius:3px;background:var(--border)}
+  .calgrid i.on{background:var(--carbs)}
+  .calgrid i.part{background:var(--faint)}
+  .calgrid i.today{background:transparent;border:1px solid var(--ink2)}
+  .calgrid i.future{background:var(--surface2)}
+  .caldays{display:grid;grid-template-columns:repeat(7,1fr);margin-top:12px;justify-items:center;font-family:var(--mono);font-size:8.5px;color:var(--faint);letter-spacing:.06em}
+
+  /* week review */
+  .review .lede{font-size:14px;line-height:1.6;color:var(--ink2);margin-top:12px}
+  .review .lede b{color:var(--ink);font-weight:560}
+  .wstat{display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:14px;padding-top:12px}
+  .wstat div{text-align:left}
+  .wstat .k{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
+  .wstat .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;margin-top:4px}
+
+  /* trends */
+  .range{display:flex;gap:8px;margin-top:12px}
+  .range button{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint);background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .range button.on{color:var(--ink);border-color:var(--border2);background:var(--surface)}
+  .chart-axis{font-family:var(--mono);font-size:9px;fill:#565D69}
+  .corr .stmt{font-size:13.5px;line-height:1.55;color:var(--ink2);margin-top:10px}
+  .corr .stmt b{color:var(--ink);font-weight:560}
+  .corr .stat{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:10px;letter-spacing:.03em}
+  .corr .stat b{color:var(--mute);font-weight:400}
+</style>
+</head>
+<body data-palette="#C08432,#3E9B78,#BE5540,#5E72E4">
+<div id="app">
+  <!-- ================= ONBOARDING ================= -->
+  <div id="onboard">
+    <div class="ob-top"><span class="ob-brand">BASALT</span><span class="ob-skip" id="ob-skip">SKIP — SET UP LATER</span></div>
+    <div class="ob-dots" id="ob-dots"></div>
+
+    <div class="ob-step on" data-step="1">
+      <div class="ob-q">First, the basics.</div>
+      <div class="ob-sub">Everything here has one job: making your targets and plans actually fit you. Every answer is editable later, and any question can be skipped.</div>
+      <div class="ob-scroll">
+        <input class="ob-input" placeholder="Name" value="">
+        <div class="ob-inrow"><input class="ob-input" placeholder="Age"><input class="ob-input" placeholder="Height (cm)"></div>
+        <div class="ob-inrow"><input class="ob-input" placeholder="Weight (kg)"><input class="ob-input" placeholder="Goal weight (optional)"></div>
+        <div class="ob-chiplabel">Sex — used only for the energy formula</div>
+        <div class="ob-chips" data-single><span class="chip">Female</span><span class="chip">Male</span><span class="chip">Intersex</span><span class="chip">Prefer not to say</span></div>
+        <div class="ob-chiplabel">Units</div>
+        <div class="ob-chips" data-single><span class="chip on">Metric — kg · cm</span><span class="chip">Imperial — lb · ft</span></div>
+      </div>
+      <button class="cta ob-cta" data-next="2">Continue</button>
+    </div>
+
+    <div class="ob-step" data-step="2">
+      <div class="ob-q">What are you here for?</div>
+      <div class="ob-sub">Pick as many as apply — the targets balance them. Some pairs pull in opposite directions (lose weight + build muscle leans the plan toward recomposition; we'll say so, not hide it).</div>
+      <div class="ob-scroll">
+      <div class="ob-opts" id="ob-goal" data-multi>
+        <div class="ob-opt on" data-val="lose"><div><div class="n">Lose weight</div><div class="s">STEADY DEFICIT · PROTEIN PROTECTED</div></div><div class="mark sq"></div></div>
+        <div class="ob-opt" data-val="build"><div><div class="n">Build muscle</div><div class="s">SURPLUS · TRAINING-DAY EMPHASIS</div></div><div class="mark sq"></div></div>
+        <div class="ob-opt on" data-val="health"><div><div class="n">General health</div><div class="s">FIBRE, SUGAR CAP &amp; MOVEMENT FOCUS</div></div><div class="mark sq"></div></div>
+        <div class="ob-opt" data-val="fitness"><div><div class="n">Fitness &amp; endurance</div><div class="s">CARDIO LOAD + STEP TARGETS</div></div><div class="mark sq"></div></div>
+        <div class="ob-opt" data-val="sleep"><div><div class="n">Sleep &amp; recovery</div><div class="s">SLEEP TARGETS · RECOVERY EMPHASIS</div></div><div class="mark sq"></div></div>
+        <div class="ob-opt" data-val="refine"><div><div class="n">Refine · recomp</div><div class="s">MAINTENANCE · TIGHTER MACRO BANDS</div></div><div class="mark sq"></div></div>
+      </div>
+      </div>
+      <button class="cta ob-cta" data-next="3">Continue</button>
+    </div>
+
+    <div class="ob-step" data-step="3">
+      <div class="ob-q">Anything we should work around?</div>
+      <div class="ob-sub">Not medical advice — this biases exercise selection and flags, nothing more. Skip freely.</div>
+      <div class="ob-scroll">
+      <div class="ob-chips" data-multi-chips>
+        <span class="chip on">Nothing to note</span><span class="chip">High blood pressure</span><span class="chip">Type 1 diabetes</span><span class="chip">Type 2 diabetes</span><span class="chip">Heart condition</span><span class="chip">Asthma</span><span class="chip">Pregnant</span><span class="chip">Postpartum</span><span class="chip">Shoulder injury</span><span class="chip">Knee injury</span><span class="chip">Lower-back issues</span><span class="chip">Limited mobility</span><span class="chip">Recovering from surgery</span>
+      </div>
+      <div class="ob-chiplabel">Medication that affects weight or appetite — optional</div>
+      <div class="ob-chips" data-multi-chips>
+        <span class="chip">GLP-1 (Ozempic, Wegovy…)</span><span class="chip">Insulin</span><span class="chip">Thyroid medication</span><span class="chip">Other appetite-affecting</span><span class="chip on">None / skip</span>
+      </div>
+      <div class="ob-note">INJURIES BIAS THE EXERCISE LIBRARY (E.G. SHOULDER → PRESSING ALTERNATIVES) · CONDITIONS &amp; MEDICATIONS ENABLE RELEVANT LOGGING AND ADJUST TARGET EXPECTATIONS — NEVER SHOWN UNLESS YOU ENABLE THEM · STORED PRIVATELY, NEVER SHARED</div>
+      </div>
+      <button class="cta ob-cta" data-next="4">Continue</button>
+    </div>
+
+    <div class="ob-step" data-step="4">
+      <div class="ob-q">Eating &amp; drinking, honestly.</div>
+      <div class="ob-sub">No judgement — the targets only work if they're built on your real week, not your ideal one.</div>
+      <div class="ob-scroll">
+      <div class="ob-chiplabel">Takeaway / eating out, per week</div>
+      <div class="ob-chips" data-single><span class="chip">0–1</span><span class="chip on">2–3</span><span class="chip">4–6</span><span class="chip">Most days</span></div>
+      <div class="ob-chiplabel">Alcohol</div>
+      <div class="ob-chips" data-single><span class="chip">None</span><span class="chip on">Social</span><span class="chip">Few nights a week</span><span class="chip">Daily</span></div>
+      <div class="ob-chiplabel">Sugary drinks</div>
+      <div class="ob-chips" data-single><span class="chip on">Rarely</span><span class="chip">Few a week</span><span class="chip">Daily</span></div>
+      <div class="ob-chiplabel">Who cooks, mostly?</div>
+      <div class="ob-chips" data-single><span class="chip on">I do</span><span class="chip">Shared</span><span class="chip">Someone else</span><span class="chip">Mostly bought</span></div>
+      <div class="ob-chiplabel">Breakfast</div>
+      <div class="ob-chips" data-single><span class="chip on">Most days</span><span class="chip">Sometimes</span><span class="chip">Skip it</span></div>
+      <div class="ob-chiplabel">Smoking / vaping</div>
+      <div class="ob-chips" data-single><span class="chip on">Neither</span><span class="chip">Vape</span><span class="chip">Smoke</span><span class="chip">Both</span><span class="chip">Quitting</span></div>
+      <div class="ob-chiplabel">Caffeine</div>
+      <div class="ob-chips" data-single><span class="chip">None</span><span class="chip on">1–2 a day</span><span class="chip">3–4</span><span class="chip">5+</span></div>
+      </div>
+      <button class="cta ob-cta" data-next="5">Continue</button>
+    </div>
+
+    <div class="ob-step" data-step="5">
+      <div class="ob-q">Dietary requirements</div>
+      <div class="ob-sub">Scanned products and imported recipes get checked against these, ingredient by ingredient. Conflicts are flagged with a swap — never hidden.</div>
+      <div class="ob-scroll">
+      <div class="ob-chiplabel">Allergies &amp; intolerances</div>
+      <div class="ob-chips" data-multi-chips>
+        <span class="chip on">Coeliac (strict GF)</span><span class="chip">Gluten sensitivity</span><span class="chip on">Dairy free</span><span class="chip">Lactose intolerant</span><span class="chip">Nut allergy</span><span class="chip">Peanut allergy</span><span class="chip">Shellfish</span><span class="chip">Fish</span><span class="chip">Egg</span><span class="chip">Soy</span><span class="chip">Sesame</span><span class="chip">Sulphites</span>
+      </div>
+      <div class="ob-chiplabel">Diet &amp; belief</div>
+      <div class="ob-chips" data-multi-chips>
+        <span class="chip">Vegetarian</span><span class="chip">Vegan</span><span class="chip">Pescatarian</span><span class="chip">Halal</span><span class="chip">Kosher</span><span class="chip">Low FODMAP</span><span class="chip">Keto / low carb</span><span class="chip">Diabetic-friendly</span><span class="chip">Low sodium</span>
+      </div>
+      </div>
+      <button class="cta ob-cta" data-next="6">Continue</button>
+    </div>
+
+    <div class="ob-step" data-step="6">
+      <div class="ob-q">Where do you train?</div>
+      <div class="ob-sub">Plans and the exercise library are built around what's actually available to you.</div>
+      <div class="ob-opts" id="ob-place">
+        <div class="ob-opt" data-val="gym"><div><div class="n">Gym</div><div class="s">FULL EQUIPMENT ASSUMED — WE'LL SKIP THE NEXT STEP</div></div><div class="mark"></div></div>
+        <div class="ob-opt" data-val="home"><div><div class="n">Home</div><div class="s">YOU'LL PICK YOUR EQUIPMENT NEXT</div></div><div class="mark"></div></div>
+        <div class="ob-opt on" data-val="both"><div><div class="n">Both</div><div class="s">PLANS CAN MIX GYM AND HOME DAYS</div></div><div class="mark"></div></div>
+      </div>
+      <button class="cta ob-cta" id="ob-place-next" data-next="7">Continue</button>
+    </div>
+
+    <div class="ob-step" data-step="7">
+      <div class="ob-q">What's at home?</div>
+      <div class="ob-sub">Home sessions will only ever prescribe movements you can actually do. Change this any time — or add a second location later.</div>
+      <div class="ob-scroll">
+      <div class="ob-chips" data-multi-chips>
+        <span class="chip on">Dumbbells</span><span class="chip">Adjustable dumbbells</span><span class="chip">Barbell + plates</span><span class="chip">Squat rack</span><span class="chip">Bench</span><span class="chip on">Resistance bands</span><span class="chip on">Pull-up bar</span><span class="chip">Kettlebell</span><span class="chip">Cable tower</span><span class="chip">TRX / suspension</span><span class="chip">Skipping rope</span><span class="chip">Yoga mat</span><span class="chip">Treadmill</span><span class="chip">Exercise bike</span><span class="chip">Rower</span><span class="chip">Bodyweight only</span>
+      </div>
+      <div class="ob-note">873-MOVEMENT LIBRARY FILTERS TO THIS AUTOMATICALLY · GYM DAYS IGNORE IT · "TRAIN QUIETLY" (NO JUMPS) AVAILABLE PER SESSION</div>
+      </div>
+      <button class="cta ob-cta" data-next="8">Continue</button>
+    </div>
+
+    <div class="ob-step" data-step="8">
+      <div class="ob-q">Your life, roughly.</div>
+      <div class="ob-sub">Last one. Activity outside training changes your energy needs more than most workouts do.</div>
+      <div class="ob-scroll">
+      <div class="ob-chiplabel">Your days are mostly…</div>
+      <div class="ob-chips" data-single><span class="chip on">At a desk</span><span class="chip">On your feet</span><span class="chip">Physical work</span><span class="chip">Mixed</span></div>
+      <div class="ob-chiplabel">Currently exercising</div>
+      <div class="ob-chips" data-single><span class="chip">Not yet</span><span class="chip on">1–2× a week</span><span class="chip">3–4×</span><span class="chip">5+</span></div>
+      <div class="ob-chiplabel">Usual sleep</div>
+      <div class="ob-chips" data-single><span class="chip">Under 6 h</span><span class="chip on">6–7 h</span><span class="chip">7–8 h</span><span class="chip">8 h+</span></div>
+      <div class="ob-chiplabel">Stress lately</div>
+      <div class="ob-chips" data-single><span class="chip">Low</span><span class="chip on">Medium</span><span class="chip">High</span></div>
+      <div class="ob-chiplabel">What's driving this? — helps us talk to you right</div>
+      <div class="ob-chips" data-multi-chips>
+        <span class="chip on">Energy &amp; feeling better</span><span class="chip">Health scare / doctor's advice</span><span class="chip">Event coming up</span><span class="chip">Confidence</span><span class="chip">Strength / performance</span><span class="chip">Just time</span>
+      </div>
+      <div class="ob-chiplabel">How should we check in?</div>
+      <div class="ob-chips" data-single><span class="chip">Quiet — I'll open it</span><span class="chip on">Weekly digest only</span><span class="chip">Daily reminder</span></div>
+      <div class="ob-note">OUTPUT · DAILY TARGETS FOR ENERGY, PROTEIN, CARBS, FAT, FIBRE, SUGAR CAP, SODIUM CAP, WATER, STEPS &amp; SLEEP · SEEDED FROM ALL OF THE ABOVE, THEN RECALIBRATED WEEKLY FROM YOUR ACTUAL WEIGHT TREND</div>
+      </div>
+      <button class="cta ob-cta" id="ob-done">Build my targets</button>
+    </div>
+  </div>
+
+  <div class="statusbar"><span>09:41</span><span>WED 20 AUG</span></div>
+  <div class="apphead"><span class="t" id="head-t">Today</span><span style="display:flex;align-items:baseline;gap:14px"><span class="d" id="head-d">Day 214</span><span id="gear" style="cursor:pointer;color:var(--faint);font-size:13px">⚙</span></span></div>
+
+  <main>
+    <!-- ================= TODAY ================= -->
+    <section class="view on" id="v-today">
+      <div class="card">
+        <div class="kv"><span class="microlabel">Energy remaining</span><span class="ratio"><span class="of">target</span> 2,340</span></div>
+        <div style="margin-top:12px" class="hero-num">612<small>kcal</small></div>
+        <div class="hero-sub">1,728 eaten <b>·</b> 412 active <b>·</b> updated 12 min ago</div>
+        <div class="stack">
+          <i style="background:var(--protein);width:26%"></i><i style="background:var(--carbs);width:31%"></i><i style="background:var(--fat);width:17%"></i><i class="rest"></i>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="macro">
+          <div class="kv"><span class="n"><i class="dotkey" style="background:var(--protein)"></i>Protein</span><span class="ratio">142 <span class="of">/ 180 g</span></span></div>
+          <div class="bar"><i style="background:var(--protein);width:79%"></i></div>
+        </div>
+        <div class="macro">
+          <div class="kv"><span class="n"><i class="dotkey" style="background:var(--carbs)"></i>Carbohydrate</span><span class="ratio">203 <span class="of">/ 260 g</span></span></div>
+          <div class="bar"><i style="background:var(--carbs);width:78%"></i></div>
+        </div>
+        <div class="macro">
+          <div class="kv"><span class="n"><i class="dotkey" style="background:var(--fat)"></i>Fat</span><span class="ratio">48 <span class="of">/ 78 g</span></span></div>
+          <div class="bar"><i style="background:var(--fat);width:62%"></i></div>
+        </div>
+        <div class="macro">
+          <div class="kv"><span class="n"><i class="dotkey" style="background:var(--faint)"></i>Fibre</span><span class="ratio">19 <span class="of">/ 28 g</span></span></div>
+          <div class="bar"><i style="background:var(--faint);width:68%"></i></div>
+        </div>
+        <div class="rule"></div>
+        <div class="microlabel" style="color:var(--faint)">Caps — under is the goal</div>
+        <div class="macro">
+          <div class="kv"><span class="n"><i class="dotkey" style="background:var(--fat)"></i>Added sugar</span><span class="ratio" style="color:var(--fat)">41 <span class="of" style="color:var(--fat)">/ 36 g</span> · 5 over</span></div>
+          <div class="bar"><i style="background:var(--fat);width:100%"></i></div>
+        </div>
+        <div class="macro">
+          <div class="kv"><span class="n"><i class="dotkey" style="background:var(--faint)"></i>Sodium</span><span class="ratio">1.6 <span class="of">/ 2.3 g</span></span></div>
+          <div class="bar"><i style="background:var(--faint);width:70%"></i></div>
+        </div>
+        <div class="srcnote">TARGETS FROM YOUR GOAL + HABITS QUESTIONNAIRE · OVER A CAP IS STATED PLAINLY, NEVER HIDDEN — AND NEVER SCOLDED</div>
+      </div>
+
+      <div class="card receipt">
+        <div class="receipt-h"><span class="microlabel">Logged</span><span class="sum">6 entries · 1,728 kcal</span></div>
+        <span class="mealtag">Breakfast — 07:12</span>
+        <div class="rrow">
+          <div class="l"><span class="thumb"></span><div><div class="n">Greek yoghurt, oats &amp; blueberries</div><div class="m">P 31 · C 52 · F 9 · photo attached</div></div></div>
+          <div class="r"><div class="v">412</div><div class="u">kcal</div></div>
+        </div>
+        <div class="rrow">
+          <div class="l"><div class="n">Long black</div><div class="m">scanned · 7 Grams Roastery</div></div>
+          <div class="r"><div class="v">4</div><div class="u">kcal</div></div>
+        </div>
+        <span class="mealtag">Lunch — 12:48</span>
+        <div class="rrow">
+          <div class="l"><div class="n">Chicken &amp; brown rice bowl</div><div class="m">P 54 · C 71 · F 14 · recipe ×1.5 srv</div></div>
+          <div class="r"><div class="v">638</div><div class="u">kcal</div></div>
+        </div>
+        <span class="mealtag">Training — 17:30</span>
+        <div class="rrow">
+          <div class="l"><div class="n">Upper A — push emphasis</div><div class="m">14 sets · 6,240 kg volume · 52 min</div></div>
+          <div class="r"><div class="v" style="color:var(--ink2)">−412</div><div class="u">kcal</div></div>
+        </div>
+        <div class="srcnote">SWIPE A MEAL LEFT TO COPY YESTERDAY'S · TAP ANY ENTRY TO EDIT</div>
+      </div>
+
+      <div class="card">
+        <div class="receipt-h"><span class="microlabel">Micronutrients</span><span class="sum">from logged foods</span></div>
+        <div style="margin-top:8px">
+          <div class="micro full"><span class="mn">Iron</span><div class="mbar"><i style="width:100%"></i></div><span class="mv">104%</span></div>
+          <div class="micro"><span class="mn">Calcium</span><div class="mbar"><i style="width:71%"></i></div><span class="mv">71%</span></div>
+          <div class="micro"><span class="mn">Magnesium</span><div class="mbar"><i style="width:64%"></i></div><span class="mv">64%</span></div>
+          <div class="micro"><span class="mn">Potassium</span><div class="mbar"><i style="width:58%"></i></div><span class="mv">58%</span></div>
+          <div class="micro full"><span class="mn">Vitamin B12</span><div class="mbar"><i style="width:100%"></i></div><span class="mv">138%</span></div>
+          <div class="micro"><span class="mn">Vitamin D</span><div class="mbar"><i style="width:22%"></i></div><span class="mv">22%</span></div>
+          <div class="micro"><span class="mn">Zinc</span><div class="mbar"><i style="width:81%"></i></div><span class="mv">81%</span></div>
+        </div>
+        <div class="srcnote">ONLY NUTRIENTS WITH SOURCE DATA ARE SHOWN — NO ESTIMATES PRESENTED AS FACT · FULL PANEL IN NUTRITION</div>
+      </div>
+
+      <div class="tiles">
+        <div class="tile">
+          <div class="microlabel">Steps <em>PIXEL WATCH</em></div>
+          <div class="v num">8,412</div>
+          <div class="delta up">▲ 12% vs 7-day mean</div>
+          <svg height="26" viewBox="0 0 140 26" preserveAspectRatio="none">
+            <path d="M2 20 L14 17 L26 18 L38 12 L50 14 L62 9 L74 13 L86 10 L98 12 L110 7 L122 9 L134 6" fill="none" stroke="#3E9B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="134" cy="6" r="3.5" fill="#3E9B78" stroke="#16181D" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="tile">
+          <div class="microlabel">Water</div>
+          <div class="v num"><span id="water-v">1,750</span><small>/ 2,850 ml</small></div>
+          <div class="ticks" id="water-ticks"></div>
+          <div class="tickcap"><b id="water-add">+250 TAP</b><span>250 ml / tick</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= LOG ================= -->
+    <section class="view" id="v-log">
+      <div class="seg" data-group="log">
+        <button class="on" data-sub="capture">Capture</button>
+        <button data-sub="recipes">Recipes</button>
+        <button data-sub="planner">Planner</button>
+      </div>
+
+      <div class="sub on" id="sub-log-capture">
+      <div class="vf">
+        <div class="grain"></div>
+        <div class="modes"><span>Search</span><span class="on">Barcode</span><span>Plate</span><span>Manual</span></div>
+        <div class="reticle"><b></b><b></b><b></b><b></b><div class="scanline"></div></div>
+        <div class="hint">EAN-13 · GS1 check-digit verified on device</div>
+      </div>
+
+      <div class="card">
+        <div class="receipt-h"><span class="microlabel">Result</span><span class="sum mono">9300633 481116 ✓</span></div>
+        <div class="result" style="border-bottom:1px solid var(--border)">
+          <div>
+            <div class="n">Vaalia Greek Yoghurt, Natural 900 g</div>
+            <div class="s">per 170 g serve — 152 kcal · P 16 · C 10 · F 5</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0"><div class="add" style="color:var(--faint)">+ PHOTO</div><div class="add">ADD</div></div>
+        </div>
+        <div class="kv" style="padding-top:12px">
+          <span class="microlabel" style="color:var(--faint)">Quality</span>
+          <span class="ratio">protein-dense · low added sugar</span>
+        </div>
+        <div class="srcnote">SOURCE · OPEN FOOD FACTS — VERIFIED 2026-07-30 · EDITABLE BEFORE SAVE</div>
+      </div>
+
+      <div class="card receipt">
+        <div class="receipt-h"><span class="microlabel">Frequent at this hour</span><span class="sum">1-tap re-log</span></div>
+        <div class="rrow">
+          <div class="l"><div class="n">Chicken &amp; brown rice bowl</div><div class="m">logged 14× · usually 12:30–13:15</div></div>
+          <div class="r"><div class="v">638</div><div class="u">kcal</div></div>
+        </div>
+        <div class="rrow">
+          <div class="l"><div class="n">Tuna, avocado &amp; rye</div><div class="m">logged 9×</div></div>
+          <div class="r"><div class="v">486</div><div class="u">kcal</div></div>
+        </div>
+        <div class="rrow">
+          <div class="l"><div class="n">Protein shake, 2 scoops</div><div class="m">logged 31×</div></div>
+          <div class="r"><div class="v">244</div><div class="u">kcal</div></div>
+        </div>
+      </div>
+      </div><!-- /sub-log-capture -->
+
+      <div class="sub" id="sub-log-recipes">
+        <div class="search">
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="5" cy="5" r="4" fill="none" stroke="#565D69" stroke-width="1.4"/><line x1="8.2" y1="8.2" x2="11" y2="11" stroke="#565D69" stroke-width="1.4"/></svg>
+          <span>Search 24 saved recipes…</span>
+        </div>
+        <div class="newrow"><span class="n">Import — websites, socials, anywhere</span><span class="p">+</span></div>
+        <div class="srcnote" style="padding:4px 4px 0">PASTE OR SHARE A LINK · PULLS STEPS, QUANTITIES AND THE COVER IMAGE FROM THE SOURCE · EVERYTHING EDITABLE BEFORE SAVE</div>
+        <div class="chips">
+          <span class="chip on">GF</span><span class="chip on">DF</span><span class="chip">Vegetarian</span><span class="chip">Vegan</span><span class="chip">Nut free</span><span class="chip">&lt; 30 min</span><span class="chip">High protein</span>
+        </div>
+
+        <div class="card receipt">
+          <div class="receipt-h"><span class="microlabel">Saved recipes</span><span class="sum">per serve · scalable</span></div>
+          <div class="rrow">
+            <div class="l"><div class="n">Chicken &amp; brown rice bowl</div><div class="m">P 36 · C 47 · F 9 · serves 4 · 35 min · GF DF</div></div>
+            <div class="r"><div class="v">425</div><div class="u">kcal</div></div>
+          </div>
+          <div class="rrow" id="open-ragu" style="cursor:pointer">
+            <div class="l"><span class="thumb"></span><div><div class="n">Slow-cooker beef ragu →</div><div class="m">P 41 · C 22 · F 17 · serves 6 · 6 h · GF DF</div></div></div>
+            <div class="r"><div class="v">412</div><div class="u">kcal</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><span class="thumb t3"></span><div><div class="n">Miso salmon, greens &amp; soba</div><div class="m">imported · recipetineats.com · JSON-LD ✓ · contains soy</div></div></div>
+            <div class="r"><div class="v">548</div><div class="u">kcal</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><span class="thumb t2"></span><div><div class="n">Crispy chilli chicken bowls</div><div class="m">imported · tiktok.com/@foodwithsoy · cover image from source · check macros</div></div></div>
+            <div class="r"><div class="v">~612</div><div class="u">kcal</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Overnight oats, five ways</div><div class="m">P 24 · C 58 · F 11 · serves 1 · <span style="color:var(--fat)">contains dairy — swap suggested</span></div></div>
+            <div class="r"><div class="v">438</div><div class="u">kcal</div></div>
+          </div>
+        </div>
+        <div class="srcnote" style="padding:0 4px">IMPORTS KEEP THEIR SOURCE LINK · SOCIAL IMPORTS PARSE CAPTION + TRANSCRIPT AND ARE MARKED "~" UNTIL YOU CONFIRM MACROS · DIETARY CONFLICTS FLAGGED PER-INGREDIENT, NEVER HIDDEN</div>
+      </div><!-- /sub-log-recipes -->
+
+      <div class="sub" id="sub-log-detail">
+        <span class="backlink" id="back-recipes">← Recipes</span>
+        <div class="card">
+          <div style="display:flex;gap:14px;align-items:center">
+            <span class="thumb" style="width:52px;height:52px;border-radius:10px"></span>
+            <div style="flex:1"><div class="exhead"><span class="n">Slow-cooker beef ragu</span><span class="meta">6 h</span></div>
+            <div class="srcnote" style="margin-top:5px">COVER FROM SOURCE · TAP TO REPLACE WITH YOUR OWN PHOTO</div></div>
+          </div>
+          <div class="tagrow">
+            <span class="tag">Gluten free ✓</span><span class="tag">Dairy free ✓</span><span class="tag" style="color:var(--mute);border-color:var(--border2)">High protein</span>
+          </div>
+          <div class="kv" style="margin-top:16px">
+            <span class="microlabel">Makes</span>
+            <div class="stepper"><button id="srv-minus">−</button><span class="val"><span id="srv-n">6</span> serves</span><button id="srv-plus">+</button></div>
+          </div>
+          <div class="kv" style="margin-top:14px">
+            <span class="microlabel" style="color:var(--faint)">Per serve</span>
+            <span class="ratio">412 kcal · P 41 · C 22 · F 17</span>
+          </div>
+          <div class="srcnote">SOURCE · YOUR RECIPE · MACROS FROM INGREDIENT SUM, EDITABLE</div>
+        </div>
+
+        <div class="card">
+          <div class="receipt-h"><span class="microlabel">Ingredients</span><span class="sum">tap to check off what you have</span></div>
+          <div id="ing-list" style="margin-top:4px"></div>
+          <button class="cta" id="add-grocery">Add 7 to grocery list</button>
+        </div>
+
+        <div class="card">
+          <div class="receipt-h"><span class="microlabel">Method</span><span class="sum">6 steps</span></div>
+          <div class="steps-list">
+            <p>Season the chuck generously and sear in batches until deeply browned on all sides.</p>
+            <p>Soften onion, carrot and garlic in the same pot; deglaze with the red wine.</p>
+            <p>Return beef, add passata, cover and slow-cook on low for 6 hours until it shreds.</p>
+          </div>
+          <div class="srcnote">SHOWING 3 OF 6 · FULL METHOD ON THE REAL SCREEN</div>
+        </div>
+      </div><!-- /sub-log-detail -->
+
+      <div class="sub" id="sub-log-planner">
+        <div class="card receipt">
+          <div class="receipt-h"><span class="microlabel">This week</span><span class="sum">Wed → Sun</span></div>
+          <span class="mealtag">Wed 20 · Tonight</span>
+          <div class="rrow">
+            <div class="l"><div class="n">Slow-cooker beef ragu</div><div class="m">dinner · ×2 serves</div></div>
+            <div class="r"><div class="v">824</div><div class="u">kcal</div></div>
+          </div>
+          <span class="mealtag">Thu 21</span>
+          <div class="rrow">
+            <div class="l"><div class="n">Miso salmon, greens &amp; soba</div><div class="m">dinner · ×1 serve</div></div>
+            <div class="r"><div class="v">548</div><div class="u">kcal</div></div>
+          </div>
+          <span class="mealtag">Fri 22</span>
+          <div class="rrow">
+            <div class="l"><div class="n">Unplanned</div><div class="m">no meal scheduled</div></div>
+            <div class="r"><div class="v" style="color:var(--faint)">—</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="receipt-h"><span class="microlabel">Grocery list</span><span class="sum" id="gro-sum">8 items · 2 checked</span></div>
+          <span class="mealtag">Produce</span>
+          <div class="checkrow"><div class="box"></div><span class="qty">×2</span><span class="ing">Brown onion</span></div>
+          <div class="checkrow done"><div class="box"></div><span class="qty">300 g</span><span class="ing">Carrot</span></div>
+          <div class="checkrow"><div class="box"></div><span class="qty">200 g</span><span class="ing">Baby spinach</span></div>
+          <span class="mealtag">Meat &amp; fish</span>
+          <div class="checkrow"><div class="box"></div><span class="qty">1.2 kg</span><span class="ing">Beef chuck</span></div>
+          <div class="checkrow"><div class="box"></div><span class="qty">2 × 180 g</span><span class="ing">Salmon fillets</span></div>
+          <span class="mealtag">Pantry</span>
+          <div class="checkrow done"><div class="box"></div><span class="qty">270 g</span><span class="ing">Soba noodles</span></div>
+          <div class="checkrow"><div class="box"></div><span class="qty">60 g</span><span class="ing">White miso</span></div>
+          <div class="checkrow"><div class="box"></div><span class="qty">700 ml</span><span class="ing">Passata</span></div>
+        </div>
+        <div class="srcnote" style="padding:0 4px">QUANTITIES CONSOLIDATED ACROSS RECIPES · UNITS NORMALISED · GROUPED BY AISLE · TAP TO CHECK OFF IN-STORE</div>
+      </div><!-- /sub-log-planner -->
+    </section>
+
+    <!-- ================= TRAIN ================= -->
+    <section class="view" id="v-train">
+      <div class="seg" data-group="train">
+        <button class="on" data-sub="session">Session</button>
+        <button data-sub="plans">Plans</button>
+        <button data-sub="library">Library</button>
+        <button data-sub="outdoor">Outdoor</button>
+      </div>
+
+      <div class="sub on" id="sub-train-session">
+      <div class="card">
+        <div class="exhead"><span class="n">Incline Bench Press</span><span class="meta">Barbell · Chest</span></div>
+        <div class="prev-note">LAST SESSION · <b>4 × 8 @ 72.5 kg</b> · 14 AUG</div>
+        <table class="sets">
+          <thead><tr><th>Set</th><th>Prev</th><th>kg</th><th>Reps</th><th>RIR</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td class="prevcol">72.5×8</td><td>75.0</td><td>8</td><td>2</td></tr>
+            <tr><td>2</td><td class="prevcol">72.5×8</td><td>75.0</td><td>8<span class="pr">PR</span></td><td>2</td></tr>
+            <tr><td>3</td><td class="prevcol">72.5×8</td><td>75.0</td><td>7</td><td>1</td></tr>
+            <tr class="ghost"><td>4</td><td class="prevcol">72.5×8</td><td>75.0</td><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+        <div class="resttimer">
+          <span class="l">Rest</span>
+          <span class="t" id="rest-t">01:24</span>
+          <span class="skip" id="rest-skip">SKIP →</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ss-link"><div class="line"></div><span>Superset · A2</span></div>
+        <div class="exhead"><span class="n">Chest-Supported Row</span><span class="meta">Dumbbell · Back</span></div>
+        <table class="sets">
+          <thead><tr><th>Set</th><th>Prev</th><th>kg</th><th>Reps</th><th>RIR</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td class="prevcol">30×10</td><td>32.5</td><td>10</td><td>3</td></tr>
+            <tr><td>2</td><td class="prevcol">30×10</td><td>32.5</td><td>10</td><td>2</td></tr>
+            <tr class="ghost"><td>3</td><td class="prevcol">30×9</td><td>32.5</td><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="exhead"><span class="n">Plank</span><span class="meta">Timed · Core</span></div>
+        <div class="gt-cfg"><span><b>50 s</b> work</span><span><b>20 s</b> rest</span><span><b>4</b> sets</span><span><b>5 s</b> lead-in ⚙</span></div>
+        <div class="gt-num" id="gt-num">50</div>
+        <div class="gt-phase" id="gt-phase">Ready — tap go</div>
+        <div class="gt-bar"><i id="gt-fill" style="width:0%"></i></div>
+        <div class="gt-sets" id="gt-sets"><i></i><i></i><i></i><i></i></div>
+        <button class="cta" id="gt-go">GO</button>
+        <div class="srcnote" style="text-align:center">BEEP AT WORK END · DOUBLE BEEP + LAST-5 COUNT BEFORE NEXT SET · HAPTICS ON PHONE · SETS AUTO-LOGGED</div>
+      </div>
+
+      <div class="tiles">
+        <div class="tile">
+          <div class="microlabel">Session volume</div>
+          <div class="v num">6,240<small>kg</small></div>
+          <div class="delta up">▲ 4.2% · 14 / 18 planned sets</div>
+        </div>
+        <div class="tile">
+          <div class="microlabel">e1RM · Bench</div>
+          <div class="v num">96.3<small>kg</small></div>
+          <div class="delta up">▲ 1.1 kg vs last session</div>
+        </div>
+      </div>
+      </div><!-- /sub-train-session -->
+
+      <div class="sub" id="sub-train-plans">
+        <div class="newrow"><span class="n">New plan — build from library or duplicate a week</span><span class="p">+</span></div>
+
+        <span class="planweek">Mesocycle 3 · Week 1 of 4</span>
+        <div class="card receipt" style="margin-top:8px">
+          <div class="rrow">
+            <div class="l"><div class="n">Push · Week 1</div><div class="m">GYM · 6 exercises · 18 sets · chest, shoulders, triceps</div></div>
+            <div class="r"><div class="v">Mon</div><div class="u">done ✓</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Pull · Week 1</div><div class="m">HOME · 6 exercises · 17 sets · dumbbells, bands, pull-up bar</div></div>
+            <div class="r"><div class="v">Tue</div><div class="u">done ✓</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Upper A · Week 1</div><div class="m">5 exercises · 14 sets · in progress</div></div>
+            <div class="r"><div class="v" style="color:var(--carbs)">Wed</div><div class="u">active</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Legs · Week 1</div><div class="m">5 exercises · 16 sets · quads, hams, calves</div></div>
+            <div class="r"><div class="v" style="color:var(--faint)">Fri</div><div class="u">planned</div></div>
+          </div>
+        </div>
+
+        <span class="planweek">Saved templates</span>
+        <div class="card receipt" style="margin-top:8px">
+          <div class="rrow">
+            <div class="l"><div class="n">Push · base template</div><div class="m">progresses +2.5 kg or +1 rep when all sets hit target RIR</div></div>
+            <div class="r"><div class="v">×12</div><div class="u">runs</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Pull · base template</div><div class="m">superset pairs A1/A2 preserved on duplicate</div></div>
+            <div class="r"><div class="v">×12</div><div class="u">runs</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Home — bands only</div><div class="m">equipment filter: bodyweight + bands</div></div>
+            <div class="r"><div class="v">×3</div><div class="u">runs</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="receipt-h"><span class="microlabel">This week · volume by muscle</span><span class="sum">31 sets logged</span></div>
+          <div class="bodymap">
+            <svg width="96" height="132" viewBox="0 0 96 132">
+              <g stroke="#2A2F38" stroke-width="1">
+                <!-- front figure -->
+                <circle cx="24" cy="9" r="5" fill="#1B1E24"/>
+                <rect x="21.5" y="14" width="5" height="4" rx="2" fill="#1B1E24"/>
+                <path d="M16 20 Q16 18 18 18 H30 Q32 18 32 20 L31 33 Q31 35 29 35 H19 Q17 35 17 33 Z" fill="#C08432" fill-opacity=".72"/>   <!-- chest -->
+                <path d="M17.5 37 H30.5 L31 48 Q31 51 28.5 51 H19.5 Q17 51 17 48 Z" fill="#C08432" fill-opacity=".18"/>                     <!-- core -->
+                <rect x="10.5" y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".38"/>  <!-- arm L -->
+                <rect x="33"   y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".38"/>  <!-- arm R -->
+                <rect x="16.5" y="53" width="7" height="33" rx="3.5" fill="#C08432" fill-opacity=".52"/>     <!-- quad L -->
+                <rect x="25"   y="53" width="7" height="33" rx="3.5" fill="#C08432" fill-opacity=".52"/>     <!-- quad R -->
+                <!-- back figure -->
+                <circle cx="72" cy="9" r="5" fill="#1B1E24"/>
+                <rect x="69.5" y="14" width="5" height="4" rx="2" fill="#1B1E24"/>
+                <path d="M64 20 Q64 18 66 18 H78 Q80 18 80 20 L79 38 Q79 40 77 40 H67 Q65 40 65 38 Z" fill="#C08432" fill-opacity=".62"/>   <!-- back -->
+                <path d="M65.5 42 H78.5 L79 48 Q79 51 76.5 51 H67.5 Q65 51 65 48 Z" fill="#C08432" fill-opacity=".28"/>                     <!-- glutes -->
+                <rect x="58.5" y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".22"/>
+                <rect x="81"   y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".22"/>
+                <rect x="64.5" y="53" width="7" height="33" rx="3.5" fill="#C08432" fill-opacity=".30"/>     <!-- ham L -->
+                <rect x="73"   y="53" width="7" height="33" rx="3.5" fill="#C08432" fill-opacity=".30"/>     <!-- ham R -->
+              </g>
+              <text x="18" y="128" font-family="ui-monospace,monospace" font-size="7.5" fill="#565D69" letter-spacing="1">FRONT</text>
+              <text x="67" y="128" font-family="ui-monospace,monospace" font-size="7.5" fill="#565D69" letter-spacing="1">BACK</text>
+            </svg>
+            <div class="bm-list">
+              <div class="bm-row"><span class="bn">Chest</span><div class="bb"><i style="width:92%"></i></div><span class="bv">9 sets</span></div>
+              <div class="bm-row"><span class="bn">Back</span><div class="bb"><i style="width:82%"></i></div><span class="bv">8 sets</span></div>
+              <div class="bm-row"><span class="bn">Quads</span><div class="bb"><i style="width:62%"></i></div><span class="bv">6 sets</span></div>
+              <div class="bm-row"><span class="bn">Arms</span><div class="bb"><i style="width:42%"></i></div><span class="bv">4 sets</span></div>
+              <div class="bm-row"><span class="bn">Hams</span><div class="bb"><i style="width:32%"></i></div><span class="bv">3 sets</span></div>
+              <div class="bm-row"><span class="bn">Core</span><div class="bb"><i style="width:12%"></i></div><span class="bv">1 set</span></div>
+            </div>
+          </div>
+          <div class="srcnote">FILL DEPTH = LOGGED SETS THIS WEEK · FROM YOUR SET HISTORY, NOT A GUESS</div>
+        </div>
+        <div class="srcnote" style="padding:0 4px">WEEK 4 AUTO-FLAGS A DELOAD PROMPT · YOU DECIDE, THE APP NEVER FORCES IT</div>
+      </div><!-- /sub-train-plans -->
+
+      <div class="sub" id="sub-train-library">
+        <div class="search">
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="5" cy="5" r="4" fill="none" stroke="#565D69" stroke-width="1.4"/><line x1="8.2" y1="8.2" x2="11" y2="11" stroke="#565D69" stroke-width="1.4"/></svg>
+          <span>Search 873 movements…</span>
+        </div>
+        <div class="chips">
+          <span class="chip on">Chest</span><span class="chip">Back</span><span class="chip">Shoulders</span><span class="chip">Legs</span><span class="chip on">Barbell</span><span class="chip">Dumbbell</span><span class="chip">Cable</span><span class="chip on" style="color:var(--carbs);border-color:rgba(62,155,120,.35)">My equipment</span>
+        </div>
+
+        <div class="card">
+          <div class="exhead"><span class="n">Incline Bench Press</span><span class="meta">Detail preview</span></div>
+          <div class="bodymap" style="margin-top:12px">
+            <svg width="96" height="112" viewBox="0 0 96 112">
+              <g stroke="#2A2F38" stroke-width="1">
+                <circle cx="24" cy="9" r="5" fill="#1B1E24"/><rect x="21.5" y="14" width="5" height="4" rx="2" fill="#1B1E24"/>
+                <path d="M16 20 Q16 18 18 18 H30 Q32 18 32 20 L31 33 Q31 35 29 35 H19 Q17 35 17 33 Z" fill="#C08432" fill-opacity=".85"/>
+                <path d="M17.5 37 H30.5 L31 48 Q31 51 28.5 51 H19.5 Q17 51 17 48 Z" fill="#1B1E24"/>
+                <rect x="10.5" y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".32"/>
+                <rect x="33" y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".32"/>
+                <rect x="16.5" y="53" width="7" height="33" rx="3.5" fill="#1B1E24"/><rect x="25" y="53" width="7" height="33" rx="3.5" fill="#1B1E24"/>
+                <circle cx="72" cy="9" r="5" fill="#1B1E24"/><rect x="69.5" y="14" width="5" height="4" rx="2" fill="#1B1E24"/>
+                <path d="M64 20 Q64 18 66 18 H78 Q80 18 80 20 L79 38 Q79 40 77 40 H67 Q65 40 65 38 Z" fill="#1B1E24"/>
+                <path d="M65.5 42 H78.5 L79 48 Q79 51 76.5 51 H67.5 Q65 51 65 48 Z" fill="#1B1E24"/>
+                <rect x="58.5" y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".32"/>
+                <rect x="81" y="19" width="4.5" height="25" rx="2.25" fill="#C08432" fill-opacity=".32"/>
+                <rect x="64.5" y="53" width="7" height="33" rx="3.5" fill="#1B1E24"/><rect x="73" y="53" width="7" height="33" rx="3.5" fill="#1B1E24"/>
+              </g>
+              <text x="18" y="108" font-family="ui-monospace,monospace" font-size="7.5" fill="#565D69" letter-spacing="1">FRONT</text>
+              <text x="67" y="108" font-family="ui-monospace,monospace" font-size="7.5" fill="#565D69" letter-spacing="1">BACK</text>
+            </svg>
+            <div class="bm-list">
+              <div class="bm-row"><span class="bn" style="width:82px">Primary</span><span style="font-size:12px;color:var(--ink)">Upper chest</span></div>
+              <div class="bm-row"><span class="bn" style="width:82px">Secondary</span><span style="font-size:12px;color:var(--ink2)">Triceps · front delts</span></div>
+              <div class="bm-row" style="margin-top:6px"><span class="bn" style="width:82px">Motion</span><span style="font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.04em">LOOPING DEMO — LICENSED GIF SET, DUOTONE-TREATED</span></div>
+            </div>
+          </div>
+          <div class="srcnote">MUSCLE HIGHLIGHT RENDERED FROM EXERCISE DATA — ALL 873 MOVEMENTS, NO LICENSING · SOLID = PRIMARY, FADED = SECONDARY</div>
+        </div>
+
+        <div class="card receipt">
+          <div class="receipt-h"><span class="microlabel">Chest · Barbell</span><span class="sum">14 results</span></div>
+          <div class="rrow">
+            <div class="l"><div class="n">Barbell Bench Press</div><div class="m">chest · triceps, front delts · intermediate</div></div>
+            <div class="r"><div class="v">e1RM 102</div><div class="u">kg · yours</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Incline Bench Press</div><div class="m">upper chest · triceps · intermediate</div></div>
+            <div class="r"><div class="v">e1RM 96.3</div><div class="u">kg · yours</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Close-Grip Bench Press</div><div class="m">triceps · chest · intermediate</div></div>
+            <div class="r"><div class="v" style="color:var(--faint)">no history</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Floor Press</div><div class="m">chest · triceps · beginner</div></div>
+            <div class="r"><div class="v" style="color:var(--faint)">no history</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Guillotine Press</div><div class="m">upper chest · advanced</div></div>
+            <div class="r"><div class="v" style="color:var(--faint)">no history</div></div>
+          </div>
+        </div>
+        <div class="srcnote" style="padding:0 4px">SOURCE · FREE-EXERCISE-DB · 873 MOVEMENTS · FORM NOTES + IMAGES ON DETAIL · YOUR e1RM SHOWN WHERE HISTORY EXISTS</div>
+      </div><!-- /sub-train-library -->
+
+      <div class="sub" id="sub-train-outdoor">
+        <div class="map">
+          <div class="live"><i></i>RECORDING · GPS ±4 M</div>
+          <svg viewBox="0 0 358 240">
+            <!-- street grid -->
+            <g stroke="#1E2229" stroke-width="1.5" fill="none">
+              <path d="M0 40 H358"/><path d="M0 96 H358"/><path d="M0 152 H358"/><path d="M0 208 H358"/>
+              <path d="M52 0 V240"/><path d="M118 0 V240"/><path d="M196 0 V240"/><path d="M282 0 V240"/>
+            </g>
+            <g stroke="#242933" stroke-width="2.5" fill="none">
+              <path d="M0 124 C 80 118, 160 132, 358 120"/>
+              <path d="M160 0 C 158 80, 172 160, 164 240"/>
+            </g>
+            <!-- park -->
+            <path d="M196 40 H282 V96 H196 Z" fill="rgba(62,155,120,.06)" stroke="rgba(62,155,120,.18)" stroke-width="1"/>
+            <!-- river -->
+            <path d="M0 190 C 90 178, 200 202, 358 186" stroke="rgba(94,114,228,.22)" stroke-width="7" fill="none" stroke-linecap="round"/>
+            <!-- route -->
+            <path d="M60 200 L92 168 L118 168 L118 124 L166 120 L166 68 L214 64 L246 64 L246 96 L282 96 L300 128"
+                  fill="none" stroke="#3E9B78" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="60" cy="200" r="5" fill="#0F1115" stroke="#3E9B78" stroke-width="2"/>
+            <circle cx="300" cy="128" r="6.5" fill="#3E9B78" stroke="#0F1115" stroke-width="2.5"/>
+            <text x="70" y="216" font-family="ui-monospace,monospace" font-size="8" fill="#565D69" letter-spacing="1">START 17:02</text>
+          </svg>
+          <span class="scale">500 m</span>
+        </div>
+
+        <div class="card">
+          <div class="statrow">
+            <div><div class="k">Distance</div><div class="n">4.21<small> km</small></div></div>
+            <div><div class="k">Time</div><div class="n">38:12</div></div>
+            <div><div class="k">Pace</div><div class="n">9:04<small> /km</small></div></div>
+            <div><div class="k">Elev</div><div class="n">+64<small> m</small></div></div>
+          </div>
+          <div class="srcnote">ROUTE SIMPLIFIED (DOUGLAS-PEUCKER) BEFORE STORING · KEEPS TRACKING WITH SCREEN OFF</div>
+        </div>
+
+        <div class="card">
+          <div class="receipt-h"><span class="microlabel">Splits</span><span class="sum">longer bar = faster</span></div>
+          <div style="margin-top:10px">
+            <div class="split"><span class="km">1</span><div class="sbar"><i style="width:88%"></i></div><span class="pace">8:42</span><span class="ele">+4 m</span></div>
+            <div class="split"><span class="km">2</span><div class="sbar"><i style="width:78%"></i></div><span class="pace">9:01</span><span class="ele">+12 m</span></div>
+            <div class="split"><span class="km">3</span><div class="sbar"><i style="width:68%"></i></div><span class="pace">9:18</span><span class="ele">+31 m</span></div>
+            <div class="split"><span class="km">4</span><div class="sbar"><i style="width:83%"></i></div><span class="pace">8:51</span><span class="ele">+9 m</span></div>
+            <div class="split"><span class="km">.21</span><div class="sbar"><i style="width:80%"></i></div><span class="pace">8:56</span><span class="ele">+8 m</span></div>
+          </div>
+        </div>
+
+        <div class="card receipt">
+          <div class="receipt-h"><span class="microlabel">Routes near you</span><span class="sum">from OSM footpaths</span></div>
+          <div class="rrow">
+            <div class="l"><div class="n">River &amp; wetlands loop</div><div class="m">5.1 km · +38 m · 92% paths · starts 400 m away</div></div>
+            <div class="r"><div class="v">~46</div><div class="u">min</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Ridgeline out-and-back</div><div class="m">3.4 km · +110 m · steep middle third</div></div>
+            <div class="r"><div class="v">~38</div><div class="u">min</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Neighbourhood figure-8</div><div class="m">2.8 km · +12 m · footpath the whole way</div></div>
+            <div class="r"><div class="v">~27</div><div class="u">min</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Your usual — Tuesday loop</div><div class="m">4.2 km · walked 11× · your median 39:40</div></div>
+            <div class="r"><div class="v">~40</div><div class="u">min</div></div>
+          </div>
+        </div>
+        <div class="srcnote" style="padding:0 4px">ROUTES GENERATED FROM OPENSTREETMAP FOOTPATH DATA AROUND YOUR LOCATION + YOUR OWN HISTORY · LOCATION NEVER LEAVES THE DEVICE EXCEPT AS YOUR SAVED ROUTES</div>
+      </div><!-- /sub-train-outdoor -->
+    </section>
+
+    <!-- ================= RECOVER ================= -->
+    <section class="view" id="v-recover">
+      <div class="seg" data-group="recover">
+        <button class="on" data-sub="vitals">Vitals</button>
+        <button data-sub="mind">Mind</button>
+      </div>
+
+      <div class="sub on" id="sub-recover-vitals">
+      <div class="card">
+        <div class="kv"><span class="microlabel">Sleep · last night</span><span class="ratio">23:41 → 07:02</span></div>
+        <div style="margin-top:12px" class="hero-num">7<small style="margin-left:2px">h</small> 21<small style="margin-left:2px">m</small></div>
+        <div class="stagebar">
+          <i style="background:var(--recovery-deep);width:9%"></i>
+          <i style="background:var(--recovery-light);width:16%"></i>
+          <i style="background:var(--recovery);width:11%"></i>
+          <i style="background:var(--recovery-light);width:22%"></i>
+          <i style="background:var(--recovery-deep);width:8%"></i>
+          <i style="background:var(--recovery-light);width:14%"></i>
+          <i style="background:var(--recovery);width:13%"></i>
+          <i style="background:#3A4048;width:7%"></i>
+        </div>
+        <div class="timescale"><span>23:41</span><span>02:00</span><span>04:30</span><span>07:02</span></div>
+        <div class="stagekey">
+          <span><i style="background:var(--recovery-deep)"></i>Deep 1h 12m</span>
+          <span><i style="background:var(--recovery)"></i>REM 1h 46m</span>
+          <span><i style="background:var(--recovery-light)"></i>Light 3h 51m</span>
+          <span><i style="background:#3A4048"></i>Awake 32m</span>
+        </div>
+        <div class="srcnote">SOURCE · GALAXY WATCH VIA HEALTH CONNECT — MEASURED STAGES</div>
+      </div>
+
+      <div class="tiles">
+        <div class="tile">
+          <div class="microlabel">HRV <em>rMSSD</em></div>
+          <div class="v num">64<small>ms</small></div>
+          <div class="delta up">▲ within baseline</div>
+          <svg height="26" viewBox="0 0 140 26" preserveAspectRatio="none">
+            <path d="M2 16 L14 18 L26 13 L38 15 L50 11 L62 14 L74 10 L86 12 L98 8 L110 11 L122 9 L134 8" fill="none" stroke="#5E72E4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="134" cy="8" r="3.5" fill="#5E72E4" stroke="#16181D" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="tile">
+          <div class="microlabel">Resting HR</div>
+          <div class="v num">52<small>bpm</small></div>
+          <div class="delta">— 30-day mean 53</div>
+          <svg height="26" viewBox="0 0 140 26" preserveAspectRatio="none">
+            <path d="M2 10 L14 11 L26 9 L38 12 L50 11 L62 13 L74 11 L86 12 L98 11 L110 13 L122 12 L134 12" fill="none" stroke="#5E72E4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="134" cy="12" r="3.5" fill="#5E72E4" stroke="#16181D" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="tile">
+          <div class="microlabel">SpO₂</div>
+          <div class="v num">97<small>%</small></div>
+          <div class="delta">overnight mean · min 94</div>
+        </div>
+        <div class="tile empty">
+          <div class="microlabel">Blood glucose</div>
+          <div class="v">No glucose data recorded for this period. Connect a source to begin.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="receipt-h"><span class="microlabel">Bodyweight</span><span class="sum">14-day trend</span></div>
+        <div class="kv" style="margin-top:10px">
+          <span class="num" style="font-size:23px;font-weight:620">81.4 <small style="font-size:12px;color:var(--mute);font-weight:450">kg</small></span>
+          <span class="ratio" style="color:var(--carbs)">−0.4 kg / wk <span class="of">· on pace</span></span>
+        </div>
+        <svg width="100%" height="34" viewBox="0 0 340 34" preserveAspectRatio="none" style="margin-top:10px;display:block">
+          <line x1="0" y1="17" x2="340" y2="17" stroke="#22262E" stroke-width="1"/>
+          <path d="M4 8 L28 9 L52 11 L76 10 L100 13 L124 12 L148 15 L172 14 L196 17 L220 16 L244 19 L268 18 L292 21 L316 20 L336 23" fill="none" stroke="#3E9B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="336" cy="23" r="4" fill="#3E9B78" stroke="#16181D" stroke-width="2"/>
+        </svg>
+      </div>
+      </div><!-- /sub-recover-vitals -->
+
+      <div class="sub" id="sub-recover-mind">
+        <div class="card">
+          <div class="kv"><span class="microlabel">Box breathing</span><span class="ratio">4 · 4 · 4 · 4</span></div>
+          <div class="pacer">
+            <div class="pacer-ring">
+              <div class="pacer-fill"></div>
+              <span class="pacer-label" id="pacer-label">Inhale</span>
+            </div>
+            <div class="pacer-count"><span id="pacer-sec">4</span> · FOLLOW THE RING</div>
+          </div>
+          <div class="chips" style="justify-content:center;margin-top:14px">
+            <span class="chip on">5 min</span><span class="chip">10 min</span><span class="chip">15 min</span><span class="chip">20 min</span>
+          </div>
+          <div class="srcnote" style="text-align:center">HAPTIC PULSE ON PHASE CHANGE · NO SOUNDS UNLESS YOU TURN THEM ON · SYNCS AS A MINDFULNESS SESSION</div>
+        </div>
+
+        <div class="card receipt">
+          <div class="receipt-h"><span class="microlabel">Protocols</span><span class="sum">structured breathing</span></div>
+          <div class="rrow">
+            <div class="l"><div class="n">Box breathing</div><div class="m">4-4-4-4 · state regulation · any time</div></div>
+            <div class="r"><div class="v">4:00</div><div class="u">min·cycle 16 s</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">4-7-8 downshift</div><div class="m">pre-sleep · long exhale bias</div></div>
+            <div class="r"><div class="v">4:45</div><div class="u">min</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Coherent 5.5</div><div class="m">5.5 breaths/min · HRV-oriented</div></div>
+            <div class="r"><div class="v">10:00</div><div class="u">min</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">Unguided timer</div><div class="m">open-ended · optional interval bell</div></div>
+            <div class="r"><div class="v">—</div></div>
+          </div>
+        </div>
+
+        <div class="card receipt">
+          <div class="receipt-h"><span class="microlabel">This week</span><span class="sum">4 sessions · 38 min</span></div>
+          <div class="rrow">
+            <div class="l"><div class="n">Box breathing</div><div class="m">this morning · 06:40</div></div>
+            <div class="r"><div class="v">10:00</div><div class="u">min</div></div>
+          </div>
+          <div class="rrow">
+            <div class="l"><div class="n">4-7-8 downshift</div><div class="m">Tue · before bed — slept 23:05</div></div>
+            <div class="r"><div class="v">8:00</div><div class="u">min</div></div>
+          </div>
+        </div>
+      </div><!-- /sub-recover-mind -->
+    </section>
+
+    <!-- ================= TRENDS ================= -->
+    <section class="view" id="v-trends">
+      <div class="card review">
+        <div class="receipt-h"><span class="microlabel">Week 33 · in review</span><span class="sum">Mon 10 – Sun 16</span></div>
+        <div class="lede">Your strongest week this mesocycle. <b>4 sessions</b>, a bench PR, and sleep midpoint steadied to <b>±24 min</b> — protein landed on target <b>6 of 7 days</b>. The one gap: Thursday's planned legs day never happened, and weekly quad volume is now trailing your split.</div>
+        <div class="wstat">
+          <div><div class="k">Volume</div><div class="n">24.1 t</div></div>
+          <div><div class="k">Deficit</div><div class="n">−214<span style="font-size:10px;color:var(--mute)">/d</span></div></div>
+          <div><div class="k">Sleep</div><div class="n">7:18<span style="font-size:10px;color:var(--mute)">avg</span></div></div>
+          <div><div class="k">Steps</div><div class="n">8,940<span style="font-size:10px;color:var(--mute)">avg</span></div></div>
+        </div>
+        <div class="srcnote">WRITTEN FROM YOUR DATA EVERY SUNDAY 18:00 · NO CHEERLEADING, ONE GAP NAMED PER WEEK</div>
+      </div>
+
+      <div class="card">
+        <div class="receipt-h"><span class="microlabel">August · days logged</span><span class="sum">17 of 20 so far</span></div>
+        <div class="caldays"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+        <div class="calgrid">
+          <i class="future" style="visibility:hidden"></i><i class="future" style="visibility:hidden"></i><i class="future" style="visibility:hidden"></i><i class="future" style="visibility:hidden"></i><i class="on"></i><i class="on"></i><i class="part"></i>
+          <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i>
+          <i class="on"></i><i class="on"></i><i class="part"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i>
+          <i class="on"></i><i class="on"></i><i class="today"></i><i class="future"></i><i class="future"></i><i class="future"></i><i class="future"></i>
+          <i class="future"></i><i class="future"></i><i class="future"></i><i class="future"></i><i class="future"></i><i class="future"></i><i class="future"></i>
+        </div>
+        <div class="srcnote">FILLED = FULL LOG · DIM = PARTIAL · GAPS STAY GRAY — NO FLAMES, NO GUILT, NO RESETTING COUNTERS</div>
+      </div>
+
+      <div class="card receipt">
+        <div class="receipt-h"><span class="microlabel">Records</span><span class="sum">all-time</span></div>
+        <div class="rrow">
+          <div class="l"><div class="n">Incline bench · e1RM</div><div class="m">today — 75 kg × 8 @ RIR 2</div></div>
+          <div class="r"><div class="v" style="color:var(--carbs)">96.3</div><div class="u">kg · new</div></div>
+        </div>
+        <div class="rrow">
+          <div class="l"><div class="n">Fastest 5 km walk</div><div class="m">2 Aug · river loop</div></div>
+          <div class="r"><div class="v">43:56</div><div class="u">8:47 /km</div></div>
+        </div>
+        <div class="rrow">
+          <div class="l"><div class="n">Longest full-log run</div><div class="m">ended 14 Jul · food, training &amp; sleep</div></div>
+          <div class="r"><div class="v">38</div><div class="u">days</div></div>
+        </div>
+      </div>
+
+      <div class="range"><button class="on">14 D</button><button>30 D</button><button>90 D</button></div>
+
+      <div class="card">
+        <div class="receipt-h"><span class="microlabel">Energy balance</span><span class="sum">daily · vs target</span></div>
+        <svg width="100%" height="96" viewBox="0 0 340 96" style="margin-top:14px;display:block">
+          <line x1="0" y1="48" x2="340" y2="48" stroke="#2A2F38" stroke-width="1"/>
+          <g>
+            <rect x="8"   y="48" width="14" height="18" rx="3" fill="#BE5540"/>
+            <rect x="32"  y="30" width="14" height="18" rx="3" fill="#3E9B78"/>
+            <rect x="56"  y="36" width="14" height="12" rx="3" fill="#3E9B78"/>
+            <rect x="80"  y="48" width="14" height="8"  rx="3" fill="#BE5540"/>
+            <rect x="104" y="26" width="14" height="22" rx="3" fill="#3E9B78"/>
+            <rect x="128" y="40" width="14" height="8"  rx="3" fill="#3E9B78"/>
+            <rect x="152" y="48" width="14" height="26" rx="3" fill="#BE5540"/>
+            <rect x="176" y="34" width="14" height="14" rx="3" fill="#3E9B78"/>
+            <rect x="200" y="38" width="14" height="10" rx="3" fill="#3E9B78"/>
+            <rect x="224" y="48" width="14" height="12" rx="3" fill="#BE5540"/>
+            <rect x="248" y="28" width="14" height="20" rx="3" fill="#3E9B78"/>
+            <rect x="272" y="36" width="14" height="12" rx="3" fill="#3E9B78"/>
+            <rect x="296" y="44" width="14" height="4"  rx="3" fill="#3E9B78"/>
+            <rect x="320" y="32" width="14" height="16" rx="3" fill="#3E9B78"/>
+          </g>
+          <text x="0" y="10" class="chart-axis">deficit</text>
+          <text x="0" y="92" class="chart-axis">surplus</text>
+        </svg>
+        <div class="kv" style="margin-top:8px">
+          <span class="srcnote" style="margin-top:0">MEAN · <b style="color:var(--ink2)">−214 kcal / day</b></span>
+          <span class="srcnote" style="margin-top:0">10 OF 14 DAYS IN DEFICIT</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="receipt-h"><span class="microlabel">Training volume</span><span class="sum">weekly · kg</span></div>
+        <svg width="100%" height="80" viewBox="0 0 340 80" style="margin-top:14px;display:block">
+          <line x1="0" y1="70" x2="340" y2="70" stroke="#22262E" stroke-width="1"/>
+          <rect x="14"  y="38" width="22" height="32" rx="3" fill="#C08432"/>
+          <rect x="66"  y="30" width="22" height="40" rx="3" fill="#C08432"/>
+          <rect x="118" y="34" width="22" height="36" rx="3" fill="#C08432"/>
+          <rect x="170" y="24" width="22" height="46" rx="3" fill="#C08432"/>
+          <rect x="222" y="28" width="22" height="42" rx="3" fill="#C08432"/>
+          <rect x="274" y="18" width="22" height="52" rx="3" fill="#C08432"/>
+          <text x="270" y="12" class="chart-axis" style="fill:#B6BCC6">24.1 t</text>
+        </svg>
+        <div class="srcnote">6 WEEKS · PROGRESSING +4.8% / WK MEAN</div>
+      </div>
+
+      <div class="card corr">
+        <div class="receipt-h"><span class="microlabel">Observed relationship</span><span class="sum mono">r = 0.58 · n = 41</span></div>
+        <div class="stmt">On nights with <b>7 h+ sleep</b>, your next-day session volume ran <b>9% higher</b> on average over the last 90 days.</div>
+        <div class="stat">PEARSON r 0.58 · SHOWN BECAUSE |r| ≥ 0.45 WITH n ≥ 30 OVERLAPPING DAYS · <b>CORRELATION, NOT CAUSE</b></div>
+      </div>
+
+      <div class="card corr">
+        <div class="receipt-h"><span class="microlabel">Checked, not shown</span><span class="sum">2 below threshold</span></div>
+        <div class="stat" style="margin-top:8px">HYDRATION ↔ HRV · r 0.21 — BELOW 0.45, NOT REPORTED<br>STEPS ↔ SLEEP · r 0.14 — BELOW 0.45, NOT REPORTED</div>
+      </div>
+    </section>
+    <!-- ================= SETTINGS ================= -->
+    <section class="view" id="v-settings">
+      <div class="card receipt">
+        <div class="receipt-h"><span class="microlabel">Profile</span><span class="sum">everything editable</span></div>
+        <div class="rrow"><div class="l"><div><div class="n">Eliias</div><div class="m">181 cm · 81.4 kg · metric</div></div></div><div class="r"><div class="v" style="color:var(--faint)">edit →</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Goals</div><div class="m">lose weight + general health · balanced</div></div></div><div class="r"><div class="v" style="color:var(--faint)">change →</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Daily targets</div><div class="m">2,340 kcal · P 180 · sugar cap 36 g · recalibrated weekly</div></div></div><div class="r"><div class="v" style="color:var(--faint)">view →</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Dietary requirements</div><div class="m">coeliac (strict GF) · dairy free</div></div></div><div class="r"><div class="v" style="color:var(--faint)">edit →</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Training setup</div><div class="m">gym + home · 3 items at home</div></div></div><div class="r"><div class="v" style="color:var(--faint)">edit →</div></div></div>
+      </div>
+
+      <div class="card receipt">
+        <div class="receipt-h"><span class="microlabel">Preferences</span></div>
+        <div class="rrow"><div class="l"><div><div class="n">Check-ins</div><div class="m">weekly digest only · no daily nudges</div></div></div><div class="r"><div class="v" style="color:var(--faint)">→</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Connected sources</div><div class="m">Health Connect · Galaxy Watch · Pixel Watch</div></div></div><div class="r"><div class="v" style="color:var(--faint)">→</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Hide the numbers</div><div class="m">log without seeing calories/macros</div></div></div><div class="r"><div class="v" style="color:var(--faint)">off</div></div></div>
+      </div>
+
+      <div class="card receipt">
+        <div class="receipt-h"><span class="microlabel">Your data</span><span class="sum">yours, fully</span></div>
+        <div class="rrow"><div class="l"><div><div class="n">Export everything</div><div class="m">JSON + CSV · one tap, no email-us nonsense</div></div></div><div class="r"><div class="v" style="color:var(--faint)">→</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Doctor report</div><div class="m">monthly PDF — weight, sleep, activity, vitals</div></div></div><div class="r"><div class="v" style="color:var(--faint)">→</div></div></div>
+      </div>
+
+      <div class="card receipt">
+        <div class="receipt-h"><span class="microlabel">Account</span></div>
+        <div class="rrow"><div class="l"><div><div class="n">itseliiasstudy@gmail.com</div><div class="m">Free plan · billing lives here when it exists</div></div></div><div class="r"><div class="v" style="color:var(--faint)">→</div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n">Sign out</div></div></div></div>
+        <div class="rrow"><div class="l"><div><div class="n" style="color:var(--fat)">Delete account &amp; all data</div><div class="m">type-to-confirm · removes every table, every photo, the auth record — complete</div></div></div><div class="r"><div class="v" style="color:var(--fat)">→</div></div></div>
+      </div>
+      <div class="srcnote" style="padding:0 4px">DELETE IS FULL CASCADE — REQUIRED BY GOOGLE PLAY &amp; APP STORE POLICY, AND ALSO JUST RIGHT</div>
+    </section>
+  </main>
+
+  <div id="qsheet">
+    <div class="dim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="qgrid">
+        <div class="qitem"><div class="qi">◫</div><div class="qn">Scan</div></div>
+        <div class="qitem"><div class="qi">✳</div><div class="qn">Meal</div></div>
+        <div class="qitem"><div class="qi">↺</div><div class="qn">Re-log</div></div>
+        <div class="qitem"><div class="qi">▤</div><div class="qn">Water +250</div></div>
+        <div class="qitem"><div class="qi">▲</div><div class="qn">Weight</div></div>
+        <div class="qitem"><div class="qi">◔</div><div class="qn">Breathwork</div></div>
+        <div class="qitem"><div class="qi">▶</div><div class="qn">Session</div></div>
+        <div class="qitem"><div class="qi">⌖</div><div class="qn">Walk</div></div>
+        <div class="qitem"><div class="qi">✎</div><div class="qn">Manual</div></div>
+      </div>
+      <div class="qhint">LOG ANYTHING FROM ANYWHERE · WATER +250 COMMITS INSTANTLY, NO SCREEN</div>
+    </div>
+  </div>
+
+  <nav class="tabbar">
+    <button class="tab on" data-v="today" data-t="Today" data-d="Day 214"><i></i>Today</button>
+    <button class="tab" data-v="log" data-t="Log" data-d="Lunch"><i></i>Log</button>
+    <button class="tab plus" id="qopen"><span class="pbtn">+</span></button>
+    <button class="tab" data-v="train" data-t="Upper A" data-d="22:14 elapsed"><i></i>Train</button>
+    <button class="tab" data-v="recover" data-t="Recover" data-d="Synced 06:58"><i></i>Recover</button>
+    <button class="tab" data-v="trends" data-t="Trends" data-d="Rolling windows"><i></i>Trends</button>
+  </nav>
+</div>
+
+<script>
+  // tab switching
+  const tabs = document.querySelectorAll('.tab');
+  const main = document.querySelector('main');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    if(!t.dataset.v) return; // the + button
+    tabs.forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+    document.getElementById('v-' + t.dataset.v).classList.add('on');
+    document.getElementById('head-t').textContent = t.dataset.t;
+    document.getElementById('head-d').textContent = t.dataset.d;
+    main.scrollTop = 0;
+  }));
+
+  // segmented sub-nav
+  document.querySelectorAll('.seg').forEach(seg => {
+    const view = seg.closest('.view');
+    const prefix = 'sub-' + view.id.slice(2) + '-';
+    seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      seg.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      view.querySelectorAll('.sub').forEach(s => s.classList.remove('on'));
+      document.getElementById(prefix + b.dataset.sub).classList.add('on');
+      main.scrollTop = 0;
+    }));
+  });
+
+  // water ticks (interactive)
+  let cups = 7; const total = 11, ml = 250, goal = 2850;
+  const ticksEl = document.getElementById('water-ticks');
+  function renderTicks(){
+    ticksEl.innerHTML = '';
+    for(let i=0;i<total;i++){const s=document.createElement('i'); if(i<cups)s.classList.add('on'); ticksEl.appendChild(s);}
+    document.getElementById('water-v').textContent = (cups*ml).toLocaleString();
+  }
+  renderTicks();
+  document.getElementById('water-add').addEventListener('click', ()=>{ if(cups<total){cups++; renderTicks();} });
+  ticksEl.addEventListener('click', ()=>{ if(cups<total){cups++; renderTicks();} });
+
+  // settings via gear
+  document.getElementById('gear').addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('on'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+    document.getElementById('v-settings').classList.add('on');
+    document.getElementById('head-t').textContent = 'Settings';
+    document.getElementById('head-d').textContent = 'v0.1 · prototype';
+    main.scrollTop = 0;
+  });
+
+  // quick-log sheet
+  const qs = document.getElementById('qsheet');
+  document.getElementById('qopen').addEventListener('click', () => qs.classList.add('on'));
+  qs.querySelector('.dim').addEventListener('click', () => qs.classList.remove('on'));
+  qs.querySelectorAll('.qitem').forEach(q => q.addEventListener('click', () => qs.classList.remove('on')));
+
+  // onboarding
+  const ob = document.getElementById('onboard');
+  const OB_STEPS = 8;
+  const dotsWrap = document.getElementById('ob-dots');
+  for(let i=0;i<OB_STEPS;i++){const d=document.createElement('i'); if(i===0)d.classList.add('on'); dotsWrap.appendChild(d);}
+  const obDots = dotsWrap.querySelectorAll('i');
+  function obGo(n){
+    ob.querySelectorAll('.ob-step').forEach(s => s.classList.toggle('on', s.dataset.step == n));
+    obDots.forEach((d,i) => d.classList.toggle('on', i < n));
+  }
+  ob.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
+    let n = parseInt(b.dataset.next);
+    // conditional: gym-only skips the home-equipment step (7)
+    if (b.id === 'ob-place-next') {
+      const place = document.querySelector('#ob-place .ob-opt.on');
+      if (place && place.dataset.val === 'gym') n = 8;
+    }
+    obGo(n);
+  }));
+  document.getElementById('ob-skip').addEventListener('click', () => ob.classList.add('off'));
+  document.getElementById('ob-done').addEventListener('click', () => ob.classList.add('off'));
+  // single-select option lists (train location)
+  document.querySelectorAll('#ob-place .ob-opt').forEach(o => o.addEventListener('click', () => {
+    document.querySelectorAll('#ob-place .ob-opt').forEach(x => x.classList.remove('on'));
+    o.classList.add('on');
+  }));
+  // multi-select option lists (goals)
+  document.querySelectorAll('[data-multi] .ob-opt').forEach(o => o.addEventListener('click', () => o.classList.toggle('on')));
+
+  // chips: single-select rows vs multi-select groups
+  document.querySelectorAll('[data-single]').forEach(row => {
+    row.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+      row.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+    }));
+  });
+  document.querySelectorAll('[data-multi-chips] .chip, .chips:not([data-single]):not([data-multi-chips]) .chip').forEach(c =>
+    c.addEventListener('click', () => c.classList.toggle('on')));
+
+  // recipe detail navigation
+  const logSubs = () => document.querySelectorAll('#v-log .sub');
+  document.getElementById('open-ragu').addEventListener('click', () => {
+    logSubs().forEach(s => s.classList.remove('on'));
+    document.getElementById('sub-log-detail').classList.add('on');
+    main.scrollTop = 0;
+  });
+  document.getElementById('back-recipes').addEventListener('click', () => {
+    logSubs().forEach(s => s.classList.remove('on'));
+    document.getElementById('sub-log-recipes').classList.add('on');
+  });
+
+  // serving stepper — scales ingredient quantities from a base of 6 serves
+  const BASE = 6;
+  const ING = [
+    {q:1200,u:'g',  n:'Beef chuck, cubed', fmt:v=>v>=1000?(v/1000).toFixed(1).replace('.0','')+' kg':Math.round(v)+' g'},
+    {q:700, u:'ml', n:'Passata',           fmt:v=>Math.round(v)+' ml'},
+    {q:2,   u:'',   n:'Brown onion',       fmt:v=>'×'+(Math.round(v*2)/2)},
+    {q:300, u:'g',  n:'Carrot, diced',     fmt:v=>Math.round(v)+' g'},
+    {q:4,   u:'',   n:'Garlic cloves',     fmt:v=>'×'+Math.round(v)},
+    {q:250, u:'ml', n:'Red wine (or stock)',fmt:v=>Math.round(v)+' ml'},
+    {q:500, u:'g',  n:'GF pappardelle',    fmt:v=>Math.round(v)+' g'}
+  ];
+  let serves = 6;
+  const ingList = document.getElementById('ing-list');
+  const groBtn = document.getElementById('add-grocery');
+  function renderIng(){
+    document.getElementById('srv-n').textContent = serves;
+    ingList.querySelectorAll('.checkrow').forEach((row,i) => {
+      row.querySelector('.qty').textContent = ING[i].fmt(ING[i].q * serves / BASE);
+    });
+    updateGroBtn();
+  }
+  function updateGroBtn(){
+    const unchecked = ingList.querySelectorAll('.checkrow:not(.done)').length;
+    groBtn.textContent = unchecked ? 'Add ' + unchecked + ' to grocery list' : 'All ingredients on hand';
+  }
+  ING.forEach(ing => {
+    const row = document.createElement('div'); row.className = 'checkrow';
+    row.innerHTML = '<div class="box"></div><span class="qty"></span><span class="ing">' + ing.n + '</span>';
+    row.addEventListener('click', () => { row.classList.toggle('done'); updateGroBtn(); });
+    ingList.appendChild(row);
+  });
+  renderIng();
+  document.getElementById('srv-minus').addEventListener('click', () => { if(serves>1){serves--; renderIng();} });
+  document.getElementById('srv-plus').addEventListener('click', () => { if(serves<16){serves++; renderIng();} });
+
+  // grocery list check-off
+  document.querySelectorAll('#sub-log-planner .checkrow').forEach(row => row.addEventListener('click', () => {
+    row.classList.toggle('done');
+    const all = document.querySelectorAll('#sub-log-planner .checkrow').length;
+    const done = document.querySelectorAll('#sub-log-planner .checkrow.done').length;
+    document.getElementById('gro-sum').textContent = all + ' items · ' + done + ' checked';
+  }));
+
+  // breathing pacer label + countdown (synced to the 16s CSS cycle)
+  const PHASES = ['Inhale','Hold','Exhale','Hold'];
+  let pt = 0;
+  setInterval(() => {
+    pt = (pt + 1) % 16;
+    const lbl = document.getElementById('pacer-label');
+    const sec = document.getElementById('pacer-sec');
+    if (lbl && sec){ lbl.textContent = PHASES[Math.floor(pt/4)]; sec.textContent = 4 - (pt % 4); }
+  }, 1000);
+
+  // guided set timer (plank demo): lead-in -> work -> rest (last-5 warning) x sets
+  (function(){
+    const WORK=50, REST=20, SETS=4, LEAD=5;
+    const num=document.getElementById('gt-num'), phase=document.getElementById('gt-phase'),
+          fill=document.getElementById('gt-fill'), go=document.getElementById('gt-go'),
+          setsEl=document.getElementById('gt-sets');
+    if(!num) return;
+    let ac=null;
+    function beep(freq,dur,n){ try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+      for(let i=0;i<(n||1);i++){ const o=ac.createOscillator(),g=ac.createGain();
+        o.frequency.value=freq; o.connect(g); g.connect(ac.destination);
+        const t=ac.currentTime+i*0.22; g.gain.setValueAtTime(0.12,t); g.gain.exponentialRampToValueAtTime(0.001,t+(dur||0.15));
+        o.start(t); o.stop(t+(dur||0.15)); } }catch(e){} }
+    let timer=null, state='idle';
+    function marks(cur,done){ [...setsEl.children].forEach((m,i)=>{ m.className = i<done?'done':(i===cur?'now':''); }); }
+    function run(){
+      let set=0, mode='lead', t=LEAD, total=LEAD;
+      state='running'; go.textContent='STOP';
+      marks(0,0);
+      timer=setInterval(()=>{
+        t--;
+        if(mode==='lead'){ num.className='gt-num'; phase.textContent='Get set — set '+(set+1)+' of '+SETS;
+          if(t<=0){ mode='work'; t=WORK; total=WORK; beep(880,0.15); phase.textContent='WORK — set '+(set+1)+' of '+SETS; }
+        } else if(mode==='work'){ num.className='gt-num'; phase.textContent='WORK — set '+(set+1)+' of '+SETS;
+          if(t<=0){ beep(660,0.3); set++; marks(set,set);
+            if(set>=SETS){ finish(); return; }
+            mode='rest'; t=REST; total=REST; }
+        } else if(mode==='rest'){ num.className = t<=5 ? 'gt-num warn':'gt-num rest';
+          phase.textContent = t<=5 ? 'NEXT SET IN…' : 'Rest — breathe';
+          if(t===5) beep(880,0.12,2);
+          if(t<=0){ mode='work'; t=WORK; total=WORK; beep(880,0.15); }
+        }
+        num.textContent=Math.max(t,0); fill.style.width=(100*(1-t/total))+'%';
+      },1000);
+    }
+    function finish(){ clearInterval(timer); state='idle'; num.textContent='✓'; num.className='gt-num';
+      phase.textContent='4 × 50 s logged'; fill.style.width='100%'; go.textContent='GO AGAIN'; beep(660,0.2,3); marks(-1,SETS); }
+    go.addEventListener('click',()=>{ if(state==='running'){ clearInterval(timer); state='idle'; go.textContent='GO';
+        num.textContent=WORK; num.className='gt-num'; phase.textContent='Ready — tap go'; fill.style.width='0%'; marks(-1,0); }
+      else { num.textContent=LEAD; run(); } });
+  })();
+
+  // rest timer counts down
+  let rest = 84;
+  const restEl = document.getElementById('rest-t');
+  const iv = setInterval(()=>{ if(rest>0){rest--; restEl.textContent = String(Math.floor(rest/60)).padStart(2,'0')+':'+String(rest%60).padStart(2,'0');} else {restEl.textContent='DONE'; clearInterval(iv);} },1000);
+  document.getElementById('rest-skip').addEventListener('click', ()=>{ rest=0; });
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+packages:
+  - 'app'
+  - 'packages/*'
+
+# pnpm v10 blocks postinstall scripts by default; esbuild backs vitest.
+onlyBuiltDependencies:
+  - esbuild
