@@ -1,7 +1,8 @@
 # Play Console — Draft Answers (transcribe, don't decide)
 
 **Status: DRAFT** — answers assume the privacy policy is published at its final URL
-(placeholder below: `https://<pages-url>/privacy.html`) and AI quick-add stays enabled.
+(URLs below are final: `https://basalt.itseliias.com/`) and AI quick-add stays enabled.
+**Both pages still carry a DRAFT banner pending your review — remove it before store submission.**
 If either changes, revisit the marked answers.
 
 ## 1 · Data safety form
@@ -12,7 +13,7 @@ If either changes, revisit the marked answers.
 |---|---|
 | Does your app collect or share any of the required user data types? | **Yes** (collects; does not share for advertising) |
 | Is all of the user data collected by your app encrypted in transit? | **Yes** (TLS to Supabase and every named endpoint) |
-| Do you provide a way for users to request that their data is deleted? | **Yes** — in-app full deletion + web request page (`https://<pages-url>/delete-account.html`) |
+| Do you provide a way for users to request that their data is deleted? | **Yes** — in-app full deletion + web request page (`https://basalt.itseliias.com/delete-account/`) |
 
 ### Data types — declare COLLECTED (not shared) unless noted
 
@@ -33,8 +34,8 @@ ephemeral-processing question **Yes** for this flow (the text is processed to re
 estimate; Anthropic API data is not used for training). State it in the privacy policy
 regardless — it is stated there.
 
-**Account deletion URL:** `https://<pages-url>/delete-account.html`
-**Privacy policy URL:** `https://<pages-url>/privacy.html`
+**Account deletion URL:** `https://basalt.itseliias.com/delete-account/`
+**Privacy policy URL:** `https://basalt.itseliias.com/privacy/`
 
 ### Data deletion
 
@@ -56,7 +57,7 @@ Google's separate approval form for apps requesting HC permissions in production
 | Is HC data shared with third parties? | **No** — stored only in the user's own account (Supabase, RLS-scoped) |
 | Is HC data used for machine learning? | **No** |
 | Can users delete HC-derived data? | **Yes** — individually in-app, or entirely via account deletion (full cascade) |
-| Privacy policy explains HC data use? | **Yes** — dedicated Health Connect section at `https://<pages-url>/privacy.html` |
+| Privacy policy explains HC data use? | **Yes** — dedicated Health Connect section at `https://basalt.itseliias.com/privacy/` |
 
 **Justification paragraph (paste-ready):** Basalt is a personal health ledger. It reads the
 Health Connect record types the user explicitly approves and displays that data back to the

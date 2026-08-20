@@ -22,10 +22,11 @@ that resolves them.
   URL + attribution change, both pinned by tests that will fail loudly on the
   swap until updated.
 
-- [~] **Play account-deletion web page — drafted (Phase A).** Page + privacy
-  policy live in `docs/site/` and on the `gh-pages` branch, DRAFT-marked.
-  **Remaining: owner review, contact-email fill-in, and a Pages hosting
-  decision (free-plan private repos can't enable Pages).** Original item: Play requires a *web* URL where
+- [~] **Play account-deletion web page — live, pending review (Phase A+C).**
+  Published at `https://basalt.itseliias.com/delete-account/` (public repo
+  `ItsEliias/basalt-site`, GitHub Pages + custom domain). **Remaining: your
+  review, then remove the DRAFT banner** in `basalt-site/delete-account/index.html`
+  and re-push. Original item: Play requires a *web* URL where
   users can request account deletion without reinstalling the app. The
   in-app path (Settings → type-DELETE → `delete-account` Edge Function) is
   done; the public page is not. A minimal static page + a small Edge Function
@@ -46,8 +47,10 @@ that resolves them.
   shared with third parties" holds ONLY while AI quick-add is disclosed:
   free-text food descriptions are sent to Anthropic's API — declare it.
 
-- [~] **Privacy policy — drafted (Phase A).** `docs/site/privacy.html`,
-  DRAFT-marked, review pending. Original item: Required by Play for any app, doubly so with health
+- [~] **Privacy policy — live, pending review (Phase A+C).** Published at
+  `https://basalt.itseliias.com/privacy/` (repo `ItsEliias/basalt-site`).
+  **Remaining: your review + contact-email fill-in, then remove the DRAFT
+  banner** in `basalt-site/privacy/index.html` and re-push. Original item: Required by Play for any app, doubly so with health
   data + Health Connect (Google requires HC data use to be listed
   explicitly). Must name: what's collected per table, Supabase hosting,
   Anthropic processing for AI quick-add (with the ~-estimate framing), OSM/
