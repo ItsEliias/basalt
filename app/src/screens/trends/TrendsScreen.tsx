@@ -7,6 +7,7 @@ import {
 import { activeDaysFor, currentAndLongest, monthCells, loadWeekReview, type WeekReview } from '@basalt/analytics';
 import { e1rm } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
+import { useAppStore } from '../../state/appStore';
 
 // Trends — everything here is computed from the ledger or absent. Gaps stay
 // gray, streak resets don't shame, and there are no charts until there is
@@ -19,6 +20,7 @@ export function TrendsScreen() {
   const [anyDays, setAnyDays] = useState<Set<string> | null>(null);
   const [records, setRecords] = useState<Records | null>(null);
   const [review, setReview] = useState<WeekReview | null>(null);
+  const hideNumbers = useAppStore((s) => s.profile?.hideNumbers ?? false);
 
   useEffect(() => {
     void (async () => {
@@ -91,7 +93,7 @@ export function TrendsScreen() {
             <Text style={styles.lede}>{review.lede}</Text>
             {review.stats.length > 0 ? (
               <View style={styles.wstatRow}>
-                {review.stats.map((s) => (
+                {review.stats.filter((s) => !(hideNumbers && (s.k === 'Deficit' || s.k === 'Surplus'))).map((s) => (
                   <View key={s.k} style={styles.wstat}>
                     <Text style={styles.wstatK}>{s.k}</Text>
                     <Text style={styles.wstatV}>{s.v}</Text>

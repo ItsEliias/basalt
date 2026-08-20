@@ -30,6 +30,8 @@ export type ProfileRecord = {
   stressLevel: string | null;
   motivations: string[];
   checkinPreference: 'quiet' | 'weekly' | 'daily' | null;
+  /** ED-sensitive display mode: log everything, show no nutrition numbers. */
+  hideNumbers: boolean;
   useMetric: boolean;
 };
 
@@ -57,6 +59,7 @@ function mapProfile(r: any): ProfileRecord {
     stressLevel: r.stress_level ?? null,
     motivations: r.motivations ?? [],
     checkinPreference: r.checkin_preference ?? null,
+    hideNumbers: r.hide_numbers ?? false,
     useMetric: r.use_metric ?? true,
   };
 }
@@ -71,7 +74,7 @@ function profilePayload(p: Partial<ProfileRecord>): Record<string, unknown> {
     ['dietaryFlags', 'dietary_flags'], ['dietPatterns', 'diet_patterns'], ['trainLocation', 'train_location'],
     ['equipment', 'equipment'], ['jobActivity', 'job_activity'], ['exerciseFrequency', 'exercise_frequency'],
     ['typicalSleep', 'typical_sleep'], ['stressLevel', 'stress_level'], ['motivations', 'motivations'],
-    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'],
+    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'],
   ];
   for (const [key, col] of map) {
     if (p[key] !== undefined) out[col] = p[key];

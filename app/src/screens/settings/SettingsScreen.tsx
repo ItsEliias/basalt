@@ -229,6 +229,16 @@ export function SettingsScreen() {
         {hcStatus ? <SrcNote>{hcStatus}</SrcNote> : (
           <SrcNote>Steps, sleep, vitals and more — read-only, every synced value shows its source</SrcNote>
         )}
+        <ObChipLabel>Nutrition display</ObChipLabel>
+        <Pressable onPress={() => void save({ hideNumbers: !(profile?.hideNumbers ?? false) })} disabled={busy !== null}>
+          <ReceiptRow
+            name="Hide the numbers"
+            meta="log-only mode: everything is still recorded and exported — calories and macros just aren't shown. For anyone the numbers aren't kind to."
+            value={profile?.hideNumbers ? 'on' : 'off'}
+            valueColor={profile?.hideNumbers ? color.carbs : color.faint}
+            last
+          />
+        </Pressable>
         <ObChipLabel>Week in review</ObChipLabel>
         <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null}>
           <ReceiptRow

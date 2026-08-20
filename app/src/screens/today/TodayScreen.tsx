@@ -132,6 +132,7 @@ export function TodayScreen() {
   const sections = data ? groupEntriesByMeal(data.entries) : [];
   const micros = data ? microTotals(data.entries) : [];
   const hero = targets && data ? heroModel(targets, data.totals, data.activeKcal) : null;
+  const hideNumbers = profile?.hideNumbers ?? false;
 
   return (
     <ScrollView
@@ -141,7 +142,18 @@ export function TodayScreen() {
     >
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
       <Card>
-        {hero ? (
+        {hero && hideNumbers ? (
+          <>
+            <MicroLabel>Food</MicroLabel>
+            <Text style={styles.heroSub}>
+              {data && data.entries.length > 0
+                ? `Logged — ${data.entries.length} ${data.entries.length === 1 ? 'item' : 'items'} today`
+                : 'Nothing logged yet today'}
+            </Text>
+            <SrcNote>Numbers hidden at your request · everything is still recorded and stays in your ledger and exports · turn back on in Settings</SrcNote>
+          </>
+        ) : null}
+        {hero && !hideNumbers ? (
           <>
             <KV label="Energy remaining" right={<Text style={styles.targetRatio}><Text style={styles.targetOf}>target</Text> {hero.targetText}</Text>} />
             <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
@@ -165,7 +177,7 @@ export function TodayScreen() {
       </Card>
 
       {/* ── Macros + caps ──────────────────────────────────────────── */}
-      {targets && data ? (
+      {targets && data && !hideNumbers ? (
         <Card>
           <MacroRow name="Protein" dot={color.protein} value={data.totals.protein} target={targets.proteinG} />
           <MacroRow name="Carbohydrate" dot={color.carbs} value={data.totals.carbs} target={targets.carbsG} />
@@ -197,7 +209,9 @@ export function TodayScreen() {
           label="Logged"
           summary={
             data && (data.entries.length > 0 || data.sessions.length > 0)
-              ? `${data.entries.length + data.sessions.length} entries · ${groupInt(data.totals.calories)} kcal`
+              ? hideNumbers
+                ? `${data.entries.length + data.sessions.length} entries`
+                : `${data.entries.length + data.sessions.length} entries · ${groupInt(data.totals.calories)} kcal`
               : undefined
           }
         />
@@ -210,9 +224,10 @@ export function TodayScreen() {
                   <ReceiptRow
                     key={e.id}
                     name={e.foodName}
-                    meta={entryMeta(e)}
-                    value={groupInt(e.calories)}
-                    unit="kcal"
+                    meta={hideNumbers ? undefined : entryMeta(e)}
+                    value={hideNumbers ? '✓' : groupInt(e.calories)}
+                    unit={hideNumbers ? undefined : 'kcal'}
+                    valueColor={hideNumbers ? color.faint : undefined}
                     last={i === s.entries.length - 1}
                   />
                 ))}
