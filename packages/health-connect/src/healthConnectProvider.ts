@@ -107,9 +107,11 @@ const RECORD_TO_PERMISSION: Record<HCRecord, HealthPermission> = {
   ElevationGained:      'elevation',
   Speed:                'speed',
   Power:                'power',
-  // Cycling cadence piggybacks on the `speed` permission surface for now —
-  // no separate HC permission exists and no UI consumes it yet.
-  CyclingPedalingCadence: 'speed',
+  // CyclingPedalingCadenceRecord has no permission of its own — Health
+  // Connect reads it under READ_EXERCISE (verified against the HC data-types
+  // docs and react-native-health-connect's permission table; an earlier
+  // comment here claimed READ_SPEED, which was wrong).
+  CyclingPedalingCadence: 'exercise',
 };
 
 function toRecordType(p: HealthPermission): HCRecord {

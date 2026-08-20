@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { ANDROID_PERMISSION_FOR, ANDROID_HEALTH_PERMISSIONS, ALL_HEALTH_PERMISSIONS } from './manifest';
+import {
+  ANDROID_PERMISSION_FOR, ANDROID_HEALTH_PERMISSIONS, ALL_HEALTH_PERMISSIONS,
+  RECORD_TYPE_ACCOUNTING,
+} from './manifest';
 
 // The regression this file exists to prevent: the source app declared 1 of
 // 28 Health Connect permissions and 27 readers silently failed at runtime.
@@ -57,5 +60,44 @@ describe('Android Health Connect manifest', () => {
     for (const token of ALL_HEALTH_PERMISSIONS) {
       expect(ANDROID_PERMISSION_FOR[token]).toBeTruthy();
     }
+  });
+});
+
+describe('the 28-record-type accounting', () => {
+  it('accounts for exactly 28 record types', () => {
+    expect(RECORD_TYPE_ACCOUNTING).toHaveLength(28);
+    expect(new Set(RECORD_TYPE_ACCOUNTING.map((r) => r.recordType)).size).toBe(28);
+  });
+
+  it('every accounted permission is actually declared in the manifest list', () => {
+    const declared = new Set(ANDROID_HEALTH_PERMISSIONS);
+    for (const r of RECORD_TYPE_ACCOUNTING) {
+      expect(declared.has(r.permission), `${r.recordType} → ${r.permission}`).toBe(true);
+    }
+  });
+
+  it('26 own + 1 shared + 1 nested = 28, resolving to the 26 declared strings', () => {
+    const own = RECORD_TYPE_ACCOUNTING.filter((r) => r.coverage === 'own');
+    const shared = RECORD_TYPE_ACCOUNTING.filter((r) => r.coverage === 'shared');
+    const nested = RECORD_TYPE_ACCOUNTING.filter((r) => r.coverage === 'nested');
+    expect(own).toHaveLength(26);
+    expect(shared).toHaveLength(1);
+    expect(nested).toHaveLength(1);
+    // The own-permission types cover the declared list exactly, one-to-one.
+    expect(new Set(own.map((r) => r.permission)).size).toBe(26);
+    // Every non-own type documents its why.
+    for (const r of [...shared, ...nested]) expect(r.note).toBeTruthy();
+  });
+
+  it('cadence rides READ_EXERCISE (the docs, not the old comment)', () => {
+    const cadence = RECORD_TYPE_ACCOUNTING.find((r) => r.recordType === 'CyclingPedalingCadence')!;
+    expect(cadence.permission).toBe('android.permission.health.READ_EXERCISE');
+    expect(cadence.coverage).toBe('shared');
+  });
+
+  it('sleep stages are nested in SleepSession under READ_SLEEP', () => {
+    const stages = RECORD_TYPE_ACCOUNTING.find((r) => r.recordType === 'SleepStage')!;
+    expect(stages.permission).toBe('android.permission.health.READ_SLEEP');
+    expect(stages.coverage).toBe('nested');
   });
 });
