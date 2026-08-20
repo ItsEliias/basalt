@@ -10,9 +10,9 @@ import {
 } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
-  platesFor, platesText,
+  platesFor, platesText, biasOrder,
   describe as describeGuided,
-  type Exercise, type WorkoutSession,
+  type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -383,10 +383,11 @@ function ExercisePicker({
   hasEquipmentProfile: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const conditions = useAppStore((s) => s.profile?.conditions ?? []);
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<string | null>(null);
   const [mineOnly, setMineOnly] = useState(false);
-  const [results, setResults] = useState<Exercise[]>([]);
+  const [results, setResults] = useState<(Exercise & { bias: ConditionBias })[]>([]);
 
   const MUSCLES = ['chest', 'shoulders', 'quadriceps', 'hamstrings', 'lats', 'middle back', 'biceps', 'triceps', 'abdominals', 'glutes', 'calves'];
 
@@ -398,10 +399,12 @@ function ExercisePicker({
         muscle: muscle ?? undefined,
         equipment: mineOnly ? myEquipment : undefined,
         limit: 40,
-      }).then((r) => r.ok && setResults(r.data));
+      }).then((r) => r.ok && setResults(biasOrder(r.data, conditions)));
     }, 200);
     return () => clearTimeout(t);
-  }, [open, query, muscle, mineOnly, myEquipment]);
+  }, [open, query, muscle, mineOnly, myEquipment, conditions]);
+
+  const biasedCount = results.filter((e) => e.bias.down).length;
 
   return (
     <Modal visible={open} animationType="fade" onRequestClose={onClose}>
@@ -429,7 +432,11 @@ function ExercisePicker({
               <Pressable onPress={() => onPick(e, false)}>
                 <ReceiptRow
                   name={e.name}
-                  meta={[...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · ')}
+                  meta={
+                    e.bias.down
+                      ? `${[...e.primaryMuscles, e.equipment ?? ''].filter(Boolean).join(' · ')} · listed lower — ${e.bias.reason} (you noted ${e.bias.condition?.toLowerCase()})`
+                      : [...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · ')
+                  }
                   value="add"
                   last={i === results.length - 1}
                 />
@@ -443,7 +450,11 @@ function ExercisePicker({
             <EmptyState>No movements match those filters.</EmptyState>
           ) : null}
         </ScrollView>
-        <SrcNote center>Source · free-exercise-db · 873 movements</SrcNote>
+        <SrcNote center>
+          {biasedCount > 0
+            ? `Source · free-exercise-db · ${biasedCount} listed lower for your noted conditions — nothing is hidden, published rules`
+            : 'Source · free-exercise-db · 873 movements'}
+        </SrcNote>
       </View>
     </Modal>
   );
