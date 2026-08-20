@@ -5,3 +5,4 @@ export * from './types';
 export * from './sessions';
 export * from './e1rm';
 export * from './guided-timer';
+export * from './exercises';

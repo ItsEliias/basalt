@@ -7,3 +7,7 @@ export * from './food';
 export * from './water';
 export * from './open-food-facts';
 export * from './recipe-import';
+export * from './targets';
+export * from './hydration-goal';
+export * from './gs1';
+export * from './favorites';

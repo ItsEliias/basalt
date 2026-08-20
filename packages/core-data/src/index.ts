@@ -7,3 +7,4 @@ export * from './supabase';
 export * from './user';
 export * from './daily-log';
 export * from './sync';
+export * from './profile';
