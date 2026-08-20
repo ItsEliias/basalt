@@ -9,3 +9,4 @@ export * from './exercises';
 export * from './plates';
 export * from './gps';
 export * from './walks';
+export * from './route-map';
