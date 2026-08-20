@@ -1,0 +1,21 @@
+{
+  "name": "@basalt/health-connect",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@basalt/core-data": "workspace:*"
+  },
+  "peerDependencies": {
+    "react-native": "0.85.3",
+    "react-native-health-connect": "^3.5.3"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.0",
+    "vitest": "^4.1.9"
+  },
+  "scripts": {
+    "test": "vitest run"
+  }
+}
