@@ -53,6 +53,15 @@ const SUGGESTION_SCHEMA = {
   },
 } as const;
 
+// Model routing. Default chosen by a 20-case A/B on 2026-08-21 (live, via
+// this function): sonnet-5 20/20 passed @ 4.0s median, opus-4-8 18/20 @ 5.2s
+// (two borderline range misses), haiku-4-5 15/20 @ 2.7s (real misses: Tim Tam
+// 3× over, 3-item smoothie split) — so sonnet-5 is the default: equal-or-
+// better quality than opus here, faster, and cheaper. Haiku did not hold.
+// Callers may override with any whitelisted model (used by the A/B harness).
+const DEFAULT_MODEL = 'claude-sonnet-5';
+const ALLOWED_MODELS = new Set(['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5']);
+
 const SYSTEM = `You estimate nutrition for food descriptions in a health-tracking app.
 Rules:
 - One item per distinct food in the description. Use the portion the user stated; when unstated, assume a typical single serving and say so in portion_note (e.g. "assumed 1 medium banana, ~120 g").
@@ -83,29 +92,37 @@ Deno.serve(async (req) => {
   }
 
   let description = '';
+  let model = DEFAULT_MODEL;
   try {
     const body = await req.json();
     description = String(body?.description ?? '').trim();
+    if (body?.model !== undefined) model = String(body.model);
   } catch {
     return json({ error: 'Invalid request body.' }, 400);
   }
   if (!description || description.length > 1000) {
     return json({ error: 'Describe the food in 1–1000 characters.' }, 400);
   }
+  if (!ALLOWED_MODELS.has(model)) {
+    return json({ error: 'Unsupported model.' }, 400);
+  }
 
   const anthropic = new Anthropic({ apiKey });
   try {
+    // Haiku 4.5 predates adaptive thinking and the effort knob — for it,
+    // send neither; the other models get adaptive thinking at low effort.
+    const format = { type: 'json_schema', schema: SUGGESTION_SCHEMA } as const;
+    const tuning =
+      model === 'claude-haiku-4-5'
+        ? { output_config: { format } }
+        : { thinking: { type: 'adaptive' }, output_config: { effort: 'low', format } };
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-8',
+      model,
       max_tokens: 2048,
-      thinking: { type: 'adaptive' },
-      output_config: {
-        effort: 'low',
-        format: { type: 'json_schema', schema: SUGGESTION_SCHEMA },
-      },
+      ...tuning,
       system: SYSTEM,
       messages: [{ role: 'user', content: description }],
-    });
+    } as never);
 
     if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
       return json({ error: 'Could not produce an estimate for that description.' }, 422);
