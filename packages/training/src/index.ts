@@ -10,3 +10,4 @@ export * from './plates';
 export * from './gps';
 export * from './walks';
 export * from './route-map';
+export * from './condition-bias';
