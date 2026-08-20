@@ -10,7 +10,7 @@ import {
 } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
-  platesFor, platesText, biasOrder,
+  platesFor, platesText, biasOrder, suggestionText,
   describe as describeGuided,
   type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
@@ -220,6 +220,12 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
     <Card>
       {supersetLabel ? <SupersetTag label={supersetLabel} /> : null}
       <ExerciseHead name={ex.exercise.name} meta={exerciseMetaText(ex.exercise.primaryMuscles, ex.exercise.equipment)} />
+      {ex.suggestion ? (
+        <Text style={styles.suggestion}>
+          {suggestionText(ex.suggestion)}
+          {ex.suggestion.kind !== 'first_time' ? ' · a suggestion, never a mandate' : ''}
+        </Text>
+      ) : null}
       {index > 0 ? (
         <Pressable onPress={() => void session.toggleSupersetWithPrevious(ex.sessionExerciseId)}>
           <Text style={styles.linkAction}>
@@ -263,6 +269,18 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
       </View>
       {restHere && session.rest ? (
         <RestTimerBar time={mmss(session.rest.remaining)} onSkip={session.skipRest} />
+      ) : null}
+      {ex.rows.some((r) => r.committed) ? (
+        <View style={styles.fbRow}>
+          <Text style={styles.fbLabel}>THIS FELT</Text>
+          {(['too_easy', 'right', 'too_hard'] as const).map((f) => (
+            <Pressable key={f} onPress={() => void session.giveFeedback(ex.sessionExerciseId, f)}>
+              <Text style={[styles.fbChip, ex.feedback === f && styles.fbChipOn]}>
+                {f === 'too_easy' ? 'TOO EASY' : f === 'right' ? 'RIGHT' : 'TOO HARD'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       ) : null}
       <CommentSheet
         open={commentFor !== null}
@@ -467,6 +485,15 @@ const styles = StyleSheet.create({
   addSet: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
   rowActions: { flexDirection: 'row', justifyContent: 'space-between' },
   linkAction: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
+  suggestion: { fontFamily: mono, fontSize: 9.5, letterSpacing: 0.38, color: color.mute, lineHeight: 15, marginTop: 6 },
+  fbRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
+  fbLabel: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint },
+  fbChip: {
+    fontFamily: mono, fontSize: 9, letterSpacing: 0.7, color: color.mute,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
+    paddingHorizontal: 10, paddingVertical: 5, overflow: 'hidden',
+  },
+  fbChipOn: { color: color.ink, borderColor: color.ink2 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
     backgroundColor: color.surface,
