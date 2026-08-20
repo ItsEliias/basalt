@@ -8,7 +8,7 @@ function entry(partial: Partial<FoodEntryRow>): FoodEntryRow {
     id: 'e', logId: 'l', userId: 'u', mealType: 'breakfast', foodName: 'Food',
     brand: null, calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0,
     sodiumMg: 0, saturatedFat: 0, servingSize: 100, servingUnit: 'g', quantity: 1,
-    barcode: null, source: 'manual', extSource: null, extId: null, micros: null,
+    barcode: null, photoPath: null, source: 'manual', extSource: null, extId: null, micros: null,
     createdAt: '2026-08-20T07:12:00',
     ...partial,
   };

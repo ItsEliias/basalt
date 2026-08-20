@@ -23,7 +23,7 @@ If either changes, revisit the marked answers.
 | Health & fitness | Health info | Yes, optional | App functionality | Food/nutrition logs, weight, sleep (+stages), water, mindfulness, conditions/medications the user opts to note; Health Connect reads the user approves |
 | Health & fitness | Fitness info | Yes, optional | App functionality | Workouts, sets, walks |
 | Location | Precise location | Yes, optional | App functionality | GPS walk routes, only while recording a walk; stored in the user's account; never shared |
-| Photos & videos | — | **No** | — | Camera is used on-device for barcode scanning; no image is stored or uploaded (declare camera use, not photo collection) |
+| Photos & videos | Photos | **Yes, optional** | App functionality | Food-entry photos the user chooses to attach — stored in a private per-user bucket (RLS), shown via short-lived signed URLs, deleted with the entry or the account; never shared. Barcode scanning remains on-device with nothing stored |
 | App activity / App info | — | **No** | — | No analytics, no crash reporting, no advertising SDKs |
 
 **"Data shared" section:** declare **user-provided food descriptions are processed by a
@@ -78,6 +78,6 @@ them, and is fully deletable in-app.
 ## 4 · Revisit-if
 
 - AI quick-add disabled → remove the Anthropic service-provider declaration.
-- Photo attachments ship → Photos becomes a collected type (opt-in, app functionality).
+- ~~Photo attachments ship → Photos becomes a collected type~~ — landed (food-entry photos, optional); the data-safety table above reflects it.
 - Tile provider swap → no data-safety change (tile fetches reveal only viewed map area, no
   user identifier is sent), but keep the privacy policy's provider name current.
