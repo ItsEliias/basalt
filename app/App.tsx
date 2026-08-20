@@ -8,10 +8,14 @@ import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
 import { FadeIn } from './src/components/FadeIn';
 import { QuickLogSheet, type QuickAction } from './src/components/QuickLogSheet';
+import * as Haptics from 'expo-haptics';
+import { addWater } from '@basalt/nutrition';
+import { supabase } from './src/lib/supabase';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
+import { TodayScreen } from './src/screens/today/TodayScreen';
 import {
-  TodayShell, LogShell, TrainShell, RecoverShell, TrendsShell, SettingsShell,
+  LogShell, TrainShell, RecoverShell, TrendsShell, SettingsShell,
 } from './src/screens/shells';
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
@@ -36,21 +40,28 @@ function MainShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const quickLogOpen = useAppStore((s) => s.quickLogOpen);
   const setQuickLogOpen = useAppStore((s) => s.setQuickLogOpen);
+  const bumpToday = useAppStore((s) => s.bumpToday);
 
   const view: ViewKey = settingsOpen ? 'settings' : tab;
 
   const onQuickAction = (a: QuickAction) => {
-    // Routed for real as each surface lands; water is handled by TodayScreen's
-    // instant-commit path once wired.
+    if (a === 'water') {
+      // +250 commits instantly — no confirmation screen, ever.
+      void addWater(supabase, 250).then(() => {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        bumpToday();
+      });
+      return;
+    }
     if (a === 'scan' || a === 'meal' || a === 'relog' || a === 'manual') setTab('log');
     if (a === 'session') setTab('train');
     if (a === 'breathwork') setTab('recover');
-    if (a === 'weight' || a === 'water') setTab('today');
+    if (a === 'weight') setTab('today');
     setSettingsOpen(false);
   };
 
   const body: Record<ViewKey, React.ReactNode> = {
-    today: <TodayShell />,
+    today: <TodayScreen />,
     log: <LogShell />,
     train: <TrainShell />,
     recover: <RecoverShell />,

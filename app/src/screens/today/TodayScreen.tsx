@@ -1,0 +1,279 @@
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule,
+  MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag,
+  TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow,
+  color, mono, groupInt,
+} from '@basalt/ui';
+import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
+import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
+import { healthService } from '@basalt/health-connect';
+import { todayISO } from '@basalt/core-data';
+import { supabase } from '../../lib/supabase';
+import { useAppStore } from '../../state/appStore';
+import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, type SessionRow } from './model';
+
+// Today — the ledger's front page. Everything on it is real or absent:
+// targets from the versioned row, entries from the receipt tables, steps
+// only when a source granted them, active energy only when measured.
+
+type TodayData = {
+  entries: FoodEntryRow[];
+  totals: DailyTotals;
+  waterMl: number;
+  sessions: (SessionRow & { setCount: number; volumeKg: number })[];
+  steps: number | null;
+  activeKcal: number | null;
+};
+
+const EMPTY_TOTALS: DailyTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodiumMg: 0 };
+
+async function loadToday(): Promise<TodayData> {
+  const [entriesR, totalsR, waterR, sessionsR] = await Promise.all([
+    getFoodEntriesForDay(supabase),
+    getDailyTotals(supabase),
+    getWaterForDay(supabase),
+    listRecentSessions(supabase, 10),
+  ]);
+
+  const today = todayISO();
+  const todaySessions = (sessionsR.ok ? sessionsR.data : []).filter((s) => s.startedAt.slice(0, 10) === today);
+  const sessions: TodayData['sessions'] = [];
+  for (const s of todaySessions) {
+    const d = await getSessionDetail(supabase, s.id);
+    if (!d.ok) continue;
+    const sets = d.data.exercises.flatMap((e) => e.sets);
+    const minutes = s.endedAt ? (Date.parse(s.endedAt) - Date.parse(s.startedAt)) / 60000 : null;
+    sessions.push({
+      title: s.notes?.trim() || 'Training session',
+      meta: sessionMeta(sets.length, sessionVolumeKg(sets), minutes),
+      startedAt: s.startedAt,
+      setCount: sets.length,
+      volumeKg: sessionVolumeKg(sets),
+    });
+  }
+
+  // Health Connect — real-or-hidden: only surface numbers a source granted.
+  let steps: number | null = null;
+  let activeKcal: number | null = null;
+  const avail = await healthService.isAvailable();
+  if (avail.ok && avail.data === 'available') {
+    const granted = await healthService.getGrantedPermissions();
+    if (granted.ok && granted.data.includes('steps')) {
+      const s = await healthService.getStepsForDay();
+      if (s.ok && s.data > 0) steps = s.data;
+    }
+    if (granted.ok && granted.data.includes('activeCalories')) {
+      const a = await healthService.getActiveCaloriesForDay();
+      if (a.ok && a.data > 0) activeKcal = a.data;
+    }
+  }
+
+  return {
+    entries: entriesR.ok ? entriesR.data : [],
+    totals: totalsR.ok ? totalsR.data : EMPTY_TOTALS,
+    waterMl: waterR.ok ? waterR.data : 0,
+    sessions,
+    steps,
+    activeKcal,
+  };
+}
+
+export function TodayScreen() {
+  const targets = useAppStore((s) => s.targets);
+  const profile = useAppStore((s) => s.profile);
+  const todayVersion = useAppStore((s) => s.todayVersion);
+  const [data, setData] = useState<TodayData | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setData(await loadToday());
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh, todayVersion]);
+
+  const onPull = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
+
+  const waterTarget = targets?.waterMl ?? hydrationGoalMl(null, 0, []);
+  const tickMl = 250;
+  const totalTicks = Math.max(1, Math.ceil(waterTarget / tickMl));
+
+  const onAddWater = async () => {
+    const r = await addWater(supabase, tickMl);
+    if (r.ok && data) setData({ ...data, waterMl: r.data });
+  };
+  const onUndoWater = async () => {
+    const r = await undoLastWater(supabase);
+    if (r.ok && data) setData({ ...data, waterMl: r.data });
+  };
+
+  const sections = data ? groupEntriesByMeal(data.entries) : [];
+  const micros = data ? microTotals(data.entries) : [];
+  const hero = targets && data ? heroModel(targets, data.totals, data.activeKcal) : null;
+
+  return (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
+    >
+      {/* ── Hero: energy remaining ─────────────────────────────────── */}
+      <Card>
+        {hero ? (
+          <>
+            <KV label="Energy remaining" right={<Text style={styles.targetRatio}><Text style={styles.targetOf}>target</Text> {hero.targetText}</Text>} />
+            <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
+            <Text style={styles.heroSub}>{hero.subParts.join(' · ')}</Text>
+            <SegmentedStack
+              segments={[
+                { fraction: hero.stack[0]?.fraction ?? 0, fill: color.protein },
+                { fraction: hero.stack[1]?.fraction ?? 0, fill: color.carbs },
+                { fraction: hero.stack[2]?.fraction ?? 0, fill: color.fat },
+              ]}
+            />
+          </>
+        ) : (
+          <>
+            <MicroLabel>Energy</MicroLabel>
+            <EmptyState>
+              No daily targets yet. Finish onboarding in Settings → Profile and your energy budget appears here.
+            </EmptyState>
+          </>
+        )}
+      </Card>
+
+      {/* ── Macros + caps ──────────────────────────────────────────── */}
+      {targets && data ? (
+        <Card>
+          <MacroRow name="Protein" dot={color.protein} value={data.totals.protein} target={targets.proteinG} />
+          <MacroRow name="Carbohydrate" dot={color.carbs} value={data.totals.carbs} target={targets.carbsG} />
+          <MacroRow name="Fat" dot={color.fat} value={data.totals.fat} target={targets.fatG} />
+          <MacroRow name="Fibre" dot={color.faint} value={data.totals.fiber} target={targets.fiberG} />
+          {targets.sugarCapG !== null || targets.sodiumCapMg !== null ? (
+            <>
+              <Rule />
+              <MicroLabel faint>Caps — under is the goal</MicroLabel>
+              {targets.sugarCapG !== null ? (
+                <CapRow name="Added sugar" value={data.totals.sugar} cap={targets.sugarCapG} />
+              ) : null}
+              {targets.sodiumCapMg !== null ? (
+                <CapRow name="Sodium" value={data.totals.sodiumMg / 1000} cap={targets.sodiumCapMg / 1000} decimals={1} />
+              ) : null}
+            </>
+          ) : null}
+          <SrcNote>
+            {targets.reason
+              ? `Targets: ${targets.reason} Over a cap is stated plainly, never hidden — and never scolded.`
+              : 'Targets from your goal + habits questionnaire · over a cap is stated plainly, never hidden — and never scolded'}
+          </SrcNote>
+        </Card>
+      ) : null}
+
+      {/* ── Logged receipt ─────────────────────────────────────────── */}
+      <Card>
+        <ReceiptHeader
+          label="Logged"
+          summary={
+            data && (data.entries.length > 0 || data.sessions.length > 0)
+              ? `${data.entries.length + data.sessions.length} entries · ${groupInt(data.totals.calories)} kcal`
+              : undefined
+          }
+        />
+        {data && (data.entries.length > 0 || data.sessions.length > 0) ? (
+          <>
+            {sections.map((s) => (
+              <View key={s.meal}>
+                <MealTag>{`${s.label}${s.time ? ` — ${s.time}` : ''}`}</MealTag>
+                {s.entries.map((e, i) => (
+                  <ReceiptRow
+                    key={e.id}
+                    name={e.foodName}
+                    meta={entryMeta(e)}
+                    value={groupInt(e.calories)}
+                    unit="kcal"
+                    last={i === s.entries.length - 1}
+                  />
+                ))}
+              </View>
+            ))}
+            {data.sessions.map((s, i) => (
+              <View key={`sess-${i}`}>
+                <MealTag>{`Training — ${new Date(s.startedAt).toTimeString().slice(0, 5)}`}</MealTag>
+                <ReceiptRow name={s.title} meta={s.meta} last />
+              </View>
+            ))}
+            <SrcNote>Tap any entry to edit · every value from your own log</SrcNote>
+          </>
+        ) : (
+          <EmptyState>
+            Nothing logged yet today. Scan a barcode, add a meal or start a session — it all lands here.
+          </EmptyState>
+        )}
+      </Card>
+
+      {/* ── Micronutrients — only with source data ─────────────────── */}
+      {micros.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Micronutrients" summary="from logged foods" />
+          <View style={{ marginTop: 8 }}>
+            {micros.slice(0, 8).map((m) => (
+              <MicroRow key={m.name} name={m.name} pct={m.pct} />
+            ))}
+          </View>
+          <SrcNote>Only nutrients with source data are shown — no estimates presented as fact</SrcNote>
+        </Card>
+      ) : null}
+
+      {/* ── Tiles: steps + water ───────────────────────────────────── */}
+      <TileGrid>
+        {data?.steps != null ? (
+          <StatTile label="Steps" source="Health Connect" value={groupInt(data.steps)} />
+        ) : (
+          <EmptyTile
+            label="Steps"
+            message="No step source connected. Connect Health Connect in Recover to see movement here."
+          />
+        )}
+        <View style={{ flexBasis: '47%', flexGrow: 1 }}>
+          <StatTile
+            label="Water"
+            value={data ? groupInt(data.waterMl) : '—'}
+            unit={`/ ${groupInt(waterTarget)} ml`}
+          >
+            <WaterTicks
+              total={totalTicks}
+              filled={data ? Math.min(totalTicks, Math.floor(data.waterMl / tickMl)) : 0}
+              onAdd={onAddWater}
+            />
+            <TickCaption left="+250 tap" right="undo −250" onPressLeft={onAddWater} />
+            <SrcNote>
+              {profile
+                ? 'Goal from the bodyweight formula: weight × 32 ml + activity + goal'
+                : 'Default goal — add your weight for a personal one'}
+            </SrcNote>
+          </StatTile>
+        </View>
+      </TileGrid>
+      <Text onPress={onUndoWater} style={styles.undo}>UNDO LAST WATER</Text>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: color.bg },
+  content: { paddingHorizontal: 16, paddingBottom: 24 },
+  targetRatio: { fontFamily: mono, fontSize: 12, color: color.ink2 },
+  targetOf: { color: color.faint },
+  heroSub: { fontFamily: mono, fontSize: 11.5, color: color.mute, marginTop: 10 },
+  undo: {
+    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.95, color: color.faint,
+    textAlign: 'center', marginTop: 14, paddingVertical: 4,
+  },
+});

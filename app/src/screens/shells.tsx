@@ -15,7 +15,7 @@ function Shell({ label, message }: { label: string; message: string }) {
   );
 }
 
-export function TodayShell() {
+function TodayShell_unused() {
   return <Shell label="Today" message="Nothing logged yet today. Log food, water or a session and it shows up here." />;
 }
 export function LogShell() {

@@ -15,10 +15,13 @@ type AppState = {
   /** True once profile/targets have been fetched for the current session. */
   bootstrapped: boolean;
   quickLogOpen: boolean;
+  /** Bumped after quick-log writes so open screens refetch. */
+  todayVersion: number;
 
   init: () => void;
   refreshCore: () => Promise<void>;
   setQuickLogOpen: (open: boolean) => void;
+  bumpToday: () => void;
   signOut: () => Promise<void>;
 };
 
@@ -29,6 +32,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   targets: null,
   bootstrapped: false,
   quickLogOpen: false,
+  todayVersion: 0,
 
   init: () => {
     supabase.auth.getSession().then(({ data }) => {
@@ -55,6 +59,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setQuickLogOpen: (open) => set({ quickLogOpen: open }),
+
+  bumpToday: () => set((s) => ({ todayVersion: s.todayVersion + 1 })),
 
   signOut: async () => {
     await supabase.auth.signOut();

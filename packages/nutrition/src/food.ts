@@ -55,7 +55,11 @@ export type FoodEntryInput = {
   quantity?: number;      // default 1
   barcode?: string;
   source?: FoodSource;    // default 'manual'
+  /** Micronutrients present in the SOURCE data only — never estimated. */
+  micros?: Record<string, MicroValue>;
 };
+
+export type MicroValue = { amount?: number; unit?: string; pctTarget?: number };
 
 export type FoodEntryRow = {
   id: string;
@@ -79,6 +83,7 @@ export type FoodEntryRow = {
   source: FoodSource;
   extSource: string | null;
   extId: string | null;
+  micros: Record<string, MicroValue> | null;
   createdAt: string;
 };
 
@@ -116,6 +121,7 @@ function mapRow(r: any): FoodEntryRow {
     source: r.source ?? 'manual',
     extSource: r.ext_source ?? null,
     extId: r.ext_id ?? null,
+    micros: r.micros ?? null,
     createdAt: r.created_at,
   };
 }
@@ -140,6 +146,7 @@ function insertPayloadFrom(input: FoodEntryInput, logId: string, userId: string)
     quantity: input.quantity ?? 1,
     barcode: input.barcode ?? null,
     source: input.source ?? 'manual',
+    micros: input.micros ?? null,
   };
 }
 
