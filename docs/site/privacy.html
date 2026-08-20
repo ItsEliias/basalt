@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Basalt — Privacy Policy (DRAFT)</title>
+<style>
+  :root{--bg:#0F1115;--surface:#16181D;--border:#22262E;--ink:#F4F5F6;--ink2:#B6BCC6;--mute:#8A919D;--faint:#565D69;--green:#3E9B78;--red:#BE5540}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink2);font:15px/1.65 -apple-system,"Segoe UI",Roboto,sans-serif;padding:32px 20px 80px}
+  main{max-width:680px;margin:0 auto}
+  .draft{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.14em;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:8px 12px;margin-bottom:28px}
+  h1{color:var(--ink);font-size:26px;letter-spacing:-.01em;margin-bottom:4px}
+  .sub{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-bottom:36px}
+  h2{color:var(--ink);font-size:17px;margin:36px 0 10px;padding-top:20px;border-top:1px solid var(--border)}
+  p{margin-bottom:12px}
+  ul{margin:0 0 12px 20px}
+  li{margin-bottom:6px}
+  strong{color:var(--ink);font-weight:600}
+  .note{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;margin-top:8px}
+  a{color:var(--green)}
+</style>
+</head>
+<body>
+<main>
+  <div class="draft">DRAFT — NOT YET IN FORCE. UNDER REVIEW; NOT LINKED FROM ANY STORE LISTING.</div>
+  <h1>Basalt Privacy Policy</h1>
+  <div class="sub">Basalt: Health &amp; Fitness · draft — effective date to be set at publication</div>
+
+  <p>Basalt is an honest health ledger: food, training, sleep, and vitals, recorded as they
+  happened. This policy follows the same rule the app does — it says what actually happens,
+  in plain language, and nothing it doesn't.</p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li>Your data is <strong>yours</strong>: you can export all of it in one tap, and delete all of it in one flow.</li>
+    <li>There are <strong>no ads, no analytics trackers, and no sale or sharing of your data</strong> for anyone's marketing.</li>
+    <li>The only things that ever leave your device are listed below, each with its reason.</li>
+  </ul>
+
+  <h2>What Basalt stores</h2>
+  <p>When you use Basalt, the following is stored in your account:</p>
+  <ul>
+    <li><strong>Account</strong> — your email address and a password hash (managed by Supabase Auth).</li>
+    <li><strong>Profile &amp; targets</strong> — the onboarding answers you gave: age, sex, height, weight,
+      goals, training location and equipment, dietary flags and allergies, health conditions and
+      medications you chose to note, and the nutrition targets computed from them (with the formula's
+      reasoning stored alongside).</li>
+    <li><strong>Food ledger</strong> — meals, portions and nutrients you log, barcodes you scan, recipes you
+      save or import, meal plans, and your grocery list.</li>
+    <li><strong>Training ledger</strong> — workout sessions, exercises, sets (weight, reps, RIR/RPE,
+      comments), and guided-timer sets.</li>
+    <li><strong>Walks</strong> — distance, duration, pace, elevation, and the simplified GPS route you recorded.</li>
+    <li><strong>Body &amp; recovery</strong> — weight entries, steps, sleep sessions and stages, water,
+      and mindfulness sessions.</li>
+  </ul>
+  <p class="note">Basalt does not upload photos today. A photo field exists in the schema for a future
+  opt-in feature; nothing is stored in it.</p>
+
+  <h2>Where it is stored</h2>
+  <p>Your data is stored in a database hosted by <strong>Supabase</strong>, protected by row-level
+  security: every row is keyed to your account, and no other user can read it. Data is encrypted
+  in transit (TLS). Basalt's staff is one person; there is no data team browsing your ledger.</p>
+
+  <h2>Health Connect</h2>
+  <p>If you connect Android Health Connect, Basalt <strong>reads</strong> the record types you approve
+  (steps, sleep, workouts, vitals and related types — each one is listed in the system permission
+  screen) and stores those readings in your account so they appear in your ledger with their source
+  named. Basalt never writes to Health Connect, and Health Connect data is never used for
+  advertising or shared with third parties. You can disconnect at any time in Health Connect
+  settings; already-synced rows remain in your ledger until you delete them or your account.</p>
+
+  <h2>What leaves your device, and why</h2>
+  <ul>
+    <li><strong>Supabase</strong> — everything in "What Basalt stores", to sync your ledger. That is its job.</li>
+    <li><strong>Anthropic (AI quick-add only)</strong> — when you use AI quick-add, <strong>the food
+      description you type is sent to Anthropic's Claude API</strong> to produce a nutrition estimate.
+      Only that text is sent — never your name, email, ledger, or any other data. Estimates come back
+      marked as estimates (<code>~</code>) and nothing is saved until you confirm it. Under Anthropic's
+      commercial API terms, API inputs and outputs are not used to train their models. If you never
+      use AI quick-add, nothing is ever sent to Anthropic.</li>
+    <li><strong>Open Food Facts</strong> — when you scan a barcode, the barcode digits are sent to the
+      Open Food Facts database to look up the product.</li>
+    <li><strong>Recipe import</strong> — when you paste a recipe URL, Basalt fetches that page to read
+      its recipe data.</li>
+    <li><strong>Map tiles</strong> — when a walk map is shown, map tiles for the route's area are fetched
+      from the tile provider (OpenStreetMap-based). Tile requests necessarily reveal the approximate
+      area being viewed to the provider, as with any map app. Your GPS route itself is never sent to
+      the tile provider.</li>
+  </ul>
+  <p>That is the complete list. There are no analytics SDKs, no advertising SDKs, and no crash
+  trackers phoning home.</p>
+
+  <h2>What Basalt will never do</h2>
+  <ul>
+    <li>Sell your data, or share it with anyone for marketing.</li>
+    <li>Use your health data for advertising.</li>
+    <li>Show you fabricated numbers — and by the same rule, this policy will not fabricate claims.</li>
+  </ul>
+
+  <h2>Export</h2>
+  <p>Settings → Your data exports everything — every table row belonging to your account — as JSON,
+  CSV, or a per-table CSV archive, in one tap. No request forms, no waiting.</p>
+
+  <h2>Deletion</h2>
+  <p>Settings → Delete account &amp; all data removes <strong>every row in every table</strong> belonging
+  to your account, then the sign-in record itself. It runs server-side and is verified — not a
+  soft-delete, not a 30-day queue. See the
+  <a href="./delete-account.html">account deletion page</a> for the full flow and a contact path if
+  you can no longer sign in.</p>
+
+  <h2>Children</h2>
+  <p>Basalt is not directed at children and is intended for users 16 and over.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the change and its date will be stated here plainly. No silent edits.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: <strong>[contact email — to be confirmed before publication]</strong></p>
+
+  <p class="note" style="margin-top:40px">Draft for review · written from what the app actually does ·
+  nothing in this policy is aspirational</p>
+</main>
+</body>
+</html>
