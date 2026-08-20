@@ -4,7 +4,7 @@ import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays,
   color, mono,
 } from '@basalt/ui';
-import { activeDaysFor, currentAndLongest, monthCells } from '@basalt/analytics';
+import { activeDaysFor, currentAndLongest, monthCells, loadWeekReview, type WeekReview } from '@basalt/analytics';
 import { e1rm } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 
@@ -18,13 +18,16 @@ export function TrendsScreen() {
   const [fullDays, setFullDays] = useState<Set<string> | null>(null);
   const [anyDays, setAnyDays] = useState<Set<string> | null>(null);
   const [records, setRecords] = useState<Records | null>(null);
+  const [review, setReview] = useState<WeekReview | null>(null);
 
   useEffect(() => {
     void (async () => {
-      const [full, any] = await Promise.all([
+      const [full, any, wr] = await Promise.all([
         activeDaysFor(supabase, 'full'),
         activeDaysFor(supabase, 'any'),
+        loadWeekReview(supabase, new Date()),
       ]);
+      if (wr.ok) setReview(wr.data);
       setFullDays(full.ok ? full.data : new Set());
       setAnyDays(any.ok ? any.data : new Set());
 
@@ -73,6 +76,34 @@ export function TrendsScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      {/* ── Week in review — composed, never cheered ───────────────── */}
+      <Card>
+        <ReceiptHeader label="Week in review" summary={review?.rangeLabel} />
+        {review === null ? (
+          <EmptyState>Reading last week…</EmptyState>
+        ) : review.lede === null ? (
+          <EmptyState>
+            Not enough logged last week to review honestly — it needs at least a couple of logged
+            days or a session.
+          </EmptyState>
+        ) : (
+          <>
+            <Text style={styles.lede}>{review.lede}</Text>
+            {review.stats.length > 0 ? (
+              <View style={styles.wstatRow}>
+                {review.stats.map((s) => (
+                  <View key={s.k} style={styles.wstat}>
+                    <Text style={styles.wstatK}>{s.k}</Text>
+                    <Text style={styles.wstatV}>{s.v}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </>
+        )}
+        <SrcNote>Written from your data · no cheerleading · one gap named per week</SrcNote>
+      </Card>
+
       {/* ── Consistency calendar ───────────────────────────────────── */}
       <Card>
         <ReceiptHeader
@@ -138,4 +169,12 @@ const styles = StyleSheet.create({
     fontFamily: mono, fontSize: 9.5, color: color.faint, letterSpacing: 0.38,
     lineHeight: 16, marginTop: 14, paddingHorizontal: 4,
   },
+  lede: { fontSize: 13.5, color: color.ink, lineHeight: 20, marginBottom: 12 },
+  wstatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 12 },
+  wstat: { minWidth: 68 },
+  wstatK: {
+    fontFamily: mono, fontSize: 9.5, color: color.ink2, letterSpacing: 0.38,
+    textTransform: 'uppercase', marginBottom: 2,
+  },
+  wstatV: { fontFamily: mono, fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },
 });
