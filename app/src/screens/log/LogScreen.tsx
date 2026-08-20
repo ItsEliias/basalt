@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav,
+  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav, ObInput,
   color, mono, groupInt,
 } from '@basalt/ui';
 import { RecipesTab } from './RecipesTab';
@@ -14,6 +14,19 @@ import {
 } from '@basalt/nutrition';
 import { isoDay } from '@basalt/core-data';
 import type { MealType } from '@basalt/nutrition';
+
+type AiItem = {
+  food_name: string;
+  meal_guess: MealType;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  sodium_mg: number;
+  portion_note: string;
+};
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import {
@@ -26,7 +39,7 @@ import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 // manual add, favorites and "frequent at this hour". Every path ends in the
 // same editable-before-save form; nothing auto-commits.
 
-type Mode = 'search' | 'barcode' | 'manual';
+type Mode = 'search' | 'barcode' | 'manual' | 'ai';
 
 type ScanState =
   | { kind: 'idle' }
@@ -58,6 +71,11 @@ function CaptureTab() {
   const [favorites, setFavorites] = useState<FoodFavorite[]>([]);
   const [frequent, setFrequent] = useState<{ foodName: string; count: number; calories: number }[]>([]);
   const [yesterday, setYesterday] = useState<YesterdayMeal[]>([]);
+  const [aiText, setAiText] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiItems, setAiItems] = useState<AiItem[] | null>(null);
+  const [aiNote, setAiNote] = useState<string | null>(null);
   const lastScanRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
 
   const dietaryFlags = profile?.dietaryFlags ?? [];
@@ -137,6 +155,48 @@ function CaptureTab() {
     });
   };
 
+  const runAiEstimate = async () => {
+    if (!aiText.trim()) return;
+    setAiBusy(true);
+    setAiError(null);
+    setAiItems(null);
+    const { data, error } = await supabase.functions.invoke('ai-quick-add', {
+      body: { description: aiText.trim() },
+    });
+    setAiBusy(false);
+    if (error) {
+      // Surface the function's honest message (e.g. "not configured yet").
+      let message = error.message ?? 'AI request failed.';
+      try {
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) message = body.error;
+        }
+      } catch { /* keep the generic message */ }
+      setAiError(message);
+      return;
+    }
+    setAiItems((data?.items ?? []) as AiItem[]);
+    setAiNote(data?.note ?? null);
+  };
+
+  const openDraftFromAi = (item: AiItem) => {
+    setDraft({
+      mealType: item.meal_guess,
+      foodName: item.food_name,
+      calories: Math.round(item.calories),
+      protein: Math.round(item.protein_g * 10) / 10,
+      carbs: Math.round(item.carbs_g * 10) / 10,
+      fat: Math.round(item.fat_g * 10) / 10,
+      fiber: Math.round(item.fiber_g * 10) / 10,
+      sugar: Math.round(item.sugar_g * 10) / 10,
+      sodiumMg: Math.round(item.sodium_mg),
+      source: 'quick_add',
+      sourceNote: `AI estimate (~) · ${item.portion_note} · every value editable — nothing commits until you save`,
+    });
+  };
+
   const saveEntry = async (entry: FoodEntryInput) => {
     const r = await addFoodEntry(supabase, entry);
     if (r.ok) {
@@ -192,7 +252,7 @@ function CaptureTab() {
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={styles.vf}>
         <View style={styles.modes}>
-          {(['search', 'barcode', 'manual'] as Mode[]).map((m) => (
+          {(['search', 'barcode', 'ai', 'manual'] as Mode[]).map((m) => (
             <Pressable key={m} onPress={() => setMode(m)}>
               <Text style={[styles.mode, mode === m && styles.modeOn]}>{m.toUpperCase()}</Text>
             </Pressable>
@@ -236,6 +296,19 @@ function CaptureTab() {
           <View style={{ paddingBottom: 8 }}>
             <CTA label="New manual entry" onPress={openManualDraft} />
             <SrcNote>Your numbers, your log — no database required</SrcNote>
+          </View>
+        ) : null}
+
+        {mode === 'ai' ? (
+          <View style={{ paddingBottom: 8 }}>
+            <ObInput
+              placeholder={'Describe it — "2 eggs, rye toast and a long black"'}
+              value={aiText}
+              onChangeText={setAiText}
+              multiline
+            />
+            <CTA label={aiBusy ? 'Estimating…' : 'Estimate with AI'} disabled={aiBusy || !aiText.trim()} onPress={() => void runAiEstimate()} />
+            <SrcNote>Runs server-side — no AI key ever ships in this app · estimates wear ~ until you confirm</SrcNote>
           </View>
         ) : null}
       </View>
@@ -285,6 +358,34 @@ function CaptureTab() {
               })()}
               <SrcNote>Source · Open Food Facts · editable before save · conflicts flagged, never hidden</SrcNote>
             </>
+          )}
+        </Card>
+      ) : null}
+
+      {/* ── AI suggestions ─────────────────────────────────────────── */}
+      {mode === 'ai' && (aiItems !== null || aiError) ? (
+        <Card>
+          <ReceiptHeader label="Suggestion — editable, unconfirmed" summary={aiItems ? `${aiItems.length} ${aiItems.length === 1 ? 'item' : 'items'}` : undefined} />
+          {aiError ? (
+            <EmptyState>{aiError}</EmptyState>
+          ) : aiItems && aiItems.length > 0 ? (
+            <>
+              {aiItems.map((item, i) => (
+                <Pressable key={i} onPress={() => openDraftFromAi(item)}>
+                  <ReceiptRow
+                    name={item.food_name}
+                    meta={`~P ${Math.round(item.protein_g)} · ~C ${Math.round(item.carbs_g)} · ~F ${Math.round(item.fat_g)} · ${item.portion_note}`}
+                    value={`~${Math.round(item.calories)}`}
+                    unit="kcal"
+                    last={i === aiItems.length - 1}
+                  />
+                </Pressable>
+              ))}
+              {aiNote ? <SrcNote>{`Uncertainty · ${aiNote}`}</SrcNote> : null}
+              <SrcNote>AI-estimated via Edge Function · tap an item to edit and confirm · nothing auto-commits</SrcNote>
+            </>
+          ) : (
+            <EmptyState>No foods recognized in that description — try naming the items.</EmptyState>
           )}
         </Card>
       ) : null}
