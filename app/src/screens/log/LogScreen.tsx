@@ -1,0 +1,366 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import {
+  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA,
+  color, mono, groupInt,
+} from '@basalt/ui';
+import {
+  validateGs1, searchByBarcode, searchByName, addFoodEntry, recordFoodUse,
+  getFoodEntriesForDay, listFavorites, frequentAtHour,
+  type OFFProduct, type FoodEntryInput, type FoodFavorite, type LoggedFood,
+} from '@basalt/nutrition';
+import { isoDay } from '@basalt/core-data';
+import { supabase } from '../../lib/supabase';
+import { useAppStore } from '../../state/appStore';
+import {
+  barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts,
+  conflictLine, mealForHour,
+} from './model';
+import { AddEntryForm, type DraftEntry } from './AddEntryForm';
+
+// Log / Capture — viewfinder with on-device GS1 verification, OFF lookup,
+// manual add, favorites and "frequent at this hour". Every path ends in the
+// same editable-before-save form; nothing auto-commits.
+
+type Mode = 'search' | 'barcode' | 'manual';
+
+type ScanState =
+  | { kind: 'idle' }
+  | { kind: 'invalid'; code: string; reason: string }
+  | { kind: 'looking'; code: string }
+  | { kind: 'miss'; code: string }
+  | { kind: 'hit'; code: string; product: OFFProduct };
+
+export function LogScreen() {
+  const profile = useAppStore((s) => s.profile);
+  const bumpToday = useAppStore((s) => s.bumpToday);
+  const [mode, setMode] = useState<Mode>('barcode');
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scan, setScan] = useState<ScanState>({ kind: 'idle' });
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<OFFProduct[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [draft, setDraft] = useState<DraftEntry | null>(null);
+  const [favorites, setFavorites] = useState<FoodFavorite[]>([]);
+  const [frequent, setFrequent] = useState<{ foodName: string; count: number; calories: number }[]>([]);
+  const lastScanRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
+
+  const dietaryFlags = profile?.dietaryFlags ?? [];
+
+  const refreshLists = useCallback(async () => {
+    const favs = await listFavorites(supabase, 12);
+    if (favs.ok) setFavorites(favs.data);
+
+    // Frequent at this hour — ranked over the last 60 days of entries.
+    const since = new Date();
+    since.setDate(since.getDate() - 60);
+    const logged: LoggedFood[] = [];
+    // Walk recent days' entries via the day query (bounded: favorites cover
+    // most re-logs; this powers the hour ranking from actual history).
+    const { data } = await supabase
+      .from('basalt_food_entries')
+      .select('food_name, created_at, calories')
+      .gte('created_at', since.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(400);
+    (data ?? []).forEach((r: any) =>
+      logged.push({ foodName: r.food_name, createdAt: r.created_at, calories: Number(r.calories ?? 0) }),
+    );
+    setFrequent(frequentAtHour(logged, new Date().getHours()).slice(0, 3));
+  }, []);
+
+  useEffect(() => {
+    void refreshLists();
+  }, [refreshLists]);
+
+  useEffect(() => {
+    if (mode === 'barcode' && permission && !permission.granted && permission.canAskAgain) {
+      void requestPermission();
+    }
+  }, [mode, permission, requestPermission]);
+
+  const onBarcode = async (code: string) => {
+    // Debounce repeat fires of the same code while the sheet is open.
+    const now = Date.now();
+    if (draft || (lastScanRef.current.code === code && now - lastScanRef.current.at < 3000)) return;
+    lastScanRef.current = { code, at: now };
+
+    const check = validateGs1(code);
+    if (!check.valid) {
+      setScan({ kind: 'invalid', code, reason: check.reason ?? 'Check digit failed.' });
+      return;
+    }
+    setScan({ kind: 'looking', code });
+    const product = await searchByBarcode(code);
+    if (!product) {
+      setScan({ kind: 'miss', code });
+      return;
+    }
+    setScan({ kind: 'hit', code, product });
+  };
+
+  const openDraftFromProduct = (p: OFFProduct) => {
+    const conflicts = dietaryConflicts(p.allergens, dietaryFlags);
+    setDraft({
+      ...offToEntryInput(p, mealForHour(new Date().getHours())),
+      conflictNote: conflictLine(conflicts),
+      sourceNote: 'Source · Open Food Facts · editable before save',
+    });
+  };
+
+  const openManualDraft = () => {
+    setDraft({
+      mealType: mealForHour(new Date().getHours()),
+      foodName: '', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0,
+      source: 'manual',
+      sourceNote: 'Manual entry · your numbers, your log',
+    });
+  };
+
+  const saveEntry = async (entry: FoodEntryInput) => {
+    const r = await addFoodEntry(supabase, entry);
+    if (r.ok) {
+      void recordFoodUse(supabase, entry);
+      setDraft(null);
+      setScan({ kind: 'idle' });
+      bumpToday();
+      void refreshLists();
+    }
+  };
+
+  const relogFavorite = async (f: FoodFavorite) => {
+    await saveEntry({
+      mealType: mealForHour(new Date().getHours()),
+      foodName: f.foodName,
+      brand: f.brand ?? undefined,
+      calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
+      fiber: f.fiber, sugar: f.sugar, sodiumMg: f.sodiumMg, saturatedFat: f.saturatedFat,
+      servingSize: f.servingSize, servingUnit: f.servingUnit, quantity: f.quantity,
+      barcode: f.barcode ?? undefined,
+      source: 'search',
+    });
+  };
+
+  const runSearch = async () => {
+    if (!query.trim()) return;
+    setSearching(true);
+    setResults(await searchByName(query.trim()));
+    setSearching(false);
+  };
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {/* ── Mode row + viewfinder ──────────────────────────────────── */}
+      <View style={styles.vf}>
+        <View style={styles.modes}>
+          {(['search', 'barcode', 'manual'] as Mode[]).map((m) => (
+            <Pressable key={m} onPress={() => setMode(m)}>
+              <Text style={[styles.mode, mode === m && styles.modeOn]}>{m.toUpperCase()}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {mode === 'barcode' ? (
+          permission?.granted ? (
+            <View style={styles.cameraWrap}>
+              <CameraView
+                style={StyleSheet.absoluteFill}
+                barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a'] }}
+                onBarcodeScanned={({ data }) => void onBarcode(data)}
+              />
+              <View pointerEvents="none" style={styles.reticle}>
+                <View style={[styles.corner, styles.cTL]} />
+                <View style={[styles.corner, styles.cTR]} />
+                <View style={[styles.corner, styles.cBL]} />
+                <View style={[styles.corner, styles.cBR]} />
+              </View>
+              <Text style={styles.hint}>EAN-13 · GS1 CHECK-DIGIT VERIFIED ON DEVICE</Text>
+            </View>
+          ) : (
+            <View style={styles.cameraDenied}>
+              <EmptyState>
+                Camera access is off, so there is no scanner here. Grant camera permission in system
+                settings, or use Search and Manual — they do everything the scanner does.
+              </EmptyState>
+            </View>
+          )
+        ) : null}
+
+        {mode === 'search' ? (
+          <View style={{ paddingBottom: 8 }}>
+            <SearchBar placeholder="Search Open Food Facts…" value={query} onChangeText={setQuery} />
+            <CTA label={searching ? '…' : 'Search'} onPress={runSearch} disabled={searching || !query.trim()} />
+          </View>
+        ) : null}
+
+        {mode === 'manual' ? (
+          <View style={{ paddingBottom: 8 }}>
+            <CTA label="New manual entry" onPress={openManualDraft} />
+            <SrcNote>Your numbers, your log — no database required</SrcNote>
+          </View>
+        ) : null}
+      </View>
+
+      {/* ── Scan result ────────────────────────────────────────────── */}
+      {scan.kind !== 'idle' ? (
+        <Card>
+          <ReceiptHeader
+            label="Result"
+            summary={barcodeDisplay(scan.code, scan.kind === 'hit' || scan.kind === 'looking' || scan.kind === 'miss')}
+          />
+          {scan.kind === 'invalid' ? (
+            <EmptyState>{`Not a valid barcode — ${scan.reason} Re-aim and try again.`}</EmptyState>
+          ) : scan.kind === 'looking' ? (
+            <EmptyState>Checking Open Food Facts…</EmptyState>
+          ) : scan.kind === 'miss' ? (
+            <>
+              <EmptyState>
+                Valid barcode, but Open Food Facts has no entry for it. Add it manually — your numbers
+                are just as real.
+              </EmptyState>
+              <CTA label="Add manually" onPress={openManualDraft} />
+            </>
+          ) : (
+            <>
+              <View style={styles.resultRow}>
+                <View style={{ flexShrink: 1 }}>
+                  <Text style={styles.resultName}>{scan.product.name}</Text>
+                  <Text style={styles.resultMeta}>{resultMeta(scan.product)}</Text>
+                  {(() => {
+                    const line = conflictLine(dietaryConflicts(scan.product.allergens, dietaryFlags));
+                    return line ? <Text style={styles.conflict}>{line.toUpperCase()}</Text> : null;
+                  })()}
+                </View>
+                <Pressable style={styles.addBtn} onPress={() => openDraftFromProduct(scan.product)}>
+                  <Text style={styles.addBtnText}>ADD</Text>
+                </Pressable>
+              </View>
+              {(() => {
+                const q = qualityLine(scan.product);
+                return q ? (
+                  <View style={styles.qualityRow}>
+                    <Text style={styles.qualityLabel}>QUALITY</Text>
+                    <Text style={styles.qualityText}>{q}</Text>
+                  </View>
+                ) : null;
+              })()}
+              <SrcNote>Source · Open Food Facts · editable before save · conflicts flagged, never hidden</SrcNote>
+            </>
+          )}
+        </Card>
+      ) : null}
+
+      {/* ── Search results ─────────────────────────────────────────── */}
+      {mode === 'search' && results.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Results" summary={`${results.length} from Open Food Facts`} />
+          {results.slice(0, 10).map((p, i) => (
+            <Pressable key={p.id + i} onPress={() => openDraftFromProduct(p)}>
+              <ReceiptRow
+                name={p.name}
+                meta={resultMeta(p)}
+                metaAccent={dietaryConflicts(p.allergens, dietaryFlags).length > 0 ? color.fat : undefined}
+                value={groupInt(p.calories)}
+                unit="kcal"
+                last={i === Math.min(results.length, 10) - 1}
+              />
+            </Pressable>
+          ))}
+        </Card>
+      ) : null}
+
+      {/* ── Frequent at this hour ──────────────────────────────────── */}
+      {frequent.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Frequent at this hour" summary="from your history" />
+          {frequent.map((f, i) => {
+            const fav = favorites.find((x) => x.foodName === f.foodName);
+            return (
+              <Pressable key={f.foodName} onPress={() => fav && void relogFavorite(fav)} disabled={!fav}>
+                <ReceiptRow
+                  name={f.foodName}
+                  meta={`logged ${f.count}× around now${fav ? ' · tap to re-log' : ''}`}
+                  value={groupInt(f.calories)}
+                  unit="kcal"
+                  last={i === frequent.length - 1}
+                />
+              </Pressable>
+            );
+          })}
+        </Card>
+      ) : null}
+
+      {/* ── Favorites ──────────────────────────────────────────────── */}
+      <Card>
+        <ReceiptHeader label="Favorites" summary={favorites.length > 0 ? '1-tap re-log' : undefined} />
+        {favorites.length > 0 ? (
+          favorites.map((f, i) => (
+            <Pressable key={f.id} onPress={() => void relogFavorite(f)}>
+              <ReceiptRow
+                name={f.foodName}
+                meta={`logged ${f.useCount}×${f.brand ? ` · ${f.brand}` : ''}`}
+                value={groupInt(f.calories)}
+                unit="kcal"
+                last={i === favorites.length - 1}
+              />
+            </Pressable>
+          ))
+        ) : (
+          <EmptyState>
+            Foods you log build a favorites list here automatically — the second log is one tap.
+          </EmptyState>
+        )}
+      </Card>
+
+      <AddEntryForm draft={draft} onCancel={() => setDraft(null)} onSave={saveEntry} />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: color.bg },
+  content: { paddingHorizontal: 16, paddingBottom: 24 },
+  vf: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 12,
+    backgroundColor: '#101216',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+    paddingHorizontal: 12,
+  },
+  modes: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 12, paddingBottom: 8 },
+  mode: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.24, color: color.faint, paddingBottom: 3 },
+  modeOn: { color: color.ink, borderBottomWidth: 1, borderBottomColor: color.ink },
+  cameraWrap: { height: 260, borderRadius: 10, overflow: 'hidden', marginBottom: 12, justifyContent: 'flex-end' },
+  cameraDenied: { paddingBottom: 12 },
+  reticle: {
+    position: 'absolute', alignSelf: 'center', top: '50%', marginTop: -71,
+    width: 230, height: 142,
+  },
+  corner: { position: 'absolute', width: 18, height: 18, borderColor: '#E8EAEE' },
+  cTL: { left: 0, top: 0, borderLeftWidth: 1.5, borderTopWidth: 1.5 },
+  cTR: { right: 0, top: 0, borderRightWidth: 1.5, borderTopWidth: 1.5 },
+  cBL: { left: 0, bottom: 0, borderLeftWidth: 1.5, borderBottomWidth: 1.5 },
+  cBR: { right: 0, bottom: 0, borderRightWidth: 1.5, borderBottomWidth: 1.5 },
+  hint: {
+    fontFamily: mono, fontSize: 9.5, letterSpacing: 1.33, color: color.mute,
+    textAlign: 'center', paddingBottom: 14,
+  },
+  resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, paddingVertical: 11 },
+  resultName: { fontSize: 13, fontWeight: '500', color: color.ink },
+  resultMeta: { fontFamily: mono, fontSize: 10.5, color: color.faint, marginTop: 3 },
+  conflict: { fontFamily: mono, fontSize: 9.5, color: color.fat, marginTop: 4, letterSpacing: 0.38 },
+  addBtn: {
+    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 8,
+    paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0,
+  },
+  addBtnText: { fontFamily: mono, fontSize: 11, color: color.ink2 },
+  qualityRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
+    paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border,
+  },
+  qualityLabel: { fontFamily: mono, fontSize: 10, fontWeight: '600', letterSpacing: 1.2, color: color.faint },
+  qualityText: { fontFamily: mono, fontSize: 12, color: color.ink2 },
+});
