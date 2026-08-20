@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays,
   color, mono,
@@ -11,6 +11,7 @@ import {
 import { e1rm } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
+import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
 
 // Trends — everything here is computed from the ledger or absent. Gaps stay
 // gray, streak resets don't shame, and there are no charts until there is
@@ -25,6 +26,7 @@ export function TrendsScreen() {
   const [review, setReview] = useState<WeekReview | null>(null);
   const hideNumbers = useAppStore((s) => s.profile?.hideNumbers ?? false);
   const [correlations, setCorrelations] = useState<{ shown: CorrelationResult[]; checkedNotShown: CorrelationResult[] } | null>(null);
+  const [shareWeek, setShareWeek] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -109,8 +111,18 @@ export function TrendsScreen() {
             ) : null}
           </>
         )}
+        {review?.lede ? (
+          <Pressable onPress={() => setShareWeek(true)}>
+            <Text style={styles.shareLink}>SHARE AS IMAGE →</Text>
+          </Pressable>
+        ) : null}
         <SrcNote>Written from your data · no cheerleading · one gap named per week</SrcNote>
       </Card>
+      {review && shareWeek ? (
+        <ShareSheet open onClose={() => setShareWeek(false)} filename="basalt-week.png">
+          <WeekShareCard review={review} />
+        </ShareSheet>
+      ) : null}
 
       {/* ── Consistency calendar ───────────────────────────────────── */}
       <Card>
@@ -218,4 +230,5 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', marginBottom: 2,
   },
   wstatV: { fontFamily: mono, fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },
+  shareLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
 });

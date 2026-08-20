@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  routeLineGeoJson, routeEndpointsGeoJson, cameraForRoute, buildWalkMapStyle,
+  routeLineGeoJson, routeEndpointsGeoJson, cameraForRoute, buildWalkMapStyle, projectRoute,
   WALK_TILE_ATTRIBUTION,
 } from './route-map';
 
@@ -110,5 +110,38 @@ describe('tile config injection', () => {
   it('the default stays the dev CARTO tiles — pinned so a swap is loud', () => {
     const style = buildWalkMapStyle(ROUTE, COLORS) as any;
     expect(style.sources.basemap.tiles[0]).toContain('basemaps.cartocdn.com/dark_all');
+  });
+});
+
+describe('projectRoute — the share-card projection', () => {
+  it('fits the route inside the viewport with padding, aspect-correct', () => {
+    const pr = projectRoute(ROUTE, { widthPx: 320, heightPx: 200, padPx: 16 });
+    expect(pr.points).toHaveLength(3);
+    for (const [x, y] of pr.points) {
+      expect(x).toBeGreaterThanOrEqual(16);
+      expect(x).toBeLessThanOrEqual(304);
+      expect(y).toBeGreaterThanOrEqual(16);
+      expect(y).toBeLessThanOrEqual(184);
+    }
+  });
+
+  it('north is up: the northernmost fix has the smallest y', () => {
+    const pr = projectRoute(ROUTE, { widthPx: 320, heightPx: 200 });
+    // ROUTE[2] is the northernmost (-33.863)
+    const ys = pr.points.map((p) => p[1]);
+    expect(Math.min(...ys)).toBe(pr.points[2]![1]);
+  });
+
+  it('start/end mark the actual endpoints and a round scale bar fits', () => {
+    const pr = projectRoute(ROUTE, { widthPx: 320, heightPx: 200 });
+    expect(pr.start).toEqual(pr.points[0]);
+    expect(pr.end).toEqual(pr.points[2]);
+    expect(pr.scaleBar).not.toBeNull();
+    expect(pr.scaleBar!.px).toBeGreaterThanOrEqual(50);
+    expect(pr.scaleBar!.px).toBeLessThanOrEqual(140);
+  });
+
+  it('fewer than two fixes → nothing, not a fabricated dot', () => {
+    expect(projectRoute([ROUTE[0]!], { widthPx: 320, heightPx: 200 }).points).toEqual([]);
   });
 });
