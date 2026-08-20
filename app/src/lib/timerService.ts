@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { setTimerServiceHooks } from '../state/sessionStore';
 
@@ -42,6 +42,18 @@ export function registerTimerService(): void {
 async function showOrUpdate(label: string): Promise<void> {
   try {
     if (!running) {
+      // The service is declared with the Android 14 `health` FGS type,
+      // which requires ACTIVITY_RECOGNITION to be granted at start time.
+      // A decline is a decline: no service, honest srcnote fallback.
+      if (Number(Platform.Version) >= 29) {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION,
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          failed = true;
+          return;
+        }
+      }
       await notifee.createChannel({
         id: CHANNEL_ID,
         name: 'Session timer',

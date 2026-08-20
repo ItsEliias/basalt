@@ -308,7 +308,7 @@ function CaptureTab() {
               multiline
             />
             <CTA label={aiBusy ? 'Estimating…' : 'Estimate with AI'} disabled={aiBusy || !aiText.trim()} onPress={() => void runAiEstimate()} />
-            <SrcNote>Runs server-side — no AI key ever ships in this app · estimates wear ~ until you confirm</SrcNote>
+            <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app</SrcNote>
           </View>
         ) : null}
       </View>

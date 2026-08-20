@@ -1,14 +1,16 @@
 // Expo config plugin: Android 14+ requires every foreground service to
-// declare a type. Notifee's service is declared here as specialUse with an
-// explicit subtype (Play review reads it), overriding the library default
-// via tools:replace. If Basalt ever requests ACTIVITY_RECOGNITION, the
-// `health` FGS type (API 34, made for workout trackers) is the better fit —
-// revisit at store submission.
+// declare a type. Notifee's service is declared as `health` — the type
+// Google built for workout trackers (API 34). `health` requires the app to
+// hold one of ACTIVITY_RECOGNITION / HIGH_SAMPLING_RATE_SENSORS /
+// BODY_SENSORS; ACTIVITY_RECOGNITION is the defensible one for a fitness
+// app and is requested at runtime before the service starts
+// (timerService.ts falls back honestly if the user declines).
 const { withAndroidManifest } = require('@expo/config-plugins');
 
 const PERMISSIONS = [
   'android.permission.FOREGROUND_SERVICE',
-  'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
+  'android.permission.FOREGROUND_SERVICE_HEALTH',
+  'android.permission.ACTIVITY_RECOGNITION',
   'android.permission.POST_NOTIFICATIONS',
 ];
 
@@ -32,16 +34,9 @@ module.exports = function withTimerFgs(config) {
       svc = { $: { 'android:name': 'app.notifee.core.ForegroundService' } };
       app.service.push(svc);
     }
-    svc.$['android:foregroundServiceType'] = 'specialUse';
+    svc.$['android:foregroundServiceType'] = 'health';
     svc.$['tools:replace'] = 'android:foregroundServiceType';
-    svc.property = [
-      {
-        $: {
-          'android:name': 'android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE',
-          'android:value': 'Guided workout set timer keeps running while the screen is off',
-        },
-      },
-    ];
+    delete svc.property;
     return cfg;
   });
 };
