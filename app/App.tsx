@@ -17,10 +17,9 @@ import { TodayScreen } from './src/screens/today/TodayScreen';
 import { LogScreen } from './src/screens/log/LogScreen';
 import { TrainScreen } from './src/screens/train/TrainScreen';
 import { SettingsScreen } from './src/screens/settings/SettingsScreen';
+import { RecoverScreen } from './src/screens/recover/RecoverScreen';
+import { TrendsScreen } from './src/screens/trends/TrendsScreen';
 import { WeightSheet } from './src/components/WeightSheet';
-import {
-  RecoverShell, TrendsShell,
-} from './src/screens/shells';
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
 // tab bar with the centre +. Settings rides over the tabs via the gear;
@@ -69,8 +68,8 @@ function MainShell() {
     today: <TodayScreen />,
     log: <LogScreen />,
     train: <TrainScreen />,
-    recover: <RecoverShell />,
-    trends: <TrendsShell />,
+    recover: <RecoverScreen />,
+    trends: <TrendsScreen />,
     settings: <SettingsScreen />,
   };
 
