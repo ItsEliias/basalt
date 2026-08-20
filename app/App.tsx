@@ -20,6 +20,7 @@ import { SettingsScreen } from './src/screens/settings/SettingsScreen';
 import { RecoverScreen } from './src/screens/recover/RecoverScreen';
 import { TrendsScreen } from './src/screens/trends/TrendsScreen';
 import { WeightSheet } from './src/components/WeightSheet';
+import { wireWeekReviewNotifTap } from './src/lib/weekReviewNotif';
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
 // tab bar with the centre +. Settings rides over the tabs via the gear;
@@ -47,6 +48,15 @@ function MainShell() {
   const bumpToday = useAppStore((s) => s.bumpToday);
 
   const view: ViewKey = settingsOpen ? 'settings' : tab;
+
+  // A tap on the Week in Review notification lands on Trends, where the
+  // digest is composed live from the ledger — cold start included.
+  useEffect(() => {
+    return wireWeekReviewNotifTap(() => {
+      setSettingsOpen(false);
+      setTab('trends');
+    });
+  }, []);
 
   const onQuickAction = (a: QuickAction) => {
     if (a === 'water') {

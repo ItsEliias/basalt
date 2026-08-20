@@ -47,6 +47,7 @@
     "plugins": [
       "react-native-health-connect",
       "@maplibre/maplibre-react-native",
+      "expo-notifications",
       [
         "expo-camera",
         {
