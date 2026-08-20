@@ -11,6 +11,7 @@ import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/t
 import { healthService } from '@basalt/health-connect';
 import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
+import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, type SessionRow } from './model';
 
@@ -54,13 +55,21 @@ async function loadToday(): Promise<TodayData> {
     });
   }
 
-  // Health Connect — real-or-hidden: only surface numbers a source granted.
+  // Steps: the persisted ledger row first (the sync job writes it), a live
+  // Health Connect read second — real-or-hidden either way.
   let steps: number | null = null;
   let activeKcal: number | null = null;
+  const stepRow = await supabase
+    .from('basalt_step_logs')
+    .select('steps')
+    .eq('date', today)
+    .maybeSingle();
+  if (stepRow.data && Number(stepRow.data.steps) > 0) steps = Number(stepRow.data.steps);
+
   const avail = await healthService.isAvailable();
   if (avail.ok && avail.data === 'available') {
     const granted = await healthService.getGrantedPermissions();
-    if (granted.ok && granted.data.includes('steps')) {
+    if (steps === null && granted.ok && granted.data.includes('steps')) {
       const s = await healthService.getStepsForDay();
       if (s.ok && s.data > 0) steps = s.data;
     }
@@ -92,11 +101,17 @@ export function TodayScreen() {
   }, []);
 
   useEffect(() => {
+    // Kick a (throttled) Health Connect sync, then load; a completed sync
+    // triggers one more load so persisted rows land without a manual pull.
+    void runHealthSync().then((report) => {
+      if (report) void refresh();
+    });
     void refresh();
   }, [refresh, todayVersion]);
 
   const onPull = async () => {
     setRefreshing(true);
+    await runHealthSync({ force: true });
     await refresh();
     setRefreshing(false);
   };
