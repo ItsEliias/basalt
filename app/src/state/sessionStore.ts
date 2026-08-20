@@ -3,7 +3,8 @@ import * as Haptics from 'expo-haptics';
 import {
   startSession, endSession, addSessionExercise, logSet, getPrevExerciseSets,
   setExerciseRest, setSupersetGroup, bestE1rm, isSetPr, e1rm,
-  createGuidedTimer, startGuidedTimer, stopGuidedTimer, tick as guidedTick,
+  createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
+  collapseSensory, describe as guidedDescribe,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
@@ -62,18 +63,65 @@ type SessionState = {
 };
 
 let interval: ReturnType<typeof setInterval> | null = null;
+let lastTickMs: number | null = null;
 
-function ensureTicking(get: () => SessionState & { _tick: () => void }) {
+// The foreground service is injected (App wires notifee in) so this store
+// stays free of native imports and testable. onActive receives a phase
+// label and is only called when it changes; onInactive ends the service.
+export type TimerServiceHooks = { onActive: (label: string) => void; onInactive: () => void };
+let timerHooks: TimerServiceHooks | null = null;
+let lastServiceLabel: string | null = null;
+export function setTimerServiceHooks(hooks: TimerServiceHooks | null) {
+  timerHooks = hooks;
+}
+
+function timerLabel(s: SessionState): string | null {
+  const guided = s.exercises.find(
+    (e) => e.guided && e.guided.phase !== 'idle' && e.guided.phase !== 'finished',
+  );
+  if (guided?.guided) return guidedDescribe(guided.guided).label;
+  if (s.rest !== null) return 'Rest timer running';
+  return null;
+}
+
+function pushTimerService(s: SessionState) {
+  if (!timerHooks) return;
+  const label = timerLabel(s);
+  if (label === null) {
+    if (lastServiceLabel !== null) {
+      lastServiceLabel = null;
+      timerHooks.onInactive();
+    }
+    return;
+  }
+  if (label !== lastServiceLabel) {
+    lastServiceLabel = label;
+    timerHooks.onActive(label);
+  }
+}
+
+function ensureTicking(get: () => SessionState & { _tick: (elapsedS?: number) => void }) {
   if (interval) return;
+  lastTickMs = Date.now();
+  pushTimerService(get());
   interval = setInterval(() => {
     const s = get();
     const active = s.rest !== null || s.exercises.some((e) => e.guided && e.guided.phase !== 'idle' && e.guided.phase !== 'finished');
     if (!active) {
       if (interval) clearInterval(interval);
       interval = null;
+      lastTickMs = null;
+      pushTimerService(s);
       return;
     }
-    s._tick();
+    // Wall-clock elapsed, not tick count: if the OS throttled us (screen
+    // off without the service, doze), replay the missed seconds so the
+    // timer lands where real time says it should.
+    const now = Date.now();
+    const elapsedS = Math.min(24 * 3600, Math.max(1, Math.round((now - (lastTickMs ?? now)) / 1000)));
+    lastTickMs = now;
+    s._tick(elapsedS);
+    pushTimerService(get());
   }, 1000);
 }
 
@@ -120,7 +168,7 @@ function applyGuidedEvents(
   }
 }
 
-export const useSessionStore = create<SessionState & { _tick: () => void }>((set, get) => ({
+export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number) => void }>((set, get) => ({
   sessionId: null,
   startedAt: null,
   exercises: [],
@@ -320,11 +368,11 @@ export const useSessionStore = create<SessionState & { _tick: () => void }>((set
     }
   },
 
-  _tick: () => {
+  _tick: (elapsedS = 1) => {
     const s = get();
     // Rest timer.
     if (s.rest) {
-      const remaining = s.rest.remaining - 1;
+      const remaining = s.rest.remaining - elapsedS;
       if (remaining <= 0) {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         set({ rest: null });
@@ -332,12 +380,14 @@ export const useSessionStore = create<SessionState & { _tick: () => void }>((set
         set({ rest: { ...s.rest, remaining } });
       }
     }
-    // Guided timers.
+    // Guided timers — a multi-second catch-up replays every transition but
+    // fires the motor once (collapseSensory), so a resumed screen never
+    // machine-guns haptics.
     set((cur) => ({
       exercises: cur.exercises.map((e) => {
         if (!e.guided || e.guided.phase === 'idle' || e.guided.phase === 'finished') return e;
-        const { state, events } = guidedTick(e.guided);
-        applyGuidedEvents(events, e);
+        const { state, events } = guidedTickMany(e.guided, elapsedS);
+        applyGuidedEvents(elapsedS > 1 ? collapseSensory(events) : events, e);
         return { ...e, guided: state };
       }),
     }));
