@@ -15,8 +15,9 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
 import { TodayScreen } from './src/screens/today/TodayScreen';
 import { LogScreen } from './src/screens/log/LogScreen';
+import { TrainScreen } from './src/screens/train/TrainScreen';
 import {
-  TrainShell, RecoverShell, TrendsShell, SettingsShell,
+  RecoverShell, TrendsShell, SettingsShell,
 } from './src/screens/shells';
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
@@ -64,7 +65,7 @@ function MainShell() {
   const body: Record<ViewKey, React.ReactNode> = {
     today: <TodayScreen />,
     log: <LogScreen />,
-    train: <TrainShell />,
+    train: <TrainScreen />,
     recover: <RecoverShell />,
     trends: <TrendsShell />,
     settings: <SettingsShell />,

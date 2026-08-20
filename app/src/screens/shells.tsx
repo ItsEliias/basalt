@@ -21,7 +21,7 @@ function TodayShell_unused() {
 function LogShell_unused() {
   return <Shell label="Log" message="Barcode capture, manual add and favorites are on their way in this milestone." />;
 }
-export function TrainShell() {
+function TrainShell_unused() {
   return <Shell label="Train" message="The set logger arrives in this milestone. Sessions you log will appear here." />;
 }
 export function RecoverShell() {
