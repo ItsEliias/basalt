@@ -13,6 +13,10 @@ import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
+import { zipSync, strToU8 } from 'fflate';
+import {
+  buildPerTableCsvs, buildExportReadme, u8ToBase64,
+} from '../../lib/exportFormat';
 import {
   disableWeekReviewNotif, enableWeekReviewNotif, isWeekReviewNotifEnabled,
 } from '../../lib/weekReviewNotif';
@@ -92,6 +96,25 @@ export function SettingsScreen() {
   const exportCsv = async () => {
     const bundle = await collectExport();
     await shareText('basalt-export.csv', buildSectionedCsv(bundle), 'text/csv');
+  };
+  const exportZip = async () => {
+    setBusy('basalt-export.zip');
+    try {
+      const bundle = await collectExport();
+      const files = buildPerTableCsvs(bundle);
+      const zipped = zipSync({
+        'README.txt': strToU8(buildExportReadme(bundle, new Date().toISOString())),
+        ...Object.fromEntries(files.map((f) => [f.name, strToU8(f.csv)])),
+      });
+      const path = `${FileSystem.cacheDirectory}basalt-export.zip`;
+      await FileSystem.writeAsStringAsync(path, u8ToBase64(zipped), {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      await Sharing.shareAsync(path, { mimeType: 'application/zip', dialogTitle: 'basalt-export.zip' });
+    } catch (e: any) {
+      Alert.alert('Export failed', e?.message ?? 'Could not build the archive.');
+    }
+    setBusy(null);
   };
 
   const connectSources = async () => {
@@ -234,6 +257,14 @@ export function SettingsScreen() {
           <ReceiptRow
             name={busy === 'basalt-export.csv' ? 'Exporting…' : 'Export everything — CSV'}
             meta="sectioned per table, spreadsheet-ready"
+            value="→"
+            valueColor={color.faint}
+          />
+        </Pressable>
+        <Pressable onPress={() => void exportZip()} disabled={busy !== null}>
+          <ReceiptRow
+            name={busy === 'basalt-export.zip' ? 'Exporting…' : 'Export everything — CSV archive'}
+            meta="one file per table, zipped · README lists every table incl. empty ones"
             value="→"
             valueColor={color.faint}
             last
