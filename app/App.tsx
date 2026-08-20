@@ -14,8 +14,9 @@ import { supabase } from './src/lib/supabase';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
 import { TodayScreen } from './src/screens/today/TodayScreen';
+import { LogScreen } from './src/screens/log/LogScreen';
 import {
-  LogShell, TrainShell, RecoverShell, TrendsShell, SettingsShell,
+  TrainShell, RecoverShell, TrendsShell, SettingsShell,
 } from './src/screens/shells';
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
@@ -62,7 +63,7 @@ function MainShell() {
 
   const body: Record<ViewKey, React.ReactNode> = {
     today: <TodayScreen />,
-    log: <LogShell />,
+    log: <LogScreen />,
     train: <TrainShell />,
     recover: <RecoverShell />,
     trends: <TrendsShell />,
