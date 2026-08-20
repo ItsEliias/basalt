@@ -9,8 +9,9 @@ import { TabBar, type TabKey } from './src/components/TabBar';
 import { FadeIn } from './src/components/FadeIn';
 import { QuickLogSheet, type QuickAction } from './src/components/QuickLogSheet';
 import { AuthScreen } from './src/screens/AuthScreen';
+import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
 import {
-  TodayShell, LogShell, TrainShell, RecoverShell, TrendsShell, SettingsShell, OnboardingShell,
+  TodayShell, LogShell, TrainShell, RecoverShell, TrendsShell, SettingsShell,
 } from './src/screens/shells';
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
@@ -106,7 +107,7 @@ function Gate() {
     );
   }
   if (!session) return <AuthScreen />;
-  if (!profile) return <OnboardingShell />;
+  if (!profile) return <OnboardingScreen />;
   return <MainShell />;
 }
 
