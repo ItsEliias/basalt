@@ -4,7 +4,10 @@ import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays,
   color, mono,
 } from '@basalt/ui';
-import { activeDaysFor, currentAndLongest, monthCells, loadWeekReview, type WeekReview } from '@basalt/analytics';
+import {
+  activeDaysFor, currentAndLongest, monthCells, loadWeekReview, loadDailySeries, computeCorrelations,
+  type WeekReview, type CorrelationResult,
+} from '@basalt/analytics';
 import { e1rm } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -21,6 +24,7 @@ export function TrendsScreen() {
   const [records, setRecords] = useState<Records | null>(null);
   const [review, setReview] = useState<WeekReview | null>(null);
   const hideNumbers = useAppStore((s) => s.profile?.hideNumbers ?? false);
+  const [correlations, setCorrelations] = useState<{ shown: CorrelationResult[]; checkedNotShown: CorrelationResult[] } | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -30,6 +34,8 @@ export function TrendsScreen() {
         loadWeekReview(supabase, new Date()),
       ]);
       if (wr.ok) setReview(wr.data);
+      const series = await loadDailySeries(supabase, new Date());
+      if (series.ok) setCorrelations(computeCorrelations(series.data));
       setFullDays(full.ok ? full.data : new Set());
       setAnyDays(any.ok ? any.data : new Set());
 
@@ -156,8 +162,41 @@ export function TrendsScreen() {
         )}
       </Card>
 
+      {/* ── Correlations — gated, disclaimed, checked-not-shown named ── */}
+      <Card>
+        <ReceiptHeader label="Correlations" summary={correlations ? `${correlations.shown.length} past the gates` : undefined} />
+        {correlations === null ? (
+          <EmptyState>Reading your daily series…</EmptyState>
+        ) : (
+          <>
+            {correlations.shown.map((c, i) => (
+              <ReceiptRow
+                key={`${c.pair.aKey}-${c.pair.bKey}`}
+                name={c.statement ?? ''}
+                value={c.r !== null ? c.r.toFixed(2) : '—'}
+                unit="r"
+                last={i === correlations.shown.length - 1}
+              />
+            ))}
+            {correlations.shown.length === 0 ? (
+              <EmptyState>
+                Nothing to show yet — a correlation appears only past |r| ≥ 0.45 over ≥ 30 overlapping
+                days. That takes weeks of real data, and the bar doesn't bend.
+              </EmptyState>
+            ) : null}
+            {correlations.checkedNotShown.length > 0 ? (
+              <SrcNote>
+                {`Checked, not shown: ${correlations.checkedNotShown
+                  .map((c) => `${c.pair.aLabel} × ${c.pair.bLabel}${c.pair.lag ? ' (next day)' : ''} (${c.r === null ? 'no signal' : `r ${c.r.toFixed(2)}`}, ${c.n} d)`)
+                  .join(' · ')} · |r| ≥ 0.45 and ≥ 30 days required · correlation, never cause`}
+              </SrcNote>
+            ) : null}
+          </>
+        )}
+      </Card>
+
       <Text style={styles.footer}>
-        ROLLING TRENDS, WEEK IN REVIEW AND CORRELATIONS ARRIVE AS HISTORY ACCUMULATES — NOTHING HERE
+        EVERYTHING ON THIS SCREEN IS COMPUTED FROM YOUR LEDGER OR ABSENT — NOTHING HERE
         WILL EVER BE A MOCK
       </Text>
     </ScrollView>
