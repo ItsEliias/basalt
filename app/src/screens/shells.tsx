@@ -33,7 +33,7 @@ export function TrendsShell() {
 export function SettingsShell() {
   return <Shell label="Settings" message="Profile editing, export and account deletion land in this milestone." />;
 }
-export function OnboardingShell() {
+function OnboardingShell_unused() {
   return <Shell label="Onboarding" message="The 8-step intake is being built in this milestone." />;
 }
 
