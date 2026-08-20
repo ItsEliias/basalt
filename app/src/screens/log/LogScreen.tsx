@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA,
+  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav,
   color, mono, groupInt,
 } from '@basalt/ui';
+import { RecipesTab } from './RecipesTab';
+import { PlannerTab } from './PlannerTab';
 import {
   validateGs1, searchByBarcode, searchByName, addFoodEntry, recordFoodUse,
   getFoodEntriesForDay, listFavorites, frequentAtHour,
@@ -34,6 +36,16 @@ type ScanState =
   | { kind: 'hit'; code: string; product: OFFProduct };
 
 export function LogScreen() {
+  const [sub, setSub] = useState('Capture');
+  return (
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <SubNav items={['Capture', 'Recipes', 'Planner']} active={sub} onChange={setSub} />
+      {sub === 'Capture' ? <CaptureTab /> : sub === 'Recipes' ? <RecipesTab /> : <PlannerTab />}
+    </View>
+  );
+}
+
+function CaptureTab() {
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [mode, setMode] = useState<Mode>('barcode');
