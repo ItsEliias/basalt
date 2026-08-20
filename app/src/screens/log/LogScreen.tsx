@@ -11,6 +11,7 @@ import {
   validateGs1, searchByBarcode, searchByName, addFoodEntry, recordFoodUse,
   getFoodEntriesForDay, listFavorites, frequentAtHour,
   type OFFProduct, type FoodEntryInput, type FoodFavorite, type LoggedFood,
+  uploadFoodPhoto,
 } from '@basalt/nutrition';
 import { isoDay } from '@basalt/core-data';
 import type { MealType } from '@basalt/nutrition';
@@ -197,8 +198,13 @@ function CaptureTab() {
     });
   };
 
-  const saveEntry = async (entry: FoodEntryInput) => {
-    const r = await addFoodEntry(supabase, entry);
+  const saveEntry = async (entry: FoodEntryInput, photoB64: string | null = null) => {
+    let photoPath = entry.photoPath;
+    if (photoB64) {
+      const up = await uploadFoodPhoto(supabase, photoB64, Date.now(), Math.random().toString(36).slice(2, 8));
+      if (up.ok) photoPath = up.data; // upload failure logs the entry photo-less, honestly
+    }
+    const r = await addFoodEntry(supabase, { ...entry, photoPath });
     if (r.ok) {
       void recordFoodUse(supabase, entry);
       setDraft(null);

@@ -14,6 +14,8 @@ import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, type SessionRow } from './model';
+import { Image } from 'react-native';
+import { signedPhotoUrls } from '@basalt/nutrition';
 
 // Today — the ledger's front page. Everything on it is real or absent:
 // targets from the versioned row, entries from the receipt tables, steps
@@ -95,6 +97,7 @@ export function TodayScreen() {
   const todayVersion = useAppStore((s) => s.todayVersion);
   const [data, setData] = useState<TodayData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
 
   const refresh = useCallback(async () => {
     setData(await loadToday());
@@ -131,6 +134,15 @@ export function TodayScreen() {
 
   const sections = data ? groupEntriesByMeal(data.entries) : [];
   const micros = data ? microTotals(data.entries) : [];
+  useEffect(() => {
+    const paths = (data?.entries ?? []).map((e) => e.photoPath).filter((p): p is string => !!p);
+    if (paths.length === 0) {
+      setPhotoUrls(new Map());
+      return;
+    }
+    void signedPhotoUrls(supabase, paths).then((r) => r.ok && setPhotoUrls(r.data));
+  }, [data]);
+
   const hero = targets && data ? heroModel(targets, data.totals, data.activeKcal) : null;
   const hideNumbers = profile?.hideNumbers ?? false;
 
@@ -224,6 +236,11 @@ export function TodayScreen() {
                   <ReceiptRow
                     key={e.id}
                     name={e.foodName}
+                    thumb={
+                      e.photoPath && photoUrls.get(e.photoPath) ? (
+                        <Image source={{ uri: photoUrls.get(e.photoPath)! }} style={styles.entryThumb} />
+                      ) : undefined
+                    }
                     meta={hideNumbers ? undefined : entryMeta(e)}
                     value={hideNumbers ? '✓' : groupInt(e.calories)}
                     unit={hideNumbers ? undefined : 'kcal'}
@@ -302,6 +319,7 @@ const styles = StyleSheet.create({
   targetRatio: { fontFamily: mono, fontSize: 12, color: color.ink2 },
   targetOf: { color: color.faint },
   heroSub: { fontFamily: mono, fontSize: 11.5, color: color.mute, marginTop: 10 },
+  entryThumb: { width: 30, height: 30, borderRadius: 7, backgroundColor: color.surface2 },
   undo: {
     fontFamily: mono, fontSize: 9.5, letterSpacing: 0.95, color: color.faint,
     textAlign: 'center', marginTop: 14, paddingVertical: 4,

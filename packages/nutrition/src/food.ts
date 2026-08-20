@@ -55,6 +55,8 @@ export type FoodEntryInput = {
   quantity?: number;      // default 1
   barcode?: string;
   source?: FoodSource;    // default 'manual'
+  /** Storage path in the private food-photo bucket. */
+  photoPath?: string;
   /** Micronutrients present in the SOURCE data only — never estimated. */
   micros?: Record<string, MicroValue>;
 };
@@ -80,6 +82,7 @@ export type FoodEntryRow = {
   servingUnit: string;
   quantity: number;
   barcode: string | null;
+  photoPath: string | null;
   source: FoodSource;
   extSource: string | null;
   extId: string | null;
@@ -118,6 +121,7 @@ function mapRow(r: any): FoodEntryRow {
     servingUnit: r.serving_unit ?? 'g',
     quantity: Number(r.quantity ?? 1),
     barcode: r.barcode ?? null,
+    photoPath: r.photo_path ?? null,
     source: r.source ?? 'manual',
     extSource: r.ext_source ?? null,
     extId: r.ext_id ?? null,
@@ -147,6 +151,7 @@ function insertPayloadFrom(input: FoodEntryInput, logId: string, userId: string)
     barcode: input.barcode ?? null,
     source: input.source ?? 'manual',
     micros: input.micros ?? null,
+    photo_path: input.photoPath ?? null,
   };
 }
 

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote } from '@basalt/ui';
+import { Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import type { FoodEntryInput, MealType } from '@basalt/nutrition';
 
 // Editable-before-save — the AI rule generalized: capture → editable
@@ -15,14 +17,19 @@ const MEALS: { key: MealType; label: string }[] = [
   { key: 'snacks', label: 'Snacks' },
 ];
 
-export type DraftEntry = FoodEntryInput & { conflictNote?: string | null; sourceNote?: string };
+export type DraftEntry = FoodEntryInput & {
+  conflictNote?: string | null;
+  sourceNote?: string;
+  /** JPEG base64 waiting to upload on save — private bucket, private by default. */
+  pendingPhotoB64?: string | null;
+};
 
 export function AddEntryForm({
   draft, onCancel, onSave,
 }: {
   draft: DraftEntry | null;
   onCancel: () => void;
-  onSave: (entry: FoodEntryInput) => Promise<void>;
+  onSave: (entry: FoodEntryInput, photoB64: string | null) => Promise<void>;
 }) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<DraftEntry | null>(draft);
@@ -37,6 +44,18 @@ export function AddEntryForm({
     setState((s) => (s ? { ...s, [key]: isFinite(n) ? n : 0 } : s));
   };
   const numText = (v: number | undefined) => (v === undefined || v === 0 ? '' : String(v));
+
+  const pickPhoto = async (from: 'camera' | 'gallery') => {
+    const opts = { quality: 0.55, base64: true, allowsEditing: false } as const;
+    const result =
+      from === 'camera'
+        ? await ImagePicker.launchCameraAsync(opts)
+        : await ImagePicker.launchImageLibraryAsync(opts);
+    const b64 = result.assets?.[0]?.base64;
+    if (!result.canceled && b64) {
+      setState((s) => (s ? { ...s, pendingPhotoB64: b64 } : s));
+    }
+  };
 
   return (
     <Modal visible={draft !== null} transparent animationType="fade" onRequestClose={onCancel}>
@@ -80,6 +99,26 @@ export function AddEntryForm({
               <Field label="Sodium mg" value={numText(state.sodiumMg)} onChange={patchNum('sodiumMg')} />
               <Field label="Serves" value={numText(state.quantity ?? 1)} onChange={patchNum('quantity')} />
             </View>
+            <ObChipLabel>Photo — private, optional</ObChipLabel>
+            <View style={styles.photoRow}>
+              {state.pendingPhotoB64 ? (
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${state.pendingPhotoB64}` }}
+                  style={styles.photoThumb}
+                />
+              ) : null}
+              <Pressable onPress={() => void pickPhoto('camera')}>
+                <Text style={styles.photoAction}>CAMERA</Text>
+              </Pressable>
+              <Pressable onPress={() => void pickPhoto('gallery')}>
+                <Text style={styles.photoAction}>GALLERY</Text>
+              </Pressable>
+              {state.pendingPhotoB64 ? (
+                <Pressable onPress={() => setState((s) => (s ? { ...s, pendingPhotoB64: null } : s))}>
+                  <Text style={styles.photoAction}>REMOVE</Text>
+                </Pressable>
+              ) : null}
+            </View>
             {state.conflictNote ? <Text style={styles.conflict}>{state.conflictNote.toUpperCase()}</Text> : null}
             {state.sourceNote ? <SrcNote>{state.sourceNote}</SrcNote> : null}
           </ScrollView>
@@ -88,8 +127,8 @@ export function AddEntryForm({
             disabled={busy || !state.foodName.trim()}
             onPress={async () => {
               setBusy(true);
-              const { conflictNote: _c, sourceNote: _s, ...entry } = state;
-              await onSave(entry);
+              const { conflictNote: _c, sourceNote: _s, pendingPhotoB64, ...entry } = state;
+              await onSave(entry, pendingPhotoB64 ?? null);
               setBusy(false);
             }}
           />
@@ -110,6 +149,9 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
+  photoThumb: { width: 44, height: 44, borderRadius: 7, backgroundColor: color.surface2 },
+  photoAction: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.mute, paddingVertical: 8 },
   sheet: {
     backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,

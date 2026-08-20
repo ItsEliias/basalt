@@ -38,6 +38,9 @@ const BASALT_TABLES = [
   'basalt_targets',
 ];
 
+// Private storage buckets holding the user's files under a `${uid}/` prefix.
+const BASALT_BUCKETS = ['basalt-food-photos'];
+
 // Arise-app tables sharing this project's auth pool; user_profiles keys on id.
 const ARISE_TABLES: { table: string; column: string }[] = [
   { table: 'user_profiles', column: 'id' },
@@ -91,7 +94,25 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 2. Delete the auth record only when no Arise data depends on it.
+  // 2. Wipe the user's folder in every Basalt bucket. Pagination-safe: keep
+  // listing until the folder is empty.
+  for (const bucket of BASALT_BUCKETS) {
+    for (;;) {
+      const { data: objects, error } = await admin.storage.from(bucket).list(uid, { limit: 100 });
+      if (error || !objects || objects.length === 0) break;
+      const { error: rmError } = await admin.storage
+        .from(bucket)
+        .remove(objects.map((o) => `${uid}/${o.name}`));
+      if (rmError) {
+        return new Response(
+          JSON.stringify({ error: `Storage wipe failed in ${bucket}: ${rmError.message}` }),
+          { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+  }
+
+  // 3. Delete the auth record only when no Arise data depends on it.
   let hasAriseData = false;
   for (const { table, column } of ARISE_TABLES) {
     const { count, error } = await admin
