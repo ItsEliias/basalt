@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts, conflictLine, mealForHour } from './model';
+import { barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts, conflictLine, mealForHour, yesterdayMeals } from './model';
 import type { OFFProduct } from '@basalt/nutrition';
 
 const yoghurt: OFFProduct = {
@@ -90,5 +90,22 @@ describe('conflictLine', () => {
   });
   it('null when clear — no reassurance theater', () => {
     expect(conflictLine([])).toBeNull();
+  });
+});
+
+describe('yesterdayMeals', () => {
+  it('groups yesterday by meal in order with totals, dropping empties', () => {
+    const rows = yesterdayMeals([
+      { mealType: 'lunch', calories: 638 },
+      { mealType: 'breakfast', calories: 412 },
+      { mealType: 'breakfast', calories: 4 },
+    ]);
+    expect(rows).toEqual([
+      { meal: 'breakfast', label: 'Breakfast', count: 2, calories: 416 },
+      { meal: 'lunch', label: 'Lunch', count: 1, calories: 638 },
+    ]);
+  });
+  it('an empty yesterday means no card at all', () => {
+    expect(yesterdayMeals([])).toEqual([]);
   });
 });

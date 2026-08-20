@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeepAwake } from 'expo-keep-awake';
 import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip,
-  ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar,
-  GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile,
+  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow,
+  ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag,
+  GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput,
   color, mono, mmss, groupInt,
 } from '@basalt/ui';
 import {
-  getExercises, listRecentSessions, prevSummary, sessionVolumeKg, bestE1rm,
+  getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
+  platesFor, platesText,
   describe as describeGuided,
   type Exercise, type WorkoutSession,
 } from '@basalt/training';
@@ -26,6 +28,7 @@ export function TrainScreen() {
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [rpeOpen, setRpeOpen] = useState(false);
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
   const [, forceClock] = useState(0);
 
@@ -82,8 +85,8 @@ export function TrainScreen() {
           {session.startedAt ? `${elapsedText(session.startedAt, new Date())} ELAPSED` : ''}
         </Text>
 
-        {session.exercises.map((ex) => (
-          <ExerciseCard key={ex.sessionExerciseId} ex={ex} />
+        {session.exercises.map((ex, i) => (
+          <ExerciseCard key={ex.sessionExerciseId} ex={ex} index={i} all={session.exercises} />
         ))}
 
         {session.exercises.length === 0 ? (
@@ -110,10 +113,20 @@ export function TrainScreen() {
           ) : null;
         })()}
 
-        <CTA label={session.busy ? '…' : 'End session'} disabled={session.busy} onPress={() => { void session.finish(null).then(bumpToday); }} />
+        <CTA label={session.busy ? '…' : 'End session'} disabled={session.busy} onPress={() => setRpeOpen(true)} />
         {session.error ? <Text style={styles.error}>{session.error}</Text> : null}
       </ScrollView>
 
+      <KeepAwakeWhileTraining />
+      <RpeSheet
+        open={rpeOpen}
+        busy={session.busy}
+        onClose={() => setRpeOpen(false)}
+        onFinish={(rpe) => {
+          setRpeOpen(false);
+          void session.finish(rpe).then(bumpToday);
+        }}
+      />
       <ExercisePicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -128,9 +141,19 @@ export function TrainScreen() {
   );
 }
 
-function ExerciseCard({ ex }: { ex: SessionExerciseState }) {
+function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: number; all: SessionExerciseState[] }) {
   const session = useSessionStore();
   const restHere = session.rest?.sessionExerciseId === ex.sessionExerciseId;
+  const [commentFor, setCommentFor] = useState<number | null>(null);
+  const [platesOpen, setPlatesOpen] = useState(false);
+
+  const supersetLabel = (() => {
+    if (ex.supersetGroup === null) return null;
+    const members = all.filter((e) => e.supersetGroup === ex.supersetGroup);
+    const pos = members.findIndex((e) => e.sessionExerciseId === ex.sessionExerciseId) + 1;
+    const letter = String.fromCharCode(64 + Math.min(26, ex.supersetGroup));
+    return `Superset · ${letter}${pos}`;
+  })();
 
   if (ex.timed && ex.guided) {
     const d = describeGuided(ex.guided);
@@ -171,7 +194,17 @@ function ExerciseCard({ ex }: { ex: SessionExerciseState }) {
 
   return (
     <Card>
+      {supersetLabel ? <SupersetTag label={supersetLabel} /> : null}
       <ExerciseHead name={ex.exercise.name} meta={exerciseMetaText(ex.exercise.primaryMuscles, ex.exercise.equipment)} />
+      {index > 0 ? (
+        <Pressable onPress={() => void session.toggleSupersetWithPrevious(ex.sessionExerciseId)}>
+          <Text style={styles.linkAction}>
+            {ex.supersetGroup !== null && ex.supersetGroup === all[index - 1]?.supersetGroup
+              ? 'UNLINK SUPERSET'
+              : '⟂ LINK WITH PREVIOUS (SUPERSET)'}
+          </Text>
+        </Pressable>
+      ) : null}
       {ex.prevSets.length > 0 && ex.prevPerformedAt ? (
         <PrevNote>
           {`Last session · ${prevSummary(ex.prevSets) ?? '—'} · ${new Date(ex.prevPerformedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`}
@@ -188,20 +221,131 @@ function ExerciseCard({ ex }: { ex: SessionExerciseState }) {
           rir={row.rir}
           ghost={!row.committed}
           pr={row.isPr}
+          hasComment={row.comment.trim() !== ''}
+          onPressSet={() => setCommentFor(i)}
           onChangeKg={(kg) => session.updateRow(ex.sessionExerciseId, i, { kg, committed: false })}
           onChangeReps={(reps) => session.updateRow(ex.sessionExerciseId, i, { reps, committed: false })}
           onChangeRir={(rir) => session.updateRow(ex.sessionExerciseId, i, { rir, committed: false })}
           onCommit={() => void session.commitRow(ex.sessionExerciseId, i)}
         />
       ))}
-      <Pressable onPress={() => session.addRow(ex.sessionExerciseId)}>
-        <Text style={styles.addSet}>+ ADD SET</Text>
-      </Pressable>
+      <View style={styles.rowActions}>
+        <Pressable onPress={() => session.addRow(ex.sessionExerciseId)}>
+          <Text style={styles.addSet}>+ ADD SET</Text>
+        </Pressable>
+        <Pressable onPress={() => setPlatesOpen(true)}>
+          <Text style={styles.addSet}>PLATES</Text>
+        </Pressable>
+      </View>
       {restHere && session.rest ? (
         <RestTimerBar time={mmss(session.rest.remaining)} onSkip={session.skipRest} />
       ) : null}
+      <CommentSheet
+        open={commentFor !== null}
+        initial={commentFor !== null ? ex.rows[commentFor]?.comment ?? '' : ''}
+        setNumber={commentFor !== null ? ex.rows[commentFor]?.setNumber ?? 0 : 0}
+        onClose={() => setCommentFor(null)}
+        onSave={(text) => {
+          if (commentFor === null) return;
+          session.updateRow(ex.sessionExerciseId, commentFor, { comment: text });
+          const row = ex.rows[commentFor];
+          if (row?.committed) void session.commitRow(ex.sessionExerciseId, commentFor);
+          setCommentFor(null);
+        }}
+      />
+      <PlatesSheet
+        open={platesOpen}
+        onClose={() => setPlatesOpen(false)}
+        targetKgText={[...ex.rows].reverse().find((r) => r.kg.trim() !== '')?.kg ?? ''}
+      />
     </Card>
   );
+}
+
+function CommentSheet({ open, initial, setNumber, onClose, onSave }: {
+  open: boolean; initial: string; setNumber: number; onClose: () => void; onSave: (t: string) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [text, setText] = useState(initial);
+  useEffect(() => setText(initial), [initial, open]);
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.dim} onPress={onClose} />
+      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={styles.sheetTitle}>SET {setNumber} · NOTE</Text>
+        <ObInput
+          placeholder="Machine seat 4 · felt heavy · grip cue…"
+          value={text}
+          onChangeText={setText}
+          autoFocus
+        />
+        <CTA label="Save note" onPress={() => onSave(text)} />
+      </View>
+    </Modal>
+  );
+}
+
+function PlatesSheet({ open, onClose, targetKgText }: {
+  open: boolean; onClose: () => void; targetKgText: string;
+}) {
+  const insets = useSafeAreaInsets();
+  const [kgText, setKgText] = useState(targetKgText);
+  const [barKg, setBarKg] = useState(20);
+  useEffect(() => { if (open) setKgText(targetKgText); }, [open, targetKgText]);
+  const target = parseFloat(kgText.replace(',', '.'));
+  const breakdown = isFinite(target) ? platesFor(target, { barKg }) : null;
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.dim} onPress={onClose} />
+      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={styles.sheetTitle}>PLATE CALCULATOR</Text>
+        <ObInput placeholder="Target (kg)" keyboardType="decimal-pad" value={kgText} onChangeText={setKgText} />
+        <ChipRow options={['20 kg bar', '15 kg bar']} value={`${barKg} kg bar`} onChange={(v) => setBarKg(parseInt(v, 10))} />
+        {breakdown ? (
+          <>
+            <Text style={styles.platesLine}>{platesText(breakdown)}</Text>
+            {breakdown.residualKg !== 0 ? (
+              <Text style={styles.platesResidual}>
+                {`loads ${breakdown.achievableKg} kg — ${Math.abs(breakdown.residualKg)} kg short of ${breakdown.requestedKg}`}
+              </Text>
+            ) : null}
+          </>
+        ) : kgText.trim() !== '' ? (
+          <Text style={styles.platesResidual}>below bar weight — nothing to load</Text>
+        ) : null}
+        <SrcNote>Per-side loading · plates 25 / 20 / 15 / 10 / 5 / 2.5 / 1.25 kg</SrcNote>
+      </View>
+    </Modal>
+  );
+}
+
+function RpeSheet({ open, busy, onClose, onFinish }: {
+  open: boolean; busy: boolean; onClose: () => void; onFinish: (rpe: number | null) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.dim} onPress={onClose} />
+      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={styles.sheetTitle}>HOW HARD WAS THE SESSION? · RPE</Text>
+        <ChipRow
+          options={['6', '7', '8', '9', '10']}
+          onChange={(v) => onFinish(parseInt(v, 10))}
+        />
+        <Pressable onPress={() => onFinish(null)} disabled={busy}>
+          <Text style={styles.skipRpe}>SKIP — END WITHOUT A RATING</Text>
+        </Pressable>
+      </View>
+    </Modal>
+  );
+}
+
+function KeepAwakeWhileTraining() {
+  // Mounted only during an active session: the screen stays awake so the
+  // guided timer keeps ticking. True background continuation (screen off)
+  // arrives with the foreground service at V1.x.
+  useKeepAwake();
+  return null;
 }
 
 function ExercisePicker({
@@ -285,6 +429,22 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   elapsed: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'right', marginTop: 10 },
   addSet: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
+  rowActions: { flexDirection: 'row', justifyContent: 'space-between' },
+  linkAction: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
+  dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
+  sheet: {
+    backgroundColor: color.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border2,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+  },
+  sheetTitle: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute },
+  platesLine: { fontFamily: mono, fontSize: 14, color: color.ink, marginTop: 14 },
+  platesResidual: { fontFamily: mono, fontSize: 10.5, color: color.fat, marginTop: 8 },
+  skipRpe: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 14 },
   error: { fontSize: 12.5, color: color.fat, marginTop: 10 },
   cfgRow: { flexDirection: 'row', gap: 10, marginTop: 12, justifyContent: 'center' },
   picker: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 0 },

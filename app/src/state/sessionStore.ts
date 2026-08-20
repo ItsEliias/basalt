@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as Haptics from 'expo-haptics';
 import {
   startSession, endSession, addSessionExercise, logSet, getPrevExerciseSets,
-  setExerciseRest, bestE1rm, isSetPr, e1rm,
+  setExerciseRest, setSupersetGroup, bestE1rm, isSetPr, e1rm,
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tick as guidedTick,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
 } from '@basalt/training';
@@ -17,6 +17,7 @@ export type SetRowState = {
   kg: string;
   reps: string;
   rir: string;
+  comment: string;
   committed: boolean;
   isPr: boolean;
 };
@@ -28,6 +29,7 @@ export type SessionExerciseState = {
   prevSets: SetEntry[];
   prevPerformedAt: string | null;
   restSeconds: number;
+  supersetGroup: number | null;
   /** Best e1RM across ALL prior history for the quiet PR mark. */
   historyBestE1rm: number | null;
   /** Timed exercises carry a guided timer instead of a reps table. */
@@ -53,6 +55,8 @@ type SessionState = {
   commitRow: (sessionExerciseId: string, index: number) => Promise<void>;
   skipRest: () => void;
   setRestSeconds: (sessionExerciseId: string, seconds: number) => void;
+  /** Link/unlink this exercise into a superset with the one above it. */
+  toggleSupersetWithPrevious: (sessionExerciseId: string) => Promise<void>;
   guidedConfigure: (sessionExerciseId: string, patch: Partial<{ leadInS: number; workS: number; restS: number; sets: number }>) => void;
   guidedToggle: (sessionExerciseId: string) => void;
 };
@@ -166,6 +170,7 @@ export const useSessionStore = create<SessionState & { _tick: () => void }>((set
           kg: prevSets[i]?.weightKg != null ? String(prevSets[i]!.weightKg) : '',
           reps: '',
           rir: '',
+          comment: '',
           committed: false,
           isPr: false,
         }));
@@ -180,6 +185,7 @@ export const useSessionStore = create<SessionState & { _tick: () => void }>((set
           prevSets,
           prevPerformedAt: prev.ok && prev.data ? prev.data.performedAt : null,
           restSeconds: (prev.ok && prev.data?.restSeconds) || 120,
+          supersetGroup: null,
           historyBestE1rm: historyBest,
           timed,
           guided: timed ? createGuidedTimer({ leadInS: 5, workS: 50, restS: 20, sets: 4 }) : null,
@@ -201,7 +207,7 @@ export const useSessionStore = create<SessionState & { _tick: () => void }>((set
     set((s) => ({
       exercises: s.exercises.map((e) =>
         e.sessionExerciseId === id
-          ? { ...e, rows: [...e.rows, { setNumber: e.rows.length + 1, kg: '', reps: '', rir: '', committed: false, isPr: false }] }
+          ? { ...e, rows: [...e.rows, { setNumber: e.rows.length + 1, kg: '', reps: '', rir: '', comment: '', committed: false, isPr: false }] }
           : e,
       ),
     })),
@@ -221,6 +227,7 @@ export const useSessionStore = create<SessionState & { _tick: () => void }>((set
       weightKg: kg !== null && isFinite(kg) ? kg : null,
       rir: rir !== null && isFinite(rir) ? Math.min(10, Math.max(0, rir)) : null,
       restS: ex.restSeconds,
+      comment: row.comment.trim() || null,
     });
     if (!r.ok) {
       set({ error: r.error });
@@ -248,6 +255,40 @@ export const useSessionStore = create<SessionState & { _tick: () => void }>((set
       exercises: s.exercises.map((e) => (e.sessionExerciseId === id ? { ...e, restSeconds: seconds } : e)),
     }));
     void setExerciseRest(supabase, id, seconds);
+  },
+
+  toggleSupersetWithPrevious: async (id) => {
+    const exercises = get().exercises;
+    const idx = exercises.findIndex((e) => e.sessionExerciseId === id);
+    if (idx <= 0) return; // nothing above to link with
+    const cur = exercises[idx]!;
+    const prev = exercises[idx - 1]!;
+
+    if (cur.supersetGroup !== null && cur.supersetGroup === prev.supersetGroup) {
+      // Unlink the current exercise from the pair/chain.
+      await setSupersetGroup(supabase, cur.sessionExerciseId, null);
+      set((s) => ({
+        exercises: s.exercises.map((e) =>
+          e.sessionExerciseId === id ? { ...e, supersetGroup: null } : e,
+        ),
+      }));
+      return;
+    }
+
+    const group =
+      prev.supersetGroup ??
+      Math.max(0, ...exercises.map((e) => e.supersetGroup ?? 0)) + 1;
+    if (prev.supersetGroup === null) {
+      await setSupersetGroup(supabase, prev.sessionExerciseId, group);
+    }
+    await setSupersetGroup(supabase, cur.sessionExerciseId, group);
+    set((s) => ({
+      exercises: s.exercises.map((e) => {
+        if (e.sessionExerciseId === id) return { ...e, supersetGroup: group };
+        if (e.sessionExerciseId === prev.sessionExerciseId) return { ...e, supersetGroup: group };
+        return e;
+      }),
+    }));
   },
 
   guidedConfigure: (id, patch) =>

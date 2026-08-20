@@ -6,3 +6,4 @@ export * from './sessions';
 export * from './e1rm';
 export * from './guided-timer';
 export * from './exercises';
+export * from './plates';
