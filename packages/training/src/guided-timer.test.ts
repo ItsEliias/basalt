@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  createGuidedTimer, startGuidedTimer, stopGuidedTimer, tick, describe as describeState,
+  createGuidedTimer, startGuidedTimer, stopGuidedTimer, tick, tickMany, collapseSensory, describe as describeState,
   type GuidedEvent, type GuidedState,
 } from './guided-timer';
 
@@ -120,5 +120,52 @@ describe('describe() — display contract', () => {
     const { state } = startGuidedTimer(createGuidedTimer({ leadInS: 0, workS: 10, restS: 10, sets: 2 }));
     const half = runSeconds(state, 5).state;
     expect(describeState(half).progress).toBeCloseTo(0.5);
+  });
+});
+
+describe('tickMany + collapseSensory — the screen-off catch-up path', () => {
+  it('replaying a long gap lands exactly where wall time says', () => {
+    // 5s lead + (50 work + 20 rest) ×: after 130 s → set 1 (55) + rest (75)
+    // + 50 work (125) + 5 s into rest 2.
+    const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
+    const caught = tickMany(state, 130);
+    expect(caught.state.phase).toBe('rest');
+    expect(caught.state.setsDone).toBe(2);
+    expect(caught.state.remaining).toBe(CONFIG.restS - 5);
+  });
+
+  it('every set completed during the gap is still logged', () => {
+    const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
+    const caught = tickMany(state, 130);
+    const logs = caught.events.filter((e) => e.type === 'logSet');
+    expect(logs).toEqual([
+      { type: 'logSet', setNumber: 1, durationS: 50 },
+      { type: 'logSet', setNumber: 2, durationS: 50 },
+    ]);
+  });
+
+  it('a gap past the end finishes cleanly and stops consuming', () => {
+    const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
+    const caught = tickMany(state, 100000);
+    expect(caught.state.phase).toBe('finished');
+    expect(caught.state.setsDone).toBe(4);
+    expect(caught.events.filter((e) => e.type === 'logSet')).toHaveLength(4);
+  });
+
+  it('tickMany(state, 1) is exactly tick(state)', () => {
+    const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
+    expect(tickMany(state, 1)).toEqual(tick(state));
+  });
+
+  it('collapseSensory keeps data events, fires the motor once', () => {
+    const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
+    const caught = tickMany(state, 130);
+    const collapsed = collapseSensory(caught.events);
+    expect(collapsed.filter((e) => e.type === 'beep')).toHaveLength(1);
+    expect(collapsed.filter((e) => e.type === 'haptic')).toHaveLength(1);
+    expect(collapsed.filter((e) => e.type === 'logSet')).toHaveLength(2);
+    expect(collapsed.filter((e) => e.type === 'phase')).toEqual(
+      caught.events.filter((e) => e.type === 'phase'),
+    );
   });
 });

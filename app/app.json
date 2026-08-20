@@ -48,6 +48,7 @@
       "react-native-health-connect",
       "@maplibre/maplibre-react-native",
       "expo-notifications",
+      "./plugins/withTimerFgs.js",
       [
         "expo-camera",
         {

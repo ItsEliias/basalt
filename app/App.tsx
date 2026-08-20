@@ -21,6 +21,11 @@ import { RecoverScreen } from './src/screens/recover/RecoverScreen';
 import { TrendsScreen } from './src/screens/trends/TrendsScreen';
 import { WeightSheet } from './src/components/WeightSheet';
 import { wireWeekReviewNotifTap } from './src/lib/weekReviewNotif';
+import { registerTimerService } from './src/lib/timerService';
+
+// Foreground-service runner must be registered before any notification is
+// displayed — module scope, once.
+registerTimerService();
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
 // tab bar with the centre +. Settings rides over the tabs via the gear;

@@ -99,6 +99,38 @@ export function tick(state: GuidedState): { state: GuidedState; events: GuidedEv
   return { state: { ...state, phase: 'work', remaining: config.workS }, events };
 }
 
+/**
+ * Advance `seconds` at once — the wall-clock catch-up path. When the OS
+ * throttles JS timers (screen off without the foreground service, doze),
+ * the store replays the missed seconds here so the timer lands exactly
+ * where real time says it should, including every logSet that completed
+ * during the gap.
+ */
+export function tickMany(state: GuidedState, seconds: number): { state: GuidedState; events: GuidedEvent[] } {
+  let cur = state;
+  const events: GuidedEvent[] = [];
+  for (let i = 0; i < seconds; i++) {
+    if (cur.phase === 'idle' || cur.phase === 'finished') break;
+    const r = tick(cur);
+    cur = r.state;
+    events.push(...r.events);
+  }
+  return { state: cur, events };
+}
+
+/**
+ * Collapse a catch-up batch's sensory events: every logSet and phase event
+ * survives (they are data), but only the final beep and final haptic fire —
+ * a replay must not machine-gun the motor.
+ */
+export function collapseSensory(events: GuidedEvent[]): GuidedEvent[] {
+  const lastBeep = [...events].reverse().find((e) => e.type === 'beep');
+  const lastHaptic = [...events].reverse().find((e) => e.type === 'haptic');
+  return events.filter((e) =>
+    e.type === 'beep' ? e === lastBeep : e.type === 'haptic' ? e === lastHaptic : true,
+  );
+}
+
 /** Display descriptor the UI can render without re-deriving rules. */
 export function describe(state: GuidedState): {
   seconds: number;

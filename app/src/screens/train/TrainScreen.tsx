@@ -19,6 +19,7 @@ import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
 import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './model';
 import { OutdoorTab } from './OutdoorTab';
+import { timerServiceFailed } from '../../lib/timerService';
 
 // Train — the relational set logger. Prev values ghost as editable defaults,
 // completion is a typographic state change with a quiet PR mark, rest timers
@@ -206,7 +207,11 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
           label={ex.guided.phase === 'idle' ? 'GO' : ex.guided.phase === 'finished' ? 'Go again' : 'Stop'}
           onPress={() => session.guidedToggle(ex.sessionExerciseId)}
         />
-        <SrcNote center>Haptics on phase change · sets auto-logged as duration · keep the screen on for now</SrcNote>
+        <SrcNote center>
+          {timerServiceFailed()
+            ? 'Haptics on phase change · sets auto-logged as duration · timer service unavailable — runs only while the app is open'
+            : 'Haptics on phase change · sets auto-logged as duration · keeps running with the screen off (quiet ongoing notification)'}
+        </SrcNote>
       </Card>
     );
   }
@@ -361,8 +366,9 @@ function RpeSheet({ open, busy, onClose, onFinish }: {
 
 function KeepAwakeWhileTraining() {
   // Mounted only during an active session: the screen stays awake so the
-  // guided timer keeps ticking. True background continuation (screen off)
-  // arrives with the foreground service at V1.x.
+  // timers are visible. Screen-off continuation is the foreground
+  // service's job (timerService.ts); wall-clock catch-up in the store
+  // covers anything the OS still throttles.
   useKeepAwake();
   return null;
 }
