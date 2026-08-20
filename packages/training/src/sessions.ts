@@ -201,13 +201,13 @@ export async function getPrevExerciseSets(
   client: SupabaseClient,
   exerciseId: string,
   options: { before?: string } = {},
-): Promise<Result<{ performedAt: string; restSeconds: number | null; sets: SetEntry[] } | null>> {
+): Promise<Result<{ performedAt: string; restSeconds: number | null; feedback: 'too_easy' | 'right' | 'too_hard' | null; sets: SetEntry[] } | null>> {
   const u = await currentUserId(client);
   if (!u.ok) return u;
 
   let q = client
     .from('basalt_session_exercises')
-    .select('id, rest_seconds, created_at')
+    .select('id, rest_seconds, created_at, feedback')
     .eq('user_id', u.data)
     .eq('exercise_id', exerciseId)
     .order('created_at', { ascending: false })
@@ -227,6 +227,7 @@ export async function getPrevExerciseSets(
       return ok({
         performedAt: row.created_at,
         restSeconds: row.rest_seconds ?? null,
+        feedback: (row as any).feedback ?? null,
         sets: (sets.data ?? []).map(mapSetEntry),
       });
     }

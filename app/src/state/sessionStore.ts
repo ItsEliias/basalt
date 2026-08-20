@@ -4,7 +4,8 @@ import {
   startSession, endSession, addSessionExercise, logSet, getPrevExerciseSets,
   setExerciseRest, setSupersetGroup, bestE1rm, isSetPr, e1rm,
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
-  collapseSensory, describe as guidedDescribe,
+  collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback,
+  type Suggestion, type ExerciseFeedback,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
@@ -36,6 +37,10 @@ export type SessionExerciseState = {
   /** Timed exercises carry a guided timer instead of a reps table. */
   timed: boolean;
   guided: GuidedState | null;
+  /** Deterministic next-session hint — a suggestion, never a mandate. */
+  suggestion: Suggestion | null;
+  /** One-tap post-exercise feedback, feeding the next suggestion. */
+  feedback: ExerciseFeedback | null;
 };
 
 type RestState = { sessionExerciseId: string; remaining: number } | null;
@@ -60,6 +65,7 @@ type SessionState = {
   toggleSupersetWithPrevious: (sessionExerciseId: string) => Promise<void>;
   guidedConfigure: (sessionExerciseId: string, patch: Partial<{ leadInS: number; workS: number; restS: number; sets: number }>) => void;
   guidedToggle: (sessionExerciseId: string) => void;
+  giveFeedback: (sessionExerciseId: string, feedback: ExerciseFeedback) => Promise<void>;
 };
 
 let interval: ReturnType<typeof setInterval> | null = null;
@@ -211,6 +217,21 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     const prev = await getPrevExerciseSets(supabase, exercise.id);
     const prevSets = prev.ok && prev.data ? prev.data.sets : [];
     const historyBest = await historyBestFor(exercise.id);
+    const suggestion = timed
+      ? null
+      : suggestNext({
+          prev:
+            prev.ok && prev.data
+              ? {
+                  performedAt: prev.data.performedAt,
+                  feedback: prev.data.feedback,
+                  sets: prev.data.sets.map((s) => ({
+                    setType: s.setType, reps: s.reps, weightKg: s.weightKg, rir: s.rir,
+                  })),
+                }
+              : null,
+          today: new Date(),
+        });
     const rows = timed
       ? []
       : Array.from({ length: Math.max(1, prevSets.filter((s) => s.setType !== 'warmup').length || 3) }, (_, i) => ({
@@ -237,6 +258,8 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           historyBestE1rm: historyBest,
           timed,
           guided: timed ? createGuidedTimer({ leadInS: 5, workS: 50, restS: 20, sets: 4 }) : null,
+          suggestion,
+          feedback: null,
         },
       ],
     });
@@ -348,6 +371,13 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
         return { ...e, guided: createGuidedTimer(config) };
       }),
     })),
+
+  giveFeedback: async (id, feedback) => {
+    set((s) => ({
+      exercises: s.exercises.map((e) => (e.sessionExerciseId === id ? { ...e, feedback } : e)),
+    }));
+    await setExerciseFeedback(supabase, id, feedback);
+  },
 
   guidedToggle: (id) => {
     const ex = get().exercises.find((e) => e.sessionExerciseId === id);
