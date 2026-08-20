@@ -19,6 +19,7 @@ import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
 import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './model';
 import { OutdoorTab } from './OutdoorTab';
+import { AdaptSheet } from './AdaptSheet';
 import { timerServiceFailed } from '../../lib/timerService';
 
 // Train — the relational set logger. Prev values ghost as editable defaults,
@@ -49,6 +50,7 @@ function SessionTab() {
   const session = useSessionStore();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [rpeOpen, setRpeOpen] = useState(false);
+  const [adaptOpen, setAdaptOpen] = useState(false);
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
   const [, forceClock] = useState(0);
 
@@ -101,9 +103,14 @@ function SessionTab() {
   return (
     <>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <Text style={styles.elapsed}>
-          {session.startedAt ? `${elapsedText(session.startedAt, new Date())} ELAPSED` : ''}
-        </Text>
+        <View style={styles.topRow}>
+          <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
+            <Text style={[styles.addSet, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>
+          </Pressable>
+          <Text style={styles.elapsed}>
+            {session.startedAt ? `${elapsedText(session.startedAt, new Date())} ELAPSED` : ''}
+          </Text>
+        </View>
 
         {session.exercises.map((ex, i) => (
           <ExerciseCard key={ex.sessionExerciseId} ex={ex} index={i} all={session.exercises} />
@@ -138,6 +145,7 @@ function SessionTab() {
       </ScrollView>
 
       <KeepAwakeWhileTraining />
+      <AdaptSheet open={adaptOpen} onClose={() => setAdaptOpen(false)} />
       <RpeSheet
         open={rpeOpen}
         busy={session.busy}
@@ -523,6 +531,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   elapsed: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'right', marginTop: 10 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   addSet: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
   rowActions: { flexDirection: 'row', justifyContent: 'space-between' },
   linkAction: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
