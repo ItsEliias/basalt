@@ -123,6 +123,7 @@ describe('addFoodEntry', () => {
       barcode: null,
       source: 'manual',
       micros: null,
+      photo_path: null,
     }]);
     expect(result).toEqual({
       ok: true,
@@ -131,7 +132,7 @@ describe('addFoodEntry', () => {
         brand: null, calories: 300, protein: 10, fat: 5, carbs: 40, fiber: 6,
         sugar: 4, sodiumMg: 120, saturatedFat: 1,
         servingSize: 100, servingUnit: 'g', quantity: 1, barcode: null, source: 'manual',
-        extSource: null, extId: null, micros: null, createdAt: entryRow.created_at,
+        photoPath: null, extSource: null, extId: null, micros: null, createdAt: entryRow.created_at,
       },
     });
   });
