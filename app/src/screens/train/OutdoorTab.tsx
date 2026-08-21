@@ -15,6 +15,7 @@ import { useAppStore } from '../../state/appStore';
 import { WalkMap } from './WalkMap';
 import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
 import * as Speech from 'expo-speech';
+import { Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usualLoop, type RouteCluster } from '@basalt/training';
 
@@ -46,6 +47,40 @@ export function OutdoorTab() {
   const [loopError, setLoopError] = useState<string | null>(null);
   const [voiceSplits, setVoiceSplits] = useState(false);
   const lastAnnouncedKm = useRef(0);
+  const [beacon, setBeacon] = useState<{ id: string; expiresAt: string } | null>(null);
+  const beaconLastPush = useRef(0);
+
+  const startBeacon = async () => {
+    const { data, error } = await supabase.functions.invoke('beacon', { body: { action: 'start' } });
+    if (error || !data?.id) return;
+    setBeacon({ id: data.id, expiresAt: data.expiresAt });
+    void Share.share({
+      message: `I'm sharing my live position for this walk (expires automatically): https://basalt.itseliias.com/beacon/#${data.id}`,
+    });
+  };
+
+  const stopBeacon = async () => {
+    if (!beacon) return;
+    await supabase.functions.invoke('beacon', { body: { action: 'stop', id: beacon.id } });
+    setBeacon(null);
+  };
+
+  // Push the latest accepted fix at most every 20s while a beacon runs.
+  useEffect(() => {
+    if (!beacon || mode.kind !== 'tracking') return;
+    if (Date.parse(beacon.expiresAt) < Date.now()) {
+      setBeacon(null);
+      return;
+    }
+    const nowMs = Date.now();
+    if (nowMs - beaconLastPush.current < 20_000) return;
+    beaconLastPush.current = nowMs;
+    const last = mode.last;
+    void supabase.functions.invoke('beacon', {
+      body: { action: 'update', id: beacon.id, lat: last.lat, lng: last.lng, accuracyM: last.accuracy },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [beacon, mode]);
   const usual: RouteCluster | null = usualLoop(
     recent.map((w) => ({ id: w.id, route: w.route, durationS: w.durationS })),
   );
@@ -162,6 +197,7 @@ export function OutdoorTab() {
       tickerRef.current = null;
     }
     const ended = Date.now();
+    void stopBeacon();
     const { points, started } = mode;
     setMode({ kind: 'saving' });
 
@@ -297,6 +333,20 @@ export function OutdoorTab() {
               <Stat k="Pace" v={livePace ? paceText(livePace) : '—'} u={livePace ? '/km' : undefined} />
               <Stat k="Points" v={String(mode.points.length)} />
             </View>
+            {beacon ? (
+              <Pressable onPress={() => void stopBeacon()}>
+                <View style={styles.beaconRow}>
+                  <View style={styles.beaconDot} />
+                  <Text style={styles.beaconText}>
+                    {`LIVE BEACON ACTIVE — ANYONE WITH THE LINK SEES YOUR POSITION · EXPIRES ${new Date(beacon.expiresAt).toTimeString().slice(0, 5)} · TAP TO STOP`}
+                  </Text>
+                </View>
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => void startBeacon()}>
+                <Text style={styles.shareLink}>SHARE A LIVE BEACON → EXPLICIT START, EXPLICIT STOP, 2 H MAX</Text>
+              </Pressable>
+            )}
             <CTA label="Stop & save" onPress={() => void stop()} />
             <SrcNote>Keeps recording while this screen is open · screen stays awake</SrcNote>
           </>
@@ -420,6 +470,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, overflow: 'hidden',
   },
   loopMeta: { fontFamily: mono, fontSize: 11, color: color.ink, marginTop: 8, fontVariant: ['tabular-nums'] },
+  beaconRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: color.recovery, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
+  beaconDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.recovery },
+  beaconText: { fontFamily: mono, fontSize: 8, letterSpacing: 0.6, color: color.recovery, flexShrink: 1, lineHeight: 12 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

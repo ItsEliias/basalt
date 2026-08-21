@@ -22,7 +22,7 @@ If either changes, revisit the marked answers.
 | Personal info | Email address | Yes, required | Account management | Sign-in identity (Supabase Auth) |
 | Health & fitness | Health info | Yes, optional | App functionality | Food/nutrition logs, weight, sleep (+stages), water, mindfulness, conditions/medications the user opts to note; Health Connect reads the user approves |
 | Health & fitness | Fitness info | Yes, optional | App functionality | Workouts, sets, walks |
-| Location | Precise location | Yes, optional | App functionality | GPS walk routes, only while recording a walk; stored in the user's account; never shared |
+| Location | Precise location | Yes, optional | App functionality | GPS walk routes while recording; stored in the user's account. **Shared only in the user-initiated live-beacon flow**: the user explicitly starts sharing a link showing their latest position to people they choose, with a visible in-app indicator, explicit stop, and a 2-hour hard expiry — never shared with any company |
 | Photos & videos | Photos | **Yes, optional** | App functionality | Food-entry photos the user chooses to attach — stored in a private per-user bucket (RLS), shown via short-lived signed URLs, deleted with the entry or the account; never shared. Barcode scanning remains on-device with nothing stored |
 | App activity / App info | — | **No** | — | No analytics, no crash reporting, no advertising SDKs |
 
@@ -79,5 +79,6 @@ them, and is fully deletable in-app.
 
 - AI quick-add disabled → remove the Anthropic service-provider declaration.
 - ~~Photo attachments ship → Photos becomes a collected type~~ — landed (food-entry photos, optional); the data-safety table above reflects it.
+- Live beacon landed → the location row above already reflects it (user-initiated sharing, not third-party sharing).
 - Tile provider swap → no data-safety change (tile fetches reveal only viewed map area, no
   user identifier is sent), but keep the privacy policy's provider name current.
