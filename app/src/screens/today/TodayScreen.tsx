@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule,
   MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag,
   TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow,
   color, mono, groupInt,
 } from '@basalt/ui';
-import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
+import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
 import { todayISO } from '@basalt/core-data';
@@ -298,20 +298,21 @@ export function TodayScreen() {
               <View key={s.meal}>
                 <MealTag>{`${s.label}${s.time ? ` — ${s.time}` : ''}`}</MealTag>
                 {s.entries.map((e, i) => (
-                  <ReceiptRow
-                    key={e.id}
-                    name={e.foodName}
-                    thumb={
-                      e.photoPath && photoUrls.get(e.photoPath) ? (
-                        <Image source={{ uri: photoUrls.get(e.photoPath)! }} style={styles.entryThumb} />
-                      ) : undefined
-                    }
-                    meta={hideNumbers ? undefined : entryMeta(e)}
-                    value={hideNumbers ? '✓' : groupInt(e.calories)}
-                    unit={hideNumbers ? undefined : 'kcal'}
-                    valueColor={hideNumbers ? color.faint : undefined}
-                    last={i === s.entries.length - 1}
-                  />
+                  <Pressable key={e.id} onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)}>
+                    <ReceiptRow
+                      name={e.foodName}
+                      thumb={
+                        e.photoPath && photoUrls.get(e.photoPath) ? (
+                          <Image source={{ uri: photoUrls.get(e.photoPath)! }} style={styles.entryThumb} />
+                        ) : undefined
+                      }
+                      meta={hideNumbers ? 'hold to remove' : `${entryMeta(e)} · hold to remove`}
+                      value={hideNumbers ? '✓' : groupInt(e.calories)}
+                      unit={hideNumbers ? undefined : 'kcal'}
+                      valueColor={hideNumbers ? color.faint : undefined}
+                      last={i === s.entries.length - 1}
+                    />
+                  </Pressable>
                 ))}
               </View>
             ))}
@@ -321,7 +322,7 @@ export function TodayScreen() {
                 <ReceiptRow name={s.title} meta={s.meta} last />
               </View>
             ))}
-            <SrcNote>Tap any entry to edit · every value from your own log</SrcNote>
+            <SrcNote>Hold any food entry to remove it · every value from your own log</SrcNote>
           </>
         ) : (
           <EmptyState>

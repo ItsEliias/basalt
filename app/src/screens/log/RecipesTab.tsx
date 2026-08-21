@@ -6,7 +6,7 @@ import {
   color, mono,
 } from '@basalt/ui';
 import {
-  importRecipeFromUrl, draftFromImport, saveRecipe, listRecipes, getRecipeDetail,
+  importRecipeFromUrl, draftFromImport, saveRecipe, listRecipes, getRecipeDetail, deleteRecipe,
   confirmRecipeMacros, logRecipeServing, addToGroceryList, ingredientConflicts,
   scaleQty, fmtQty,
   type Recipe, type RecipeDetail, type SaveRecipeInput, type MealType,
@@ -261,7 +261,7 @@ export function RecipesTab() {
       </View>
       <CTA label={importing ? 'Importing…' : 'Import from URL'} disabled={importing || !importUrl.trim()} onPress={() => void runImport()} />
       {importError ? <Text style={styles.conflict}>{importError.toUpperCase()}</Text> : null}
-      <SrcNote>JSON-LD import · social imports (TikTok/IG/YouTube) arrive at V1.x · everything editable before save</SrcNote>
+      <SrcNote>JSON-LD import · TikTok/Instagram/YouTube links go through an AI-structured draft, source link kept · everything editable before save</SrcNote>
 
       <Card>
         <ReceiptHeader label="Saved recipes" summary={filtered.length > 0 ? 'per serve · scalable' : undefined} />
@@ -270,7 +270,11 @@ export function RecipesTab() {
         ) : filtered.length > 0 ? (
           filtered.map((r, i) => {
             return (
-              <Pressable key={r.id} onPress={() => void openDetail(r.id)}>
+              <Pressable
+                key={r.id}
+                onPress={() => void openDetail(r.id)}
+                onLongPress={() => void deleteRecipe(supabase, r.id).then(refresh)}
+              >
                 <ReceiptRow
                   name={r.title}
                   meta={[
@@ -278,6 +282,7 @@ export function RecipesTab() {
                     `serves ${r.serves}`,
                     r.totalTimeMin ? `${r.totalTimeMin} min` : null,
                     r.source === 'jsonld' ? 'imported' : null,
+                    'hold to remove',
                   ].filter(Boolean).join(' · ')}
                   value={approxValue(r.caloriesPerServe, r.macrosConfirmed)}
                   unit="kcal"

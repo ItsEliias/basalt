@@ -47,13 +47,37 @@ export function ObOption({
   );
 }
 
+// Confirmed on-device (Samsung SM_S908E, Android 16): native TextInput
+// ignores its `color`/`fontSize` style on this RN 0.85.3 + New Architecture
+// combo — a debug backgroundColor override rendered instantly, a debug text
+// color never did, on both Fabric and the legacy bridge. So the typed value
+// and the placeholder are drawn ourselves as an overlaid <Text> (plain Text
+// color renders correctly everywhere else in the app) on top of a
+// functionally-normal but visually-blank TextInput, which still owns focus,
+// the keyboard and the caret.
 export function ObInput(props: React.ComponentProps<typeof TextInput>) {
+  const { value, placeholder, secureTextEntry, multiline, style, ...rest } = props;
+  const shown = secureTextEntry ? '•'.repeat(value?.length ?? 0) : value;
   return (
-    <TextInput
-      placeholderTextColor={color.faint}
-      {...props}
-      style={[styles.input, props.style]}
-    />
+    <View style={[styles.inputWrap, style]}>
+      <TextInput
+        placeholderTextColor="transparent"
+        cursorColor={color.ink}
+        selectionColor={color.ink}
+        {...rest}
+        value={value}
+        secureTextEntry={secureTextEntry}
+        multiline={multiline}
+        style={styles.inputNative}
+      />
+      <Text
+        pointerEvents="none"
+        numberOfLines={multiline ? undefined : 1}
+        style={[styles.inputOverlay, !value && styles.inputPlaceholder]}
+      >
+        {value ? shown : (placeholder ?? '')}
+      </Text>
+    </View>
   );
 }
 
@@ -100,19 +124,34 @@ const styles = StyleSheet.create({
   markSq: { borderRadius: 5 },
   markOn: { borderColor: color.ink, backgroundColor: color.ink },
   markCheck: { fontSize: 10, color: color.bg, lineHeight: 12 },
-  input: {
+  inputWrap: {
     backgroundColor: color.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.border,
     borderRadius: radius.input,
+    marginTop: 10,
+    flexGrow: 1,
+    flexBasis: 'auto',
+    position: 'relative',
+  },
+  inputNative: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    color: 'transparent',
+    fontSize: 14,
+  },
+  inputOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     paddingVertical: 14,
     paddingHorizontal: 16,
     color: color.ink,
     fontSize: 14,
-    marginTop: 10,
-    flexGrow: 1,
-    flexBasis: 0,
   },
+  inputPlaceholder: { color: color.faint },
   inRow: { flexDirection: 'row', gap: 10 },
   chipLabel: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.14, color: color.mute, marginTop: 20 },
   note: { fontFamily: mono, fontSize: 9.5, color: color.faint, letterSpacing: 0.38, lineHeight: 16, marginTop: 22 },
