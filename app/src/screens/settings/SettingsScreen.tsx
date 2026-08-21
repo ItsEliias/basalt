@@ -47,6 +47,7 @@ export function SettingsScreen() {
   const [confirmText, setConfirmText] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [weekNotif, setWeekNotif] = useState<boolean | null>(null);
+  const [includePhotos, setIncludePhotos] = useState(false);
   const [weekNotifNote, setWeekNotifNote] = useState<string | null>(null);
 
   useEffect(() => {
@@ -90,17 +91,17 @@ export function SettingsScreen() {
   };
 
   const exportJson = async () => {
-    const bundle = await collectExport();
+    const bundle = await collectExport(includePhotos);
     await shareText('basalt-export.json', buildJson(bundle), 'application/json');
   };
   const exportCsv = async () => {
-    const bundle = await collectExport();
+    const bundle = await collectExport(includePhotos);
     await shareText('basalt-export.csv', buildSectionedCsv(bundle), 'text/csv');
   };
   const exportZip = async () => {
     setBusy('basalt-export.zip');
     try {
-      const bundle = await collectExport();
+      const bundle = await collectExport(includePhotos);
       const files = buildPerTableCsvs(bundle);
       const zipped = zipSync({
         'README.txt': strToU8(buildExportReadme(bundle, new Date().toISOString())),
@@ -279,6 +280,14 @@ export function SettingsScreen() {
             meta="sectioned per table, spreadsheet-ready"
             value="→"
             valueColor={color.faint}
+          />
+        </Pressable>
+        <Pressable onPress={() => setIncludePhotos(!includePhotos)}>
+          <ReceiptRow
+            name="Include progress-photo records"
+            meta="off by default — the vault stays out of exports unless you say so (records only; the photos themselves stay in private storage)"
+            value={includePhotos ? 'on' : 'off'}
+            valueColor={includePhotos ? color.carbs : color.faint}
           />
         </Pressable>
         <Pressable onPress={() => void exportZip()} disabled={busy !== null}>

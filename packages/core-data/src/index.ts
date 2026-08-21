@@ -8,3 +8,4 @@ export * from './user';
 export * from './daily-log';
 export * from './sync';
 export * from './profile';
+export * from './progress-photos';

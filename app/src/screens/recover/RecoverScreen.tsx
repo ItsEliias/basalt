@@ -12,6 +12,7 @@ import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS } from '@basalt/analytics';
+import { ProgressPhotosCard } from './ProgressPhotos';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
   FASTING_DISCLAIMER, type Fast,
@@ -207,6 +208,8 @@ function VitalsTab() {
           <SrcNote>Bands need 7+ persisted days · from Health Connect rollups, source named · no band from thin air</SrcNote>
         </Card>
       ) : null}
+
+      <ProgressPhotosCard />
 
       {/* ── Fasting — opt-in window timer, information not advice ──── */}
       {fastingEnabled ? (

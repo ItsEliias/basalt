@@ -31,9 +31,14 @@ export const EXPORT_TABLES = [
   'basalt_grocery_items',
 ] as const;
 
-export async function collectExport(): Promise<ExportBundle> {
+/**
+ * Progress-photo records are excluded unless explicitly included — the
+ * vault is private-by-default all the way into exports.
+ */
+export async function collectExport(includeProgressPhotos = false): Promise<ExportBundle> {
   const bundle: ExportBundle = {};
-  for (const table of EXPORT_TABLES) {
+  const tables = includeProgressPhotos ? [...EXPORT_TABLES, 'basalt_progress_photos'] : [...EXPORT_TABLES];
+  for (const table of tables) {
     const { data } = await supabase.from(table).select('*').limit(10000);
     bundle[table] = (data ?? []) as Record<string, unknown>[];
   }

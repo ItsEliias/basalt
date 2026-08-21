@@ -33,6 +33,7 @@ const BASALT_TABLES = [
   'basalt_checkins',
   'basalt_fasts',
   'basalt_beacons',
+  'basalt_progress_photos',
   'basalt_weight_entries',
   'basalt_meal_plans',
   'basalt_grocery_items',
@@ -43,7 +44,7 @@ const BASALT_TABLES = [
 ];
 
 // Private storage buckets holding the user's files under a `${uid}/` prefix.
-const BASALT_BUCKETS = ['basalt-food-photos'];
+const BASALT_BUCKETS = ['basalt-food-photos', 'basalt-progress-photos'];
 
 // Arise-app tables sharing this project's auth pool; user_profiles keys on id.
 const ARISE_TABLES: { table: string; column: string }[] = [
