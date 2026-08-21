@@ -31,6 +31,7 @@ const BASALT_TABLES = [
   'basalt_step_logs',
   'basalt_vitals',
   'basalt_checkins',
+  'basalt_fasts',
   'basalt_weight_entries',
   'basalt_meal_plans',
   'basalt_grocery_items',
