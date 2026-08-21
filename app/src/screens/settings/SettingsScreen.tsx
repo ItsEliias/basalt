@@ -13,6 +13,7 @@ import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
+import { shareDoctorReport } from '../../lib/doctorReport';
 import { zipSync, strToU8 } from 'fflate';
 import {
   buildPerTableCsvs, buildExportReadme, u8ToBase64,
@@ -278,6 +279,25 @@ export function SettingsScreen() {
           <ReceiptRow
             name={busy === 'basalt-export.csv' ? 'Exporting…' : 'Export everything — CSV'}
             meta="sectioned per table, spreadsheet-ready"
+            value="→"
+            valueColor={color.faint}
+          />
+        </Pressable>
+        <Pressable
+          onPress={async () => {
+            setBusy('doctor');
+            try {
+              await shareDoctorReport();
+            } catch (e: any) {
+              Alert.alert('Report failed', e?.message ?? 'Could not build the PDF.');
+            }
+            setBusy(null);
+          }}
+          disabled={busy !== null}
+        >
+          <ReceiptRow
+            name={busy === 'doctor' ? 'Building…' : 'Doctor report — PDF'}
+            meta="last 30 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
             value="→"
             valueColor={color.faint}
           />
