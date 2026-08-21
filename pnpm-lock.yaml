@@ -61,6 +61,12 @@ importers:
       expo-haptics:
         specifier: ^56.0.3
         version: 56.0.3(expo@56.0.20)
+      expo-image-manipulator:
+        specifier: ~56.0.25
+        version: 56.0.25(expo@56.0.20)
+      expo-image-picker:
+        specifier: ~56.0.24
+        version: 56.0.24(expo@56.0.20)
       expo-keep-awake:
         specifier: ~56.0.3
         version: 56.0.3(expo@56.0.20)(react@19.2.3)
@@ -73,6 +79,9 @@ importers:
       expo-sharing:
         specifier: ~56.0.25
         version: 56.0.25(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
+      expo-speech:
+        specifier: ~56.0.3
+        version: 56.0.3(expo@56.0.20)
       expo-status-bar:
         specifier: ~56.0.4
         version: 56.0.4(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -1644,6 +1653,21 @@ packages:
     peerDependencies:
       expo: '*'
 
+  expo-image-loader@56.0.3:
+    resolution: {integrity: sha512-JgUo4fUeU1ZC+z8iBFj8v7yoGQnZrLbOVPyNE+DWVrld55F2F6R1ck+rmdm/8TNWLz1LhNQfD7c3XYP1ZikxXA==}
+    peerDependencies:
+      expo: '*'
+
+  expo-image-manipulator@56.0.25:
+    resolution: {integrity: sha512-12eo/bRfTSYfU+IaZ2gzbcXJX/vFUOszBTZ4dkde8pf0OvcMHBVEGGBY+BPgEDCCNcml/knFSvOwIRHFTHplTw==}
+    peerDependencies:
+      expo: '*'
+
+  expo-image-picker@56.0.24:
+    resolution: {integrity: sha512-5GuHVqHUhf9RM96MDZwHdsSh9F/H7DmXKnDbXlONNK8+AwTsSDwB1NSwLZgl8CxlPbZXYaGcELVJdLLscXvZng==}
+    peerDependencies:
+      expo: '*'
+
   expo-keep-awake@56.0.3:
     resolution: {integrity: sha512-CLMJXtEiMKknD3Rpm8CRwE6ZJUzu2yCEmRk1sgfHAJ1zIbuEWY3dpPDubtsnuzWm+2k6Sru+yaFbYsvPWmTiBA==}
     peerDependencies:
@@ -1691,6 +1715,11 @@ packages:
       expo: '*'
       react: '*'
       react-native: '*'
+
+  expo-speech@56.0.3:
+    resolution: {integrity: sha512-NkO7RX+BgJCALrjL/6C9AsyenkmJD9EBDIKAQmSN6BLrcXxwZnyQ9TSo/ZTSDSY9Y28aStXHfEBQogt2qUrP9w==}
+    peerDependencies:
+      expo: '*'
 
   expo-status-bar@56.0.4:
     resolution: {integrity: sha512-IGs/fDfkHXofy2ZQrGiXayhFK04HB85FZXorhcEhDZEcqASKgSqpak+HwUtAaR0MeTJwWyHNF7I6VmVbbp8EcA==}
@@ -4829,6 +4858,20 @@ snapshots:
     dependencies:
       expo: 56.0.20(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
 
+  expo-image-loader@56.0.3(expo@56.0.20):
+    dependencies:
+      expo: 56.0.20(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
+
+  expo-image-manipulator@56.0.25(expo@56.0.20):
+    dependencies:
+      expo: 56.0.20(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
+      expo-image-loader: 56.0.3(expo@56.0.20)
+
+  expo-image-picker@56.0.24(expo@56.0.20):
+    dependencies:
+      expo: 56.0.20(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
+      expo-image-loader: 56.0.3(expo@56.0.20)
+
   expo-keep-awake@56.0.3(expo@56.0.20)(react@19.2.3):
     dependencies:
       expo: 56.0.20(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
@@ -4891,6 +4934,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  expo-speech@56.0.3(expo@56.0.20):
+    dependencies:
+      expo: 56.0.20(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
 
   expo-status-bar@56.0.4(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:

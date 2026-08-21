@@ -14,6 +14,9 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { WalkMap } from './WalkMap';
 import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
+import * as Speech from 'expo-speech';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usualLoop, type RouteCluster } from '@basalt/training';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
 // the pieces the audit found missing built for real: Douglas-Peucker before
@@ -38,6 +41,45 @@ export function OutdoorTab() {
   const [recent, setRecent] = useState<WalkRow[]>([]);
   const [openWalkId, setOpenWalkId] = useState<string | null>(null);
   const [shareWalk, setShareWalk] = useState<WalkRow | null>(null);
+  const [loop, setLoop] = useState<{ points: { lat: number; lng: number }[]; lengthM: number; requestedM: number; note: string } | null>(null);
+  const [loopBusy, setLoopBusy] = useState(false);
+  const [loopError, setLoopError] = useState<string | null>(null);
+  const [voiceSplits, setVoiceSplits] = useState(false);
+  const lastAnnouncedKm = useRef(0);
+  const usual: RouteCluster | null = usualLoop(
+    recent.map((w) => ({ id: w.id, route: w.route, durationS: w.durationS })),
+  );
+
+  useEffect(() => {
+    void AsyncStorage.getItem('basalt.voiceSplits').then((v) => setVoiceSplits(v === 'on'));
+  }, []);
+
+  const generateLoop = async (km: number) => {
+    setLoopBusy(true);
+    setLoopError(null);
+    try {
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { data, error } = await supabase.functions.invoke('route-loop', {
+        body: { lat: pos.coords.latitude, lng: pos.coords.longitude, km },
+      });
+      if (error) {
+        let message = error.message ?? 'Could not generate a loop.';
+        try {
+          const ctx = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) message = body.error;
+          }
+        } catch { /* keep generic */ }
+        setLoopError(message);
+      } else {
+        setLoop(data);
+      }
+    } catch (e: any) {
+      setLoopError(e?.message ?? 'Location unavailable.');
+    }
+    setLoopBusy(false);
+  };
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -105,6 +147,7 @@ export function OutdoorTab() {
         },
       );
       tickerRef.current = setInterval(() => setNow(Date.now()), 500);
+      lastAnnouncedKm.current = 0;
     } catch (e: any) {
       setMode({ kind: 'error', message: e?.message ?? 'Could not start tracking.' });
     }
@@ -159,6 +202,18 @@ export function OutdoorTab() {
 
   const tracking = mode.kind === 'tracking';
   const liveDistance = tracking ? routeDistanceM(mode.points) : 0;
+
+  // Voice split announcements — OS text-to-speech, opt-in, on whole kms.
+  useEffect(() => {
+    if (!tracking || !voiceSplits) return;
+    const km = Math.floor(liveDistance / 1000);
+    if (km > lastAnnouncedKm.current && mode.kind === 'tracking') {
+      lastAnnouncedKm.current = km;
+      const seconds = Math.max(1, Math.round((Date.now() - mode.started) / 1000));
+      const paceS = Math.round(seconds / (liveDistance / 1000));
+      Speech.speak(`${km} kilometre${km === 1 ? '' : 's'}. Average pace ${Math.floor(paceS / 60)} ${paceS % 60} per kilometre.`);
+    }
+  }, [tracking, voiceSplits, liveDistance, mode]);
   const liveSeconds = tracking ? Math.max(1, Math.round((now - mode.started) / 1000)) : 0;
   const livePace = tracking && liveDistance > 50 ? liveSeconds / (liveDistance / 1000) : null;
 
@@ -176,6 +231,34 @@ export function OutdoorTab() {
               jitter doesn't inflate distance, and the route is simplified before it's stored.
             </EmptyState>
             <CTA label="Check GPS" onPress={() => void boot()} />
+            <Pressable onPress={() => {
+              const next = !voiceSplits;
+              setVoiceSplits(next);
+              void AsyncStorage.setItem('basalt.voiceSplits', next ? 'on' : 'off');
+            }}>
+              <Text style={styles.shareLink}>{voiceSplits ? 'VOICE SPLITS ON — EVERY KM · TAP TO TURN OFF' : 'VOICE SPLITS OFF · TAP TO ANNOUNCE EVERY KM'}</Text>
+            </Pressable>
+            <View style={styles.loopRow}>
+              <Text style={styles.loopLabel}>LOOP OF…</Text>
+              {[2, 3, 5, 8].map((km) => (
+                <Pressable key={km} disabled={loopBusy} onPress={() => void generateLoop(km)}>
+                  <Text style={styles.loopChip}>{loopBusy ? '…' : `${km} KM`}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {loopError ? <SrcNote>{loopError}</SrcNote> : null}
+            {loop ? (
+              <>
+                <WalkMap route={loop.points.map((p, i) => ({ ...p, t: i }))} height={190} />
+                <Text style={styles.loopMeta}>
+                  {`${(loop.lengthM / 1000).toFixed(2)} km loop — you asked for ${(loop.requestedM / 1000).toFixed(0)} km`}
+                </Text>
+                <SrcNote>{loop.note}</SrcNote>
+                <Pressable onPress={() => setLoop(null)}>
+                  <Text style={styles.shareLink}>DISMISS</Text>
+                </Pressable>
+              </>
+            ) : null}
           </>
         ) : null}
 
@@ -261,6 +344,7 @@ export function OutdoorTab() {
                     new Date(w.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }),
                     w.avgPaceSecPerKm ? `${paceText(w.avgPaceSecPerKm)} /km` : null,
                     w.elevationGainM !== null ? `+${w.elevationGainM} m` : null,
+                    usual?.walkIds.includes(w.id) ? `your usual loop · median ${mmss(usual.medianDurationS)} · ${usual.walkIds.length} walks` : null,
                     w.route && w.route.length >= 2 ? (openWalkId === w.id ? 'hide map' : 'map') : null,
                   ].filter(Boolean).join(' · ')}
                   value={mmss(w.durationS)}
@@ -328,6 +412,14 @@ function KeepAwakeWhileTracking() {
 
 const styles = StyleSheet.create({
   shareLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
+  loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
+  loopLabel: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.faint },
+  loopChip: {
+    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.7, color: color.ink2,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
+    paddingHorizontal: 12, paddingVertical: 6, overflow: 'hidden',
+  },
+  loopMeta: { fontFamily: mono, fontSize: 11, color: color.ink, marginTop: 8, fontVariant: ['tabular-nums'] },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
