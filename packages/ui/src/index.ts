@@ -13,3 +13,4 @@ export * from './components/sets';
 export * from './components/timer';
 export * from './components/onboarding';
 export * from './components/viz';
+export * from './components/body-figure';

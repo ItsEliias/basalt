@@ -3,14 +3,14 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow,
+  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, BodyFigure,
   ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav,
   GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput,
   color, mono, mmss, groupInt,
 } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
-  platesFor, platesText, biasOrder, suggestionText, warmupSets,
+  platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
   describe as describeGuided,
   type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
@@ -343,6 +343,47 @@ function CommentSheet({ open, initial, setNumber, onClose, onSave }: {
   );
 }
 
+function ExerciseDetailSheet({ exercise, onClose, onPick }: {
+  exercise: Exercise | null;
+  onClose: () => void;
+  onPick: (e: Exercise, timed: boolean) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  if (!exercise) return null;
+  const emphasis = regionsFor(exercise);
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.dim} onPress={onClose} />
+      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={styles.sheetTitle}>{exercise.name.toUpperCase()}</Text>
+        <View style={styles.detailRow}>
+          <BodyFigure intensity={intensityFor(emphasis)} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.detailMeta}>
+              {[
+                exercise.primaryMuscles.length > 0 ? `Primary · ${exercise.primaryMuscles.join(', ')}` : null,
+                exercise.secondaryMuscles.length > 0 ? `Secondary · ${exercise.secondaryMuscles.join(', ')}` : null,
+                exercise.equipment ? `Equipment · ${exercise.equipment}` : null,
+                exercise.difficulty ? `Level · ${exercise.difficulty}` : null,
+              ].filter(Boolean).join('\n')}
+            </Text>
+            <View style={styles.mediaSlot}>
+              <Text style={styles.mediaSlotText}>MEDIA — LICENSED GIF PACK PENDING</Text>
+            </View>
+          </View>
+        </View>
+        {exercise.instructions.length > 0 ? (
+          <Text style={styles.detailInstructions} numberOfLines={6}>
+            {exercise.instructions.slice(0, 3).join(' ')}
+          </Text>
+        ) : null}
+        <CTA label="Add to session" onPress={() => { onClose(); onPick(exercise, false); }} />
+        <SrcNote>Primary solid · secondary faded · muscle data from free-exercise-db</SrcNote>
+      </View>
+    </Modal>
+  );
+}
+
 function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; ex: SessionExerciseState }) {
   const insets = useSafeAreaInsets();
   const [sharing, setSharing] = useState(false);
@@ -467,6 +508,7 @@ function ExercisePicker({
   const [muscle, setMuscle] = useState<string | null>(null);
   const [mineOnly, setMineOnly] = useState(false);
   const [results, setResults] = useState<(Exercise & { bias: ConditionBias })[]>([]);
+  const [detailFor, setDetailFor] = useState<Exercise | null>(null);
 
   const MUSCLES = ['chest', 'shoulders', 'quadriceps', 'hamstrings', 'lats', 'middle back', 'biceps', 'triceps', 'abdominals', 'glutes', 'calves'];
 
@@ -520,15 +562,21 @@ function ExercisePicker({
                   last={i === results.length - 1}
                 />
               </Pressable>
-              <Pressable onPress={() => onPick(e, true)}>
-                <Text style={styles.timedLink}>ADD AS TIMED (PLANK-STYLE) →</Text>
-              </Pressable>
+              <View style={styles.pickerLinks}>
+                <Pressable onPress={() => onPick(e, true)}>
+                  <Text style={styles.timedLink}>ADD AS TIMED (PLANK-STYLE) →</Text>
+                </Pressable>
+                <Pressable onPress={() => setDetailFor(e)}>
+                  <Text style={styles.timedLink}>DETAILS →</Text>
+                </Pressable>
+              </View>
             </View>
           ))}
           {results.length === 0 ? (
             <EmptyState>No movements match those filters.</EmptyState>
           ) : null}
         </ScrollView>
+        <ExerciseDetailSheet exercise={detailFor} onClose={() => setDetailFor(null)} onPick={onPick} />
         <SrcNote center>
           {biasedCount > 0
             ? `Source · free-exercise-db · ${biasedCount} listed lower for your noted conditions — nothing is hidden, published rules`
@@ -559,6 +607,15 @@ const styles = StyleSheet.create({
   warmupTitle: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, marginTop: 16 },
   warmupLine: { fontFamily: mono, fontSize: 13, color: color.ink, marginTop: 6, fontVariant: ['tabular-nums'] },
   warmupPct: { fontSize: 10, color: color.faint },
+  pickerLinks: { flexDirection: 'row', justifyContent: 'space-between' },
+  detailRow: { flexDirection: 'row', gap: 18, alignItems: 'flex-start', marginTop: 14 },
+  detailMeta: { fontFamily: mono, fontSize: 10, color: color.ink2, lineHeight: 17, letterSpacing: 0.3 },
+  detailInstructions: { fontSize: 12.5, color: color.mute, lineHeight: 18, marginTop: 12 },
+  mediaSlot: {
+    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderStyle: 'dashed',
+    borderRadius: 10, padding: 12, marginTop: 12, alignItems: 'center',
+  },
+  mediaSlotText: { fontFamily: mono, fontSize: 8, letterSpacing: 0.8, color: color.faint },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
     backgroundColor: color.surface,
