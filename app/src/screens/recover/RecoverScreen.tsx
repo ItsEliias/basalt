@@ -12,6 +12,10 @@ import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS } from '@basalt/analytics';
+import {
+  getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
+  FASTING_DISCLAIMER, type Fast,
+} from '@basalt/nutrition';
 import { isoDay } from '@basalt/core-data';
 import { useAppStore } from '../../state/appStore';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
@@ -39,6 +43,7 @@ export function RecoverScreen() {
 }
 
 function VitalsTab() {
+  const profile = useAppStore((s) => s.profile);
   const [vitals, setVitals] = useState<Vitals | null>(null);
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [readiness, setReadiness] = useState<Awaited<ReturnType<typeof loadReadiness>> | null>(null);
@@ -46,7 +51,18 @@ function VitalsTab() {
   const [checkinFactors, setCheckinFactors] = useState<string[]>([]);
   const [checkinMood, setCheckinMood] = useState<number | null>(null);
   const [checkinSaved, setCheckinSaved] = useState(false);
-  const profile = useAppStore((s) => s.profile);
+  const [activeFast, setActiveFast] = useState<Fast | null>(null);
+  const [recentFasts, setRecentFasts] = useState<Fast[]>([]);
+  const [fastNow, setFastNow] = useState(Date.now());
+  const fastingEnabled = profile?.fastingEnabled ?? false;
+
+  useEffect(() => {
+    if (!fastingEnabled) return;
+    void getActiveFast(supabase).then((r) => r.ok && setActiveFast(r.data));
+    void listRecentFasts(supabase).then((r) => r.ok && setRecentFasts(r.data));
+    const iv = setInterval(() => setFastNow(Date.now()), 30_000);
+    return () => clearInterval(iv);
+  }, [fastingEnabled]);
 
   useEffect(() => {
     void (async () => {
@@ -189,6 +205,47 @@ function VitalsTab() {
             />
           ) : null}
           <SrcNote>Bands need 7+ persisted days · from Health Connect rollups, source named · no band from thin air</SrcNote>
+        </Card>
+      ) : null}
+
+      {/* ── Fasting — opt-in window timer, information not advice ──── */}
+      {fastingEnabled ? (
+        <Card>
+          <ReceiptHeader label="Fasting" summary={activeFast ? stageFor(fastElapsed(activeFast.startedAt, fastNow).hours).label : undefined} />
+          {activeFast ? (
+            <>
+              <HeroNumeral value={fastElapsed(activeFast.startedAt, fastNow).text} unit="h fasted" />
+              <SrcNote>{`${stageFor(fastElapsed(activeFast.startedAt, fastNow).hours).detail} · ${FASTING_DISCLAIMER}`}</SrcNote>
+              <CTA
+                label="End fast"
+                onPress={() => {
+                  void endFast(supabase, activeFast.id, new Date().toISOString()).then(() => {
+                    setActiveFast(null);
+                    void listRecentFasts(supabase).then((r) => r.ok && setRecentFasts(r.data));
+                  });
+                }}
+              />
+            </>
+          ) : (
+            <>
+              {recentFasts.length > 0 ? (
+                recentFasts.map((f, i) => (
+                  <ReceiptRow
+                    key={f.id}
+                    name={new Date(f.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    value={fastElapsed(f.startedAt, Date.parse(f.endedAt!)).text}
+                    unit="h"
+                    last={i === recentFasts.length - 1}
+                  />
+                ))
+              ) : (
+                <EmptyState>No fasts recorded. Start one when a window begins — the stages are documented, not promised.</EmptyState>
+              )}
+              <CTA label="Start fast" onPress={() => {
+                void startFast(supabase, new Date().toISOString()).then((r) => r.ok && setActiveFast(r.data));
+              }} />
+            </>
+          )}
         </Card>
       ) : null}
 

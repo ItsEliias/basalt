@@ -239,6 +239,16 @@ export function SettingsScreen() {
             last
           />
         </Pressable>
+        <ObChipLabel>Fasting module</ObChipLabel>
+        <Pressable onPress={() => void save({ fastingEnabled: !(profile?.fastingEnabled ?? false) })} disabled={busy !== null}>
+          <ReceiptRow
+            name="Fasting timer"
+            meta="a window timer with documented stages — information, not medical advice. Off unless you want it."
+            value={profile?.fastingEnabled ? 'on' : 'off'}
+            valueColor={profile?.fastingEnabled ? color.carbs : color.faint}
+            last
+          />
+        </Pressable>
         <ObChipLabel>Week in review</ObChipLabel>
         <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null}>
           <ReceiptRow
