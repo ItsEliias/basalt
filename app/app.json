@@ -50,6 +50,21 @@
       "expo-notifications",
       "./plugins/withTimerFgs.js",
       [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "BasaltToday",
+              "label": "Basalt — Today",
+              "description": "Energy remaining and water, as of your last open — never invented.",
+              "minWidth": "180dp",
+              "minHeight": "80dp",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Basalt uses the camera to scan food barcodes."
