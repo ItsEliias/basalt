@@ -5,12 +5,14 @@ import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav,
   TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow,
   color, mono, kgText, hoursMinutes, groupInt,
+  ChipGroup,
 } from '@basalt/ui';
 import { healthService, labelForPackage, type SleepSessionSummary } from '@basalt/health-connect';
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness } from '@basalt/analytics';
+import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS } from '@basalt/analytics';
+import { isoDay } from '@basalt/core-data';
 import { useAppStore } from '../../state/appStore';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
 
@@ -41,6 +43,9 @@ function VitalsTab() {
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [readiness, setReadiness] = useState<Awaited<ReturnType<typeof loadReadiness>> | null>(null);
   const [mathOpen, setMathOpen] = useState(false);
+  const [checkinFactors, setCheckinFactors] = useState<string[]>([]);
+  const [checkinMood, setCheckinMood] = useState<number | null>(null);
+  const [checkinSaved, setCheckinSaved] = useState(false);
   const profile = useAppStore((s) => s.profile);
 
   useEffect(() => {
@@ -49,6 +54,12 @@ function VitalsTab() {
       const w = await listWeightEntries(supabase, 14);
       if (w.ok) setWeights(w.data);
       setReadiness(await loadReadiness(supabase, new Date()));
+      const c = await getCheckin(supabase, isoDay(new Date()));
+      if (c.ok && c.data) {
+        setCheckinFactors(c.data.factors);
+        setCheckinMood(c.data.mood);
+        setCheckinSaved(true);
+      }
 
       const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
 
@@ -180,6 +191,36 @@ function VitalsTab() {
           <SrcNote>Bands need 7+ persisted days · from Health Connect rollups, source named · no band from thin air</SrcNote>
         </Card>
       ) : null}
+
+      {/* ── Evening check-in — facts for your own correlations ─────── */}
+      <Card>
+        <ReceiptHeader label="Evening check-in" summary={checkinSaved ? 'saved for today' : undefined} />
+        <ChipGroup
+          options={CHECKIN_FACTORS.map((f) => f.label)}
+          values={checkinFactors.map((k) => CHECKIN_FACTORS.find((f) => f.key === k)?.label ?? k)}
+          onToggle={(label) => {
+            const key = CHECKIN_FACTORS.find((f) => f.label === label)?.key;
+            if (!key) return;
+            const next = checkinFactors.includes(key)
+              ? checkinFactors.filter((k) => k !== key)
+              : [...checkinFactors, key];
+            setCheckinFactors(next);
+            setCheckinSaved(true);
+            void saveCheckin(supabase, { date: isoDay(new Date()), factors: next, mood: checkinMood });
+          }}
+        />
+        <ChipRow
+          options={['1', '2', '3', '4', '5']}
+          value={checkinMood !== null ? String(checkinMood) : undefined}
+          onChange={(v) => {
+            const mood = parseInt(v, 10);
+            setCheckinMood(mood);
+            setCheckinSaved(true);
+            void saveCheckin(supabase, { date: isoDay(new Date()), factors: checkinFactors, mood });
+          }}
+        />
+        <SrcNote>Facts about today, one row per day · they feed Trends' correlations through the same gates (|r| ≥ 0.45, 30+ days) · never scored, never judged · mood 1–5 optional</SrcNote>
+      </Card>
 
       {/* ── Sleep ──────────────────────────────────────────────────── */}
       <Card>

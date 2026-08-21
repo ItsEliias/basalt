@@ -77,5 +77,25 @@ export async function loadDailySeries(
     volumeKg.set(date, (volumeKg.get(date) ?? 0) + Number(r.weight_kg) * r.reps);
   }
 
-  return ok({ intakeKcal, proteinG, steps, sleepMin, volumeKg });
+  // Check-in factor series (0/1) + mood — the journal's contribution.
+  const factorSeries: Record<string, Map<string, number>> = {
+    alcohol: new Map(), late_meal: new Map(), stress: new Map(),
+    caffeine_late: new Map(), screens_late: new Map(),
+  };
+  const mood = new Map<string, number>();
+  const checkins = await client
+    .from('basalt_checkins')
+    .select('date, factors, mood')
+    .eq('user_id', u.data)
+    .gte('date', fromIso);
+  if (checkins.error) return err(checkins.error.message);
+  for (const c of checkins.data ?? []) {
+    const r = c as any;
+    for (const key of Object.keys(factorSeries)) {
+      factorSeries[key]!.set(r.date, (r.factors ?? []).includes(key) ? 1 : 0);
+    }
+    if (r.mood !== null && r.mood !== undefined) mood.set(r.date, Number(r.mood));
+  }
+
+  return ok({ intakeKcal, proteinG, steps, sleepMin, volumeKg, mood, ...factorSeries });
 }

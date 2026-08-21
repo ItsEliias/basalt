@@ -7,3 +7,4 @@ export * from './correlations';
 export * from './correlations-load';
 export * from './readiness';
 export * from './readiness-load';
+export * from './checkins';

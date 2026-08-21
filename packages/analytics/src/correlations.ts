@@ -82,6 +82,15 @@ export const CHECKED_PAIRS: CorrelationPair[] = [
   { aKey: 'volumeKg', bKey: 'intakeKcal', aLabel: 'training-volume', bLabel: 'energy intake', lag: 0 },
   { aKey: 'proteinG', bKey: 'volumeKg', aLabel: 'protein', bLabel: 'training volume', lag: 0 },
   { aKey: 'volumeKg', bKey: 'sleepMin', aLabel: 'training-volume', bLabel: 'sleep that night', lag: 1 },
+  // Check-in factors are evening facts; the night they could affect is the
+  // sleep row dated the NEXT morning — hence lag 1. Mood pairs same-day
+  // (today's mood against last night's sleep, which shares its date).
+  { aKey: 'alcohol', bKey: 'sleepMin', aLabel: 'alcohol', bLabel: 'sleep that night', lag: 1 },
+  { aKey: 'late_meal', bKey: 'sleepMin', aLabel: 'late-meal', bLabel: 'sleep that night', lag: 1 },
+  { aKey: 'stress', bKey: 'sleepMin', aLabel: 'stress', bLabel: 'sleep that night', lag: 1 },
+  { aKey: 'screens_late', bKey: 'sleepMin', aLabel: 'late-screens', bLabel: 'sleep that night', lag: 1 },
+  { aKey: 'sleepMin', bKey: 'mood', aLabel: 'sleep', bLabel: 'mood', lag: 0 },
+  { aKey: 'steps', bKey: 'mood', aLabel: 'step', bLabel: 'mood', lag: 0 },
 ];
 
 export function computeCorrelations(series: DailySeries, pairs: CorrelationPair[] = CHECKED_PAIRS): {
