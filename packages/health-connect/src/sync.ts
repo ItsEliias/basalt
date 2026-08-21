@@ -22,6 +22,8 @@ export type SyncReport = {
   weights: number;
   hydrationMl: number;
   meals: number;
+  /** Days that landed at least one vitals rollup (HRV median / RHR). */
+  vitalDays: number;
   /** Permission tokens that were not granted, so their readers were skipped. */
   skipped: string[];
 };
@@ -96,13 +98,13 @@ export async function syncHealthData(
   const avail = await provider.isAvailable();
   if (!avail.ok) return err(avail.error);
   if (avail.data !== 'available') {
-    return ok({ sleepSessions: 0, sleepStages: 0, stepDays: 0, weights: 0, hydrationMl: 0, meals: 0, skipped: ['provider_unavailable'] });
+    return ok({ sleepSessions: 0, sleepStages: 0, stepDays: 0, weights: 0, hydrationMl: 0, meals: 0, vitalDays: 0, skipped: ['provider_unavailable'] });
   }
   const grantedR = await provider.getGrantedPermissions();
   if (!grantedR.ok) return err(grantedR.error);
   const granted = new Set(grantedR.data);
 
-  const report: SyncReport = { sleepSessions: 0, sleepStages: 0, stepDays: 0, weights: 0, hydrationMl: 0, meals: 0, skipped: [] };
+  const report: SyncReport = { sleepSessions: 0, sleepStages: 0, stepDays: 0, weights: 0, hydrationMl: 0, meals: 0, vitalDays: 0, skipped: [] };
   for (const p of ['sleep', 'steps', 'weight', 'hydration', 'nutrition'] as const) {
     if (!granted.has(p)) report.skipped.push(p);
   }
@@ -129,6 +131,32 @@ export async function syncHealthData(
         );
         if (error) return err(error.message);
         report.stepDays += 1;
+      }
+    }
+
+    // Vitals rollups — the readiness baseline's history. Median HRV per
+    // night (a single rMSSD outlier shouldn't set the day), latest RHR.
+    if (granted.has('hrv')) {
+      const hrv = await provider.getHrvForDay(date);
+      if (hrv.ok && hrv.data.length > 0) {
+        const sorted = hrv.data.map((r) => r.ms).sort((a, b) => a - b);
+        const median = sorted[Math.floor(sorted.length / 2)]!;
+        const { error } = await client.from('basalt_vitals').upsert(
+          { user_id: userId, date, kind: 'hrv_rmssd', value: median, source: 'health_connect' },
+          { onConflict: 'user_id,date,kind' },
+        );
+        if (error) return err(error.message);
+        report.vitalDays += 1;
+      }
+    }
+    if (granted.has('restingHeartRate')) {
+      const rhr = await provider.getRestingHeartRate(date);
+      if (rhr.ok && rhr.data !== null) {
+        const { error } = await client.from('basalt_vitals').upsert(
+          { user_id: userId, date, kind: 'resting_hr', value: rhr.data, source: 'health_connect' },
+          { onConflict: 'user_id,date,kind' },
+        );
+        if (error) return err(error.message);
       }
     }
 

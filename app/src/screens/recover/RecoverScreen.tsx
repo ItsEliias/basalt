@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav,
@@ -10,6 +10,7 @@ import { healthService, labelForPackage, type SleepSessionSummary } from '@basal
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
+import { loadReadiness } from '@basalt/analytics';
 import { useAppStore } from '../../state/appStore';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
 
@@ -38,6 +39,8 @@ export function RecoverScreen() {
 function VitalsTab() {
   const [vitals, setVitals] = useState<Vitals | null>(null);
   const [weights, setWeights] = useState<WeightEntry[]>([]);
+  const [readiness, setReadiness] = useState<Awaited<ReturnType<typeof loadReadiness>> | null>(null);
+  const [mathOpen, setMathOpen] = useState(false);
   const profile = useAppStore((s) => s.profile);
 
   useEffect(() => {
@@ -45,6 +48,7 @@ function VitalsTab() {
       void runHealthSync();
       const w = await listWeightEntries(supabase, 14);
       if (w.ok) setWeights(w.data);
+      setReadiness(await loadReadiness(supabase, new Date()));
 
       const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
 
@@ -110,8 +114,73 @@ function VitalsTab() {
   const losing = (profile?.goalTypes ?? []).includes('lose');
   const onPace = rate !== null && losing && rate < 0;
 
+  const ready = readiness?.ok ? readiness.data.readiness : null;
+  const bands = readiness?.ok ? readiness.data.bands : null;
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      {/* ── Readiness — published formula, math one tap away ───────── */}
+      <Card>
+        <ReceiptHeader label="Readiness" summary={ready?.score !== null && ready ? 'tap for the math' : undefined} />
+        {ready === null ? (
+          <EmptyState>Reading your vitals…</EmptyState>
+        ) : ready.score === null ? (
+          <EmptyState>
+            {`No readiness number: ${ready.note}. No wearable data, no number — it will appear when the components exist.`}
+          </EmptyState>
+        ) : (
+          <Pressable onPress={() => setMathOpen(true)}>
+            <HeroNumeral value={String(ready.score)} unit="/ 100" />
+            <SrcNote>{`${ready.note} · HRV + RHR vs your 30-day medians · sleep vs target · prior-day load vs your P75 · published formula, tap to see every input`}</SrcNote>
+          </Pressable>
+        )}
+      </Card>
+      {ready ? (
+        <Modal visible={mathOpen} transparent animationType="fade" onRequestClose={() => setMathOpen(false)}>
+          <Pressable style={styles.dim} onPress={() => setMathOpen(false)} />
+          <View style={styles.mathSheet}>
+            <Text style={styles.mathTitle}>THE MATH</Text>
+            {ready.components.map((c, i) => (
+              <ReceiptRow
+                key={c.key}
+                name={c.label}
+                meta={c.detail}
+                value={c.points === null ? '—' : String(c.points)}
+                unit={c.points === null ? undefined : '/ 25'}
+                valueColor={c.points === null ? color.faint : undefined}
+                last={i === ready.components.length - 1}
+              />
+            ))}
+            <SrcNote>{ready.note} · components without data score nothing and hide nothing</SrcNote>
+          </View>
+        </Modal>
+      ) : null}
+
+      {/* ── Vitals baselines — your own 30-day band ────────────────── */}
+      {bands && (bands.hrv.band || bands.rhr.band) ? (
+        <Card>
+          <ReceiptHeader label="Baselines" summary="your 30-day band" />
+          {bands.hrv.band ? (
+            <ReceiptRow
+              name="HRV (rMSSD)"
+              meta={`band ${Math.round(bands.hrv.band.min)}–${Math.round(bands.hrv.band.max)} ms · median ${Math.round(bands.hrv.band.median)}`}
+              value={bands.hrv.today !== null ? String(Math.round(bands.hrv.today)) : '—'}
+              unit={bands.hrv.today !== null ? 'ms today' : undefined}
+            />
+          ) : null}
+          {bands.rhr.band ? (
+            <ReceiptRow
+              name="Resting HR"
+              meta={`band ${Math.round(bands.rhr.band.min)}–${Math.round(bands.rhr.band.max)} bpm · median ${Math.round(bands.rhr.band.median)}`}
+              value={bands.rhr.today !== null ? String(Math.round(bands.rhr.today)) : '—'}
+              unit={bands.rhr.today !== null ? 'bpm today' : undefined}
+              last
+            />
+          ) : null}
+          <SrcNote>Bands need 7+ persisted days · from Health Connect rollups, source named · no band from thin air</SrcNote>
+        </Card>
+      ) : null}
+
       {/* ── Sleep ──────────────────────────────────────────────────── */}
       <Card>
         {vitals?.sleep ? (
@@ -375,6 +444,18 @@ function MindTab() {
 }
 
 const styles = StyleSheet.create({
+  dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
+  mathSheet: {
+    backgroundColor: color.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border2,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 30,
+  },
+  mathTitle: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   weightRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 },

@@ -29,6 +29,7 @@ const BASALT_TABLES = [
   'basalt_mindfulness_sessions',
   'basalt_walks',
   'basalt_step_logs',
+  'basalt_vitals',
   'basalt_weight_entries',
   'basalt_meal_plans',
   'basalt_grocery_items',
