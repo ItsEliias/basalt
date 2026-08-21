@@ -8,3 +8,6 @@ export * from './correlations-load';
 export * from './readiness';
 export * from './readiness-load';
 export * from './checkins';
+export * from './year-review';
+export * from './challenge';
+export * from './year-challenge-load';

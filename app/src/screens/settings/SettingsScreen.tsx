@@ -251,6 +251,16 @@ export function SettingsScreen() {
             last
           />
         </Pressable>
+        <ObChipLabel>Monthly challenge</ObChipLabel>
+        <Pressable onPress={() => void save({ challengeEnabled: !(profile?.challengeEnabled ?? false) })} disabled={busy !== null}>
+          <ReceiptRow
+            name="Personal monthly challenge"
+            meta="a private target computed from your own baseline — no leaderboards, no badges, off unless you want it"
+            value={profile?.challengeEnabled ? 'on' : 'off'}
+            valueColor={profile?.challengeEnabled ? color.carbs : color.faint}
+            last
+          />
+        </Pressable>
         <ObChipLabel>Week in review</ObChipLabel>
         <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null}>
           <ReceiptRow

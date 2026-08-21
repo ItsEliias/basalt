@@ -34,6 +34,8 @@ export type ProfileRecord = {
   hideNumbers: boolean;
   /** Fasting module opt-in — off by default. */
   fastingEnabled: boolean;
+  /** Monthly-challenge opt-in — private, optional, off by default. */
+  challengeEnabled: boolean;
   useMetric: boolean;
 };
 
@@ -63,6 +65,7 @@ function mapProfile(r: any): ProfileRecord {
     checkinPreference: r.checkin_preference ?? null,
     hideNumbers: r.hide_numbers ?? false,
     fastingEnabled: r.fasting_enabled ?? false,
+    challengeEnabled: r.challenge_enabled ?? false,
     useMetric: r.use_metric ?? true,
   };
 }
@@ -77,7 +80,7 @@ function profilePayload(p: Partial<ProfileRecord>): Record<string, unknown> {
     ['dietaryFlags', 'dietary_flags'], ['dietPatterns', 'diet_patterns'], ['trainLocation', 'train_location'],
     ['equipment', 'equipment'], ['jobActivity', 'job_activity'], ['exerciseFrequency', 'exercise_frequency'],
     ['typicalSleep', 'typical_sleep'], ['stressLevel', 'stress_level'], ['motivations', 'motivations'],
-    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'],
+    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'], ['challengeEnabled', 'challenge_enabled'],
   ];
   for (const [key, col] of map) {
     if (p[key] !== undefined) out[col] = p[key];

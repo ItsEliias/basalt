@@ -6,7 +6,8 @@ import {
 } from '@basalt/ui';
 import {
   activeDaysFor, currentAndLongest, monthCells, loadWeekReview, loadDailySeries, computeCorrelations,
-  type WeekReview, type CorrelationResult,
+  loadYearAndChallenge,
+  type WeekReview, type CorrelationResult, type YearReview, type MonthlyChallenge,
 } from '@basalt/analytics';
 import { e1rm, bigThree, type BigThree } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
@@ -28,6 +29,9 @@ export function TrendsScreen() {
   const hideNumbers = useAppStore((s) => s.profile?.hideNumbers ?? false);
   const [correlations, setCorrelations] = useState<{ shown: CorrelationResult[]; checkedNotShown: CorrelationResult[] } | null>(null);
   const [shareWeek, setShareWeek] = useState(false);
+  const [year, setYear] = useState<YearReview | null>(null);
+  const [challenge, setChallenge] = useState<MonthlyChallenge>(null);
+  const challengeEnabled = useAppStore((s) => s.profile?.challengeEnabled ?? false);
 
   useEffect(() => {
     void (async () => {
@@ -39,6 +43,11 @@ export function TrendsScreen() {
       if (wr.ok) setReview(wr.data);
       const series = await loadDailySeries(supabase, new Date());
       if (series.ok) setCorrelations(computeCorrelations(series.data));
+      const yc = await loadYearAndChallenge(supabase, new Date());
+      if (yc.ok) {
+        setYear(yc.data.year);
+        setChallenge(yc.data.challenge);
+      }
       setFullDays(full.ok ? full.data : new Set());
       setAnyDays(any.ok ? any.data : new Set());
 
@@ -219,6 +228,47 @@ export function TrendsScreen() {
           </>
         )}
       </Card>
+
+      {/* ── Monthly challenge — private, optional, your own baseline ── */}
+      {challengeEnabled && challenge ? (
+        <Card>
+          <ReceiptHeader label="Monthly challenge" summary="yours alone — no leaderboards" />
+          <ReceiptRow
+            name={challenge.statement}
+            meta={challenge.basis}
+            value={`${challenge.progress} / ${challenge.goal}`}
+            unit={challenge.kind === 'steps' ? 'days' : 'sessions'}
+            last
+          />
+          <SrcNote>Computed from your own baseline · private · switch it off any time in Settings</SrcNote>
+        </Card>
+      ) : null}
+      {challengeEnabled && challenge === null ? (
+        <Card>
+          <ReceiptHeader label="Monthly challenge" />
+          <EmptyState>
+            No challenge yet — it needs a baseline (14+ days of steps or some session history).
+            Nothing is invented to fill this card.
+          </EmptyState>
+        </Card>
+      ) : null}
+
+      {/* ── Year in review — same honesty, year scale ──────────────── */}
+      {year && year.lede ? (
+        <Card>
+          <ReceiptHeader label="Year in review" summary="composed from your ledger" />
+          <Text style={styles.lede}>{year.lede}</Text>
+          <View style={styles.wstatRow}>
+            {year.stats.map((s) => (
+              <View key={s.k} style={styles.wstat}>
+                <Text style={styles.wstatK}>{s.k}</Text>
+                <Text style={styles.wstatV}>{s.v}</Text>
+              </View>
+            ))}
+          </View>
+          <SrcNote>Needs 90+ logged days or 45+ sessions to compose · one gap named · no cheerleading</SrcNote>
+        </Card>
+      ) : null}
 
       <Text style={styles.footer}>
         EVERYTHING ON THIS SCREEN IS COMPUTED FROM YOUR LEDGER OR ABSENT — NOTHING HERE
