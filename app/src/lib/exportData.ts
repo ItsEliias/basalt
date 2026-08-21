@@ -16,6 +16,7 @@ export const EXPORT_TABLES = [
   'basalt_walks',
   'basalt_step_logs',
   'basalt_vitals',
+  'basalt_checkins',
   'basalt_weight_entries',
   'basalt_sleep_sessions',
   'basalt_sleep_stages',
