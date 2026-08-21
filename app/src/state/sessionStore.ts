@@ -6,7 +6,7 @@ import {
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
   collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
   removeSessionExercise,
-  type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange,
+  type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange, type TimerMode,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
@@ -38,6 +38,9 @@ export type SessionExerciseState = {
   /** Timed exercises carry a guided timer instead of a reps table. */
   timed: boolean;
   guided: GuidedState | null;
+  timerMode: TimerMode;
+  /** Circuit mode: stations per round, for the station/round label. */
+  stations: number;
   /** Deterministic next-session hint — a suggestion, never a mandate. */
   suggestion: Suggestion | null;
   /** Best real weight per rep count, from all history. Empty = hidden. */
@@ -67,6 +70,7 @@ type SessionState = {
   /** Link/unlink this exercise into a superset with the one above it. */
   toggleSupersetWithPrevious: (sessionExerciseId: string) => Promise<void>;
   guidedConfigure: (sessionExerciseId: string, patch: Partial<{ leadInS: number; workS: number; restS: number; sets: number }>) => void;
+  setTimerMode: (sessionExerciseId: string, mode: TimerMode, config: { leadInS: number; workS: number; restS: number; sets: number }, stations?: number) => void;
   guidedToggle: (sessionExerciseId: string) => void;
   giveFeedback: (sessionExerciseId: string, feedback: ExerciseFeedback) => Promise<void>;
   /** Apply a confirmed Adapt proposal. Exercises with logged sets arrive as 'keep'. */
@@ -271,6 +275,8 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           guided: timed ? createGuidedTimer({ leadInS: 5, workS: 50, restS: 20, sets: 4 }) : null,
           suggestion,
           feedback: null,
+          timerMode: 'custom',
+          stations: 4,
         },
       ],
     });
@@ -413,6 +419,15 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     }));
     await setExerciseFeedback(supabase, id, feedback);
   },
+
+  setTimerMode: (id, mode, config, stations) =>
+    set((s) => ({
+      exercises: s.exercises.map((e) => {
+        if (e.sessionExerciseId !== id || !e.guided) return e;
+        if (e.guided.phase !== 'idle' && e.guided.phase !== 'finished') return e; // no live edits
+        return { ...e, timerMode: mode, stations: stations ?? e.stations, guided: createGuidedTimer(config) };
+      }),
+    })),
 
   guidedToggle: (id) => {
     const ex = get().exercises.find((e) => e.sessionExerciseId === id);

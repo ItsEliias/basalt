@@ -175,3 +175,39 @@ export function describe(state: GuidedState): {
       };
   }
 }
+
+// ─── Interval presets — same engine, same honesty ───────────────────────────
+//
+// EMOM and Tabata are just GuidedConfigs: the state machine doesn't change,
+// so every guarantee (auto-logged sets, catch-up, collapse) carries over.
+
+export type TimerMode = 'custom' | 'emom' | 'tabata' | 'circuit';
+
+/** EMOM: work at the top of each minute, rest fills the remainder. */
+export function emomConfig(workS: number, minutes: number): GuidedConfig {
+  const work = Math.min(55, Math.max(5, Math.round(workS)));
+  return { leadInS: 5, workS: work, restS: 60 - work, sets: Math.max(1, Math.round(minutes)) };
+}
+
+/** The published Tabata protocol: 20 s on / 10 s off × 8. */
+export const TABATA_CONFIG: GuidedConfig = { leadInS: 5, workS: 20, restS: 10, sets: 8 };
+
+/** Circuits: stations × rounds; the engine sees sets = stations·rounds. */
+export function circuitConfig(stations: number, rounds: number, workS: number, restS: number): GuidedConfig {
+  return {
+    leadInS: 5,
+    workS: Math.max(5, Math.round(workS)),
+    restS: Math.max(0, Math.round(restS)),
+    sets: Math.max(1, stations) * Math.max(1, rounds),
+  };
+}
+
+/** "Station 2 of 4 · round 1 of 3" for circuit mode displays. */
+export function circuitLabel(state: GuidedState, stations: number): string {
+  const s = Math.max(1, stations);
+  const idx = Math.min(state.setIndex, state.config.sets - 1);
+  const station = (idx % s) + 1;
+  const round = Math.floor(idx / s) + 1;
+  const rounds = Math.max(1, Math.round(state.config.sets / s));
+  return `Station ${station} of ${s} · round ${round} of ${rounds}`;
+}

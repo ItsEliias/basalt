@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -11,6 +11,7 @@ import {
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
   platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
+  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree,
   describe as describeGuided,
   type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
@@ -52,6 +53,22 @@ function SessionTab() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [rpeOpen, setRpeOpen] = useState(false);
   const [adaptOpen, setAdaptOpen] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const cardYRef = useRef<Map<string, number>>(new Map());
+
+  // Smart superset scroll: after a committed set in a superset, glide to
+  // the partner exercise — the letter pair the tags promise.
+  const scrollToPartner = (fromId: string) => {
+    const exs = useSessionStore.getState().exercises;
+    const from = exs.find((e) => e.sessionExerciseId === fromId);
+    if (!from || from.supersetGroup === null) return;
+    const members = exs.filter((e) => e.supersetGroup === from.supersetGroup);
+    if (members.length < 2) return;
+    const idx = members.findIndex((e) => e.sessionExerciseId === fromId);
+    const next = members[(idx + 1) % members.length]!;
+    const y = cardYRef.current.get(next.sessionExerciseId);
+    if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+  };
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
   const [, forceClock] = useState(0);
 
@@ -103,7 +120,7 @@ function SessionTab() {
 
   return (
     <>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
             <Text style={[styles.addSet, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>
@@ -114,7 +131,12 @@ function SessionTab() {
         </View>
 
         {session.exercises.map((ex, i) => (
-          <ExerciseCard key={ex.sessionExerciseId} ex={ex} index={i} all={session.exercises} />
+          <View
+            key={ex.sessionExerciseId}
+            onLayout={(e) => cardYRef.current.set(ex.sessionExerciseId, e.nativeEvent.layout.y)}
+          >
+            <ExerciseCard ex={ex} index={i} all={session.exercises} onCommitted={scrollToPartner} />
+          </View>
         ))}
 
         {session.exercises.length === 0 ? (
@@ -170,7 +192,7 @@ function SessionTab() {
   );
 }
 
-function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: number; all: SessionExerciseState[] }) {
+function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseState; index: number; all: SessionExerciseState[]; onCommitted?: (id: string) => void }) {
   const session = useSessionStore();
   const restHere = session.rest?.sessionExerciseId === ex.sessionExerciseId;
   const [commentFor, setCommentFor] = useState<number | null>(null);
@@ -199,14 +221,37 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
           ]}
         />
         {(ex.guided.phase === 'idle' || ex.guided.phase === 'finished') ? (
+          <ChipRow
+            options={['Custom', 'EMOM', 'Tabata', 'Circuit']}
+            value={ex.timerMode === 'custom' ? 'Custom' : ex.timerMode === 'emom' ? 'EMOM' : ex.timerMode === 'tabata' ? 'Tabata' : 'Circuit'}
+            onChange={(label) => {
+              const id = ex.sessionExerciseId;
+              if (label === 'Custom') session.setTimerMode(id, 'custom', { leadInS: 5, workS: 50, restS: 20, sets: 4 });
+              if (label === 'EMOM') session.setTimerMode(id, 'emom', emomConfig(40, 10));
+              if (label === 'Tabata') session.setTimerMode(id, 'tabata', TABATA_CONFIG);
+              if (label === 'Circuit') session.setTimerMode(id, 'circuit', circuitConfig(4, 3, 45, 15), 4);
+            }}
+          />
+        ) : null}
+        {(ex.guided.phase === 'idle' || ex.guided.phase === 'finished') ? (
           <View style={styles.cfgRow}>
-            <Stepper value={`${ex.guided.config.workS}s work`} onMinus={() => session.guidedConfigure(ex.sessionExerciseId, { workS: Math.max(5, ex.guided!.config.workS - 5) })} onPlus={() => session.guidedConfigure(ex.sessionExerciseId, { workS: ex.guided!.config.workS + 5 })} />
+            <Stepper
+              value={`${ex.guided.config.workS}s work`}
+              onMinus={() => {
+                const w = Math.max(5, ex.guided!.config.workS - 5);
+                session.guidedConfigure(ex.sessionExerciseId, ex.timerMode === 'emom' ? { workS: w, restS: 60 - w } : { workS: w });
+              }}
+              onPlus={() => {
+                const w = ex.timerMode === 'emom' ? Math.min(55, ex.guided!.config.workS + 5) : ex.guided!.config.workS + 5;
+                session.guidedConfigure(ex.sessionExerciseId, ex.timerMode === 'emom' ? { workS: w, restS: 60 - w } : { workS: w });
+              }}
+            />
             <Stepper value={`${ex.guided.config.sets} sets`} onMinus={() => session.guidedConfigure(ex.sessionExerciseId, { sets: Math.max(1, ex.guided!.config.sets - 1) })} onPlus={() => session.guidedConfigure(ex.sessionExerciseId, { sets: ex.guided!.config.sets + 1 })} />
           </View>
         ) : null}
         <GuidedTimerDisplay
           seconds={ex.guided.phase === 'finished' ? '✓' : String(d.seconds)}
-          phaseLabel={d.label}
+          phaseLabel={ex.timerMode === 'circuit' ? `${d.label.split(' — ')[0]} — ${circuitLabel(ex.guided, ex.stations)}` : d.label}
           tone={d.tone}
           progress={d.progress}
           setsDone={ex.guided.setsDone}
@@ -266,7 +311,9 @@ function ExerciseCard({ ex, index, all }: { ex: SessionExerciseState; index: num
           onChangeKg={(kg) => session.updateRow(ex.sessionExerciseId, i, { kg, committed: false })}
           onChangeReps={(reps) => session.updateRow(ex.sessionExerciseId, i, { reps, committed: false })}
           onChangeRir={(rir) => session.updateRow(ex.sessionExerciseId, i, { rir, committed: false })}
-          onCommit={() => void session.commitRow(ex.sessionExerciseId, i)}
+          onCommit={() => {
+            void session.commitRow(ex.sessionExerciseId, i).then(() => onCommitted?.(ex.sessionExerciseId));
+          }}
         />
       ))}
       <View style={styles.rowActions}>
