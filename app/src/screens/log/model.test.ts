@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts, conflictLine, mealForHour, yesterdayMeals } from './model';
+import { barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts, conflictLine, mealForHour, yesterdayMeals , labelToDraftFields } from './model';
 import type { OFFProduct } from '@basalt/nutrition';
 
 const yoghurt: OFFProduct = {
@@ -107,5 +107,26 @@ describe('yesterdayMeals', () => {
   });
   it('an empty yesterday means no card at all', () => {
     expect(yesterdayMeals([])).toEqual([]);
+  });
+});
+
+describe('labelToDraftFields', () => {
+  const label = {
+    food_name: 'Protein Oats', brand: 'Uncle Tobys', serving_size: 55, serving_unit: 'g',
+    calories: 210.4, protein_g: 11.23, carbs_g: 30.06, fat_g: 4.98, fiber_g: 4.4,
+    sugar_g: 8.91, sodium_mg: 85.6, note: 'kJ converted to kcal',
+  };
+
+  it('keeps printed per-serving values, tenth-gram rounded', () => {
+    const d = labelToDraftFields(label, 8);
+    expect(d).toMatchObject({
+      foodName: 'Protein Oats', brand: 'Uncle Tobys', calories: 210,
+      protein: 11.2, carbs: 30.1, fat: 5, sugar: 8.9, sodiumMg: 86,
+      servingSize: 55, servingUnit: 'g', source: 'photo', mealType: 'breakfast',
+    });
+  });
+
+  it('null brand maps to undefined, not the string "null"', () => {
+    expect(labelToDraftFields({ ...label, brand: null }, 8).brand).toBeUndefined();
   });
 });

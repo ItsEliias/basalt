@@ -27,6 +27,7 @@
     "expo-camera": "^56.0.7",
     "expo-file-system": "~56.0.10",
     "expo-haptics": "^56.0.3",
+    "expo-image-manipulator": "~56.0.25",
     "expo-image-picker": "~56.0.24",
     "expo-keep-awake": "~56.0.3",
     "expo-location": "^57.0.1",
