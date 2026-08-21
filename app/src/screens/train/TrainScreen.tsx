@@ -11,7 +11,8 @@ import {
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
   platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
-  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree,
+  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree, recoveryIntensity,
+  REGION_FOR_MUSCLE, type RegionRecovery, type BodyRegion,
   describe as describeGuided,
   type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
@@ -22,6 +23,7 @@ import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './
 import { OutdoorTab } from './OutdoorTab';
 import { AdaptSheet } from './AdaptSheet';
 import { timerServiceFailed } from '../../lib/timerService';
+import { loadRecovery, toggleRecoveryOverride } from '../../lib/recoveryData';
 import { PrShareCard, ShareSheet } from '../../components/ShareCards';
 
 // Train — the relational set logger. Prev values ghost as editable defaults,
@@ -70,12 +72,16 @@ function SessionTab() {
     if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
   };
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
+  const [recovery, setRecovery] = useState<RegionRecovery[] | null>(null);
+  const refreshRecovery = () => void loadRecovery(Date.now()).then((r) => setRecovery(r.recovery));
   const [, forceClock] = useState(0);
 
   useEffect(() => {
     if (!session.sessionId) {
       void listRecentSessions(supabase, 8).then((r) => r.ok && setRecent(r.data));
     }
+    refreshRecovery();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.sessionId]);
 
   // A light 1 Hz repaint for the header clock + timers while a session runs.
@@ -96,6 +102,30 @@ function SessionTab() {
           </EmptyState>
           <CTA label={session.busy ? '…' : 'Start session'} disabled={session.busy} onPress={() => void session.start()} />
         </Card>
+
+        {recovery && recovery.length > 0 ? (
+          <Card>
+            <ReceiptHeader label="Recovery" summary="published heuristic · your history, not a prescription" />
+            <View style={{ alignItems: 'center', marginTop: 6 }}>
+              <BodyFigure intensity={recoveryIntensity(recovery)} />
+            </View>
+            {recovery.map((r, i) => (
+              <Pressable
+                key={r.region}
+                onPress={() => void toggleRecoveryOverride(r.region, Date.now()).then(refreshRecovery)}
+              >
+                <ReceiptRow
+                  name={r.region[0]!.toUpperCase() + r.region.slice(1)}
+                  meta={`${r.hardSets72h} hard sets in 72 h · ${r.why} · tap to override`}
+                  value={r.status === 'overridden' ? 'fresh — your call' : r.status}
+                  valueColor={r.status === 'loaded' ? color.protein : r.status === 'fresh' || r.status === 'overridden' ? color.carbs : color.ink2}
+                  last={i === recovery.length - 1}
+                />
+              </Pressable>
+            ))}
+            <SrcNote>48 h base · +6 h per 4 hard sets beyond 8 (cap +24) · short persisted night extends 20% · a lens on your sets, never a prescription</SrcNote>
+          </Card>
+        ) : null}
 
         <Card>
           <ReceiptHeader label="Recent sessions" />
@@ -181,6 +211,7 @@ function SessionTab() {
       <ExercisePicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
+        loadedRegions={new Set((recovery ?? []).filter((r) => r.status === 'loaded').map((r) => r.region))}
         myEquipment={equipmentTokens(profile?.equipment ?? [])}
         hasEquipmentProfile={(profile?.equipment ?? []).length > 0 && profile?.trainLocation !== 'gym'}
         onPick={(exercise, timed) => {
@@ -541,13 +572,14 @@ function KeepAwakeWhileTraining() {
 }
 
 function ExercisePicker({
-  open, onClose, onPick, myEquipment, hasEquipmentProfile,
+  open, onClose, onPick, myEquipment, hasEquipmentProfile, loadedRegions,
 }: {
   open: boolean;
   onClose: () => void;
   onPick: (e: Exercise, timed: boolean) => void;
   myEquipment: string[];
   hasEquipmentProfile: boolean;
+  loadedRegions?: Set<BodyRegion>;
 }) {
   const insets = useSafeAreaInsets();
   const conditions = useAppStore((s) => s.profile?.conditions ?? []);
@@ -601,9 +633,10 @@ function ExercisePicker({
                 <ReceiptRow
                   name={e.name}
                   meta={
-                    e.bias.down
+                    (loadedRegions && e.primaryMuscles.some((m) => loadedRegions.has(REGION_FOR_MUSCLE[m.toLowerCase()]!)) ? '· trained recently ' : '') +
+                    (e.bias.down
                       ? `${[...e.primaryMuscles, e.equipment ?? ''].filter(Boolean).join(' · ')} · listed lower — ${e.bias.reason} (you noted ${e.bias.condition?.toLowerCase()})`
-                      : [...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · ')
+                      : [...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · '))
                   }
                   value="add"
                   last={i === results.length - 1}
