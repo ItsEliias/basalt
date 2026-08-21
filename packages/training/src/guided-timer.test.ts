@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tick, tickMany, collapseSensory, describe as describeState,
+  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel,
   type GuidedEvent, type GuidedState,
 } from './guided-timer';
 
@@ -167,5 +168,37 @@ describe('tickMany + collapseSensory — the screen-off catch-up path', () => {
     expect(collapsed.filter((e) => e.type === 'phase')).toEqual(
       caught.events.filter((e) => e.type === 'phase'),
     );
+  });
+});
+
+describe('interval presets — same engine, same honesty', () => {
+  it('EMOM: work + rest always fill exactly one minute', () => {
+    for (const w of [20, 40, 55, 90, 2]) {
+      const c = emomConfig(w, 10);
+      expect(c.workS + c.restS).toBe(60);
+      expect(c.workS).toBeGreaterThanOrEqual(5);
+      expect(c.workS).toBeLessThanOrEqual(55);
+    }
+    expect(emomConfig(40, 10).sets).toBe(10);
+  });
+
+  it('Tabata is the published 20/10 × 8, pinned', () => {
+    expect(TABATA_CONFIG).toEqual({ leadInS: 5, workS: 20, restS: 10, sets: 8 });
+  });
+
+  it('circuit sets = stations × rounds; labels walk stations then rounds', () => {
+    const c = circuitConfig(4, 3, 45, 15);
+    expect(c.sets).toBe(12);
+    let state = startGuidedTimer(createGuidedTimer(c)).state;
+    expect(circuitLabel(state, 4)).toBe('Station 1 of 4 · round 1 of 3');
+    // run through lead + 4 full stations to reach round 2
+    state = runSeconds(state, 5 + 4 * 60).state;
+    expect(circuitLabel(state, 4)).toBe('Station 1 of 4 · round 2 of 3');
+  });
+
+  it('a finished circuit clamps to the last station, no phantom round', () => {
+    const c = circuitConfig(2, 2, 10, 5);
+    const done = tickMany(startGuidedTimer(createGuidedTimer(c)).state, 10000).state;
+    expect(circuitLabel(done, 2)).toBe('Station 2 of 2 · round 2 of 2');
   });
 });

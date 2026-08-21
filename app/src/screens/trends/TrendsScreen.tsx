@@ -8,7 +8,7 @@ import {
   activeDaysFor, currentAndLongest, monthCells, loadWeekReview, loadDailySeries, computeCorrelations,
   type WeekReview, type CorrelationResult,
 } from '@basalt/analytics';
-import { e1rm } from '@basalt/training';
+import { e1rm, bigThree, type BigThree } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
@@ -23,6 +23,7 @@ export function TrendsScreen() {
   const [fullDays, setFullDays] = useState<Set<string> | null>(null);
   const [anyDays, setAnyDays] = useState<Set<string> | null>(null);
   const [records, setRecords] = useState<Records | null>(null);
+  const [big3, setBig3] = useState<BigThree | null>(null);
   const [review, setReview] = useState<WeekReview | null>(null);
   const hideNumbers = useAppStore((s) => s.profile?.hideNumbers ?? false);
   const [correlations, setCorrelations] = useState<{ shown: CorrelationResult[]; checkedNotShown: CorrelationResult[] } | null>(null);
@@ -62,12 +63,9 @@ export function TrendsScreen() {
         const cur = best.get(name);
         if (!cur || v > cur.e1rm) best.set(name, { e1rm: v, date: (s as any).completed_at });
       }
-      setRecords(
-        Array.from(best.entries())
-          .map(([name, v]) => ({ name, e1rm: v.e1rm, date: v.date }))
-          .sort((a, b) => b.e1rm - a.e1rm)
-          .slice(0, 5),
-      );
+      const allRecords = Array.from(best.entries()).map(([name, v]) => ({ name, e1rm: v.e1rm, date: v.date }));
+      setRecords([...allRecords].sort((a, b) => b.e1rm - a.e1rm).slice(0, 5));
+      setBig3(bigThree(allRecords));
     })();
   }, []);
 
@@ -173,6 +171,21 @@ export function TrendsScreen() {
           </EmptyState>
         )}
       </Card>
+
+      {/* ── Big Three — only when the competition lifts exist ─────── */}
+      {big3 && (big3.squat || big3.bench || big3.deadlift) ? (
+        <Card>
+          <ReceiptHeader label="Big three" summary="e1RM · published matcher, competition lifts only" />
+          {big3.squat ? <ReceiptRow name="Squat" meta={big3.squat.name} value={String(big3.squat.e1rm)} unit="kg" /> : null}
+          {big3.bench ? <ReceiptRow name="Bench" meta={big3.bench.name} value={String(big3.bench.e1rm)} unit="kg" /> : null}
+          {big3.deadlift ? <ReceiptRow name="Deadlift" meta={big3.deadlift.name} value={String(big3.deadlift.e1rm)} unit="kg" /> : null}
+          {big3.total !== null ? (
+            <ReceiptRow name="Total" meta="all three present — no partial totals" value={String(big3.total)} unit="kg" valueColor={color.carbs} last />
+          ) : (
+            <SrcNote>No total until all three lifts have history — partial totals are fiction</SrcNote>
+          )}
+        </Card>
+      ) : null}
 
       {/* ── Correlations — gated, disclaimed, checked-not-shown named ── */}
       <Card>

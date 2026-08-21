@@ -15,3 +15,4 @@ export * from './progression';
 export * from './pr-matrix';
 export * from './adapt-session';
 export * from './muscle-map';
+export * from './big-three';
