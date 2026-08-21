@@ -33,14 +33,17 @@ import { useAppStore } from '../../state/appStore';
 import {
   barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts,
   conflictLine, mealForHour, yesterdayMeals, type YesterdayMeal,
+  labelToDraftFields, type LabelScan,
 } from './model';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
+import { capturePhoto, enqueuePhoto, dequeuePhoto, loadPhotoQueue, readQueuedPhotoB64 } from '../../lib/photoFood';
+import { queuedLabel, type QueuedPhoto } from '../../lib/photoQueueModel';
 
 // Log / Capture — viewfinder with on-device GS1 verification, OFF lookup,
 // manual add, favorites and "frequent at this hour". Every path ends in the
 // same editable-before-save form; nothing auto-commits.
 
-type Mode = 'search' | 'barcode' | 'manual' | 'ai';
+type Mode = 'search' | 'barcode' | 'manual' | 'ai' | 'photo';
 
 type ScanState =
   | { kind: 'idle' }
@@ -77,6 +80,11 @@ function CaptureTab() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiItems, setAiItems] = useState<AiItem[] | null>(null);
   const [aiNote, setAiNote] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+  const [photoQueue, setPhotoQueue] = useState<QueuedPhoto[]>([]);
+  useEffect(() => {
+    void loadPhotoQueue().then(setPhotoQueue);
+  }, []);
   const lastScanRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
 
   const dietaryFlags = profile?.dietaryFlags ?? [];
@@ -182,6 +190,53 @@ function CaptureTab() {
     setAiNote(data?.note ?? null);
   };
 
+  const estimatePhotoB64 = async (b64: string, mode2: 'meal' | 'label', afterOk?: () => void) => {
+    setAiError(null);
+    const { data, error } = await supabase.functions.invoke('ai-photo-food', {
+      body: { imageB64: b64, mode: mode2 },
+    });
+    setPhotoBusy(null);
+    if (error) {
+      let message = error.message ?? 'AI request failed.';
+      try {
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) message = body.error;
+        }
+      } catch { /* keep generic */ }
+      setAiError(message);
+      return;
+    }
+    afterOk?.();
+    if (mode2 === 'meal') {
+      setAiItems((data?.items ?? []) as AiItem[]);
+      setAiNote(data?.note ?? null);
+      return;
+    }
+    if (!data?.food_name) {
+      setAiError(data?.note ?? 'No nutrition panel found in that photo.');
+      return;
+    }
+    setDraft({
+      ...labelToDraftFields(data as LabelScan, new Date().getHours()),
+      sourceNote: `~ transcribed from a label photo · ${data.note || 'check against the pack'} · saving also files it in favourites as your custom food`,
+    });
+  };
+
+  const runPhoto = async (from: 'camera' | 'gallery', mode2: 'meal' | 'label') => {
+    const shot = await capturePhoto(from);
+    if (!shot) return;
+    setPhotoBusy(mode2);
+    await estimatePhotoB64(shot.b64, mode2);
+  };
+
+  const stashPhoto = async () => {
+    const shot = await capturePhoto('camera');
+    if (!shot) return;
+    setPhotoQueue(await enqueuePhoto(shot.uri));
+  };
+
   const openDraftFromAi = (item: AiItem) => {
     setDraft({
       mealType: item.meal_guess,
@@ -258,7 +313,7 @@ function CaptureTab() {
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={styles.vf}>
         <View style={styles.modes}>
-          {(['search', 'barcode', 'ai', 'manual'] as Mode[]).map((m) => (
+          {(['search', 'barcode', 'photo', 'ai', 'manual'] as Mode[]).map((m) => (
             <Pressable key={m} onPress={() => setMode(m)}>
               <Text style={[styles.mode, mode === m && styles.modeOn]}>{m.toUpperCase()}</Text>
             </Pressable>
@@ -305,6 +360,46 @@ function CaptureTab() {
           </View>
         ) : null}
 
+        {mode === 'photo' ? (
+          <View style={{ paddingBottom: 8 }}>
+            <CTA label={photoBusy === 'meal' ? 'Estimating…' : 'Photograph a meal'} disabled={photoBusy !== null} onPress={() => void runPhoto('camera', 'meal')} />
+            <CTA label={photoBusy === 'label' ? 'Reading…' : 'Scan a nutrition label'} disabled={photoBusy !== null} onPress={() => void runPhoto('camera', 'label')} />
+            <View style={styles.photoMinor}>
+              <Pressable onPress={() => void runPhoto('gallery', 'meal')} disabled={photoBusy !== null}>
+                <Text style={styles.photoMinorLink}>FROM GALLERY</Text>
+              </Pressable>
+              <Pressable onPress={() => void stashPhoto()} disabled={photoBusy !== null}>
+                <Text style={styles.photoMinorLink}>PHOTO NOW, LOG LATER</Text>
+              </Pressable>
+            </View>
+            {photoQueue.length > 0 ? (
+              <View style={{ marginTop: 6 }}>
+                {photoQueue.map((q) => (
+                  <View key={q.id} style={styles.queueRow}>
+                    <Text style={styles.queueLabel}>{queuedLabel(q.takenAt, new Date()).toUpperCase()}</Text>
+                    <Pressable
+                      disabled={photoBusy !== null}
+                      onPress={async () => {
+                        setPhotoBusy('meal');
+                        const b64 = await readQueuedPhotoB64(q.uri);
+                        await estimatePhotoB64(b64, 'meal', () => {
+                          void dequeuePhoto(q.id).then(setPhotoQueue);
+                        });
+                      }}
+                    >
+                      <Text style={styles.photoMinorLink}>ESTIMATE</Text>
+                    </Pressable>
+                    <Pressable onPress={() => void dequeuePhoto(q.id).then(setPhotoQueue)}>
+                      <Text style={styles.photoMinorLink}>REMOVE</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <SrcNote>Your photo is sent to Anthropic (Claude) to estimate — only the image, never your ledger, name or email · downscaled on-device first · estimates wear ~ until you confirm · queued photos stay on this phone until you estimate them</SrcNote>
+          </View>
+        ) : null}
+
         {mode === 'ai' ? (
           <View style={{ paddingBottom: 8 }}>
             <ObInput
@@ -314,7 +409,7 @@ function CaptureTab() {
               multiline
             />
             <CTA label={aiBusy ? 'Estimating…' : 'Estimate with AI'} disabled={aiBusy || !aiText.trim()} onPress={() => void runAiEstimate()} />
-            <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app</SrcNote>
+            <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app · your keyboard's mic dictates straight into the box</SrcNote>
           </View>
         ) : null}
       </View>
@@ -482,6 +577,10 @@ function CaptureTab() {
 }
 
 const styles = StyleSheet.create({
+  photoMinor: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
+  photoMinorLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
+  queueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border, paddingVertical: 2 },
+  queueLabel: { fontFamily: mono, fontSize: 9.5, color: color.ink2, letterSpacing: 0.4 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   vf: {

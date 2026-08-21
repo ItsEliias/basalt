@@ -140,3 +140,43 @@ export function yesterdayMeals(
     };
   }).filter((m) => m.count > 0);
 }
+
+// ─── Nutrition-label transcription → custom-food draft fields ───────────────
+
+export type LabelScan = {
+  food_name: string;
+  brand: string | null;
+  serving_size: number;
+  serving_unit: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  sodium_mg: number;
+  note: string;
+};
+
+/**
+ * Label photo → draft fields. Per-serving values as printed; saving the
+ * entry also lands it in favorites (via the normal save path), which is
+ * what makes it a reusable custom food.
+ */
+export function labelToDraftFields(label: LabelScan, hour: number) {
+  return {
+    mealType: mealForHour(hour),
+    foodName: label.food_name,
+    brand: label.brand ?? undefined,
+    calories: Math.round(label.calories),
+    protein: Math.round(label.protein_g * 10) / 10,
+    carbs: Math.round(label.carbs_g * 10) / 10,
+    fat: Math.round(label.fat_g * 10) / 10,
+    fiber: Math.round(label.fiber_g * 10) / 10,
+    sugar: Math.round(label.sugar_g * 10) / 10,
+    sodiumMg: Math.round(label.sodium_mg),
+    servingSize: label.serving_size,
+    servingUnit: label.serving_unit,
+    source: 'photo' as const,
+  };
+}
