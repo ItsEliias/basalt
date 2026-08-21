@@ -14,8 +14,10 @@ import {
   emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree, recoveryIntensity,
   REGION_FOR_MUSCLE, type RegionRecovery, type BodyRegion,
   describe as describeGuided,
+  listTemplates, deleteTemplate, duplicateTemplate, type WorkoutTemplate,
   type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
+import { TemplateBuilder } from './TemplateBuilder';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
@@ -75,10 +77,14 @@ function SessionTab() {
   const [recovery, setRecovery] = useState<RegionRecovery[] | null>(null);
   const refreshRecovery = () => void loadRecovery(Date.now()).then((r) => setRecovery(r.recovery));
   const [, forceClock] = useState(0);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const refreshTemplates = () => void listTemplates(supabase).then((r) => r.ok && setTemplates(r.data));
 
   useEffect(() => {
     if (!session.sessionId) {
       void listRecentSessions(supabase, 8).then((r) => r.ok && setRecent(r.data));
+      refreshTemplates();
     }
     refreshRecovery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,6 +97,18 @@ function SessionTab() {
     return () => clearInterval(iv);
   }, [session.sessionId]);
 
+  if (builderOpen) {
+    return (
+      <TemplateBuilder
+        onClose={() => setBuilderOpen(false)}
+        onSaved={() => {
+          setBuilderOpen(false);
+          refreshTemplates();
+        }}
+      />
+    );
+  }
+
   if (!session.sessionId) {
     return (
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -101,6 +119,39 @@ function SessionTab() {
             ledger as its own row.
           </EmptyState>
           <CTA label={session.busy ? '…' : 'Start session'} disabled={session.busy} onPress={() => void session.start()} />
+        </Card>
+
+        <Card>
+          <ReceiptHeader label="Templates" summary="start with your own plan pre-filled" />
+          {templates.length > 0 ? (
+            templates.map((t, i) => (
+              <View key={t.id}>
+                <Pressable
+                  onPress={() => void session.startFromTemplate(t.id)}
+                  onLongPress={() => void deleteTemplate(supabase, t.id).then(refreshTemplates)}
+                >
+                  <ReceiptRow
+                    name={t.name}
+                    meta={`${t.location === 'gym' ? 'GYM' : 'HOME'} · hold to remove`}
+                    value="start"
+                    last={i === templates.length - 1}
+                  />
+                </Pressable>
+                <View style={styles.pickerLinks}>
+                  <Pressable
+                    onPress={() => void duplicateTemplate(supabase, t.id, `${t.name} copy`).then(refreshTemplates)}
+                  >
+                    <Text style={styles.timedLink}>DUPLICATE →</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))
+          ) : (
+            <EmptyState>No templates yet — build one below to start a session with your own targets pre-filled.</EmptyState>
+          )}
+          <Pressable onPress={() => setBuilderOpen(true)}>
+            <Text style={styles.addSet}>+ NEW TEMPLATE</Text>
+          </Pressable>
         </Card>
 
         {recovery && recovery.length > 0 ? (
@@ -321,6 +372,11 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           </Text>
         </Pressable>
       ) : null}
+      {ex.target ? (
+        <PrevNote>
+          {`Target · ${ex.target.sets} × ${ex.target.reps ?? '?'} reps${ex.target.weightKg ? ` @ ${ex.target.weightKg} kg` : ''} · from your template`}
+        </PrevNote>
+      ) : null}
       {ex.prevSets.length > 0 && ex.prevPerformedAt ? (
         <PrevNote>
           {`Last session · ${prevSummary(ex.prevSets) ?? '—'} · ${new Date(ex.prevPerformedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`}
@@ -456,6 +512,9 @@ function ExerciseDetailSheet({ exercise, onClose, onPick }: {
           </Text>
         ) : null}
         <CTA label="Add to session" onPress={() => { onClose(); onPick(exercise, false); }} />
+        <Pressable onPress={() => { onClose(); onPick(exercise, true); }}>
+          <Text style={styles.addAsTimed}>ADD AS TIMED (PLANK-STYLE) →</Text>
+        </Pressable>
         <SrcNote>Primary solid · secondary faded · muscle data from free-exercise-db</SrcNote>
       </View>
     </Modal>
@@ -571,7 +630,7 @@ function KeepAwakeWhileTraining() {
   return null;
 }
 
-function ExercisePicker({
+export function ExercisePicker({
   open, onClose, onPick, myEquipment, hasEquipmentProfile, loadedRegions,
 }: {
   open: boolean;
@@ -628,29 +687,19 @@ function ExercisePicker({
         </ScrollView>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           {results.map((e, i) => (
-            <View key={e.id}>
-              <Pressable onPress={() => onPick(e, false)}>
-                <ReceiptRow
-                  name={e.name}
-                  meta={
-                    (loadedRegions && e.primaryMuscles.some((m) => loadedRegions.has(REGION_FOR_MUSCLE[m.toLowerCase()]!)) ? '· trained recently ' : '') +
-                    (e.bias.down
-                      ? `${[...e.primaryMuscles, e.equipment ?? ''].filter(Boolean).join(' · ')} · listed lower — ${e.bias.reason} (you noted ${e.bias.condition?.toLowerCase()})`
-                      : [...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · '))
-                  }
-                  value="add"
-                  last={i === results.length - 1}
-                />
-              </Pressable>
-              <View style={styles.pickerLinks}>
-                <Pressable onPress={() => onPick(e, true)}>
-                  <Text style={styles.timedLink}>ADD AS TIMED (PLANK-STYLE) →</Text>
-                </Pressable>
-                <Pressable onPress={() => setDetailFor(e)}>
-                  <Text style={styles.timedLink}>DETAILS →</Text>
-                </Pressable>
-              </View>
-            </View>
+            <Pressable key={e.id} onPress={() => setDetailFor(e)}>
+              <ReceiptRow
+                name={e.name}
+                meta={
+                  (loadedRegions && e.primaryMuscles.some((m) => loadedRegions.has(REGION_FOR_MUSCLE[m.toLowerCase()]!)) ? '· trained recently ' : '') +
+                  (e.bias.down
+                    ? `${[...e.primaryMuscles, e.equipment ?? ''].filter(Boolean).join(' · ')} · listed lower — ${e.bias.reason} (you noted ${e.bias.condition?.toLowerCase()})`
+                    : [...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · '))
+                }
+                value="→"
+                last={i === results.length - 1}
+              />
+            </Pressable>
           ))}
           {results.length === 0 ? (
             <EmptyState>No movements match those filters.</EmptyState>
@@ -718,4 +767,5 @@ const styles = StyleSheet.create({
   pickerClose: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint },
   chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   timedLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingBottom: 8, marginTop: -4 },
+  addAsTimed: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.mute, textAlign: 'center', paddingVertical: 12 },
 });

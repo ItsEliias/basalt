@@ -64,6 +64,43 @@ describe('importRecipeFromUrl — happy path', () => {
     expect(result.confidence).toBe(10);
   });
 
+  it('extracts a plain string image URL', async () => {
+    mockFetchHtml(htmlWithLdJson({ ...fullRecipe, image: 'https://example.com/cover.jpg' }));
+    const result = await importRecipeFromUrl('https://example.com/recipe');
+    expect(result.imageUrl).toBe('https://example.com/cover.jpg');
+  });
+
+  it('extracts the first URL from an array of image strings', async () => {
+    mockFetchHtml(htmlWithLdJson({ ...fullRecipe, image: ['https://example.com/a.jpg', 'https://example.com/b.jpg'] }));
+    const result = await importRecipeFromUrl('https://example.com/recipe');
+    expect(result.imageUrl).toBe('https://example.com/a.jpg');
+  });
+
+  it('extracts url from an ImageObject', async () => {
+    mockFetchHtml(htmlWithLdJson({ ...fullRecipe, image: { '@type': 'ImageObject', url: 'https://example.com/obj.jpg' } }));
+    const result = await importRecipeFromUrl('https://example.com/recipe');
+    expect(result.imageUrl).toBe('https://example.com/obj.jpg');
+  });
+
+  it('extracts url from an array of ImageObjects', async () => {
+    mockFetchHtml(htmlWithLdJson({ ...fullRecipe, image: [{ '@type': 'ImageObject', url: 'https://example.com/first.jpg' }] }));
+    const result = await importRecipeFromUrl('https://example.com/recipe');
+    expect(result.imageUrl).toBe('https://example.com/first.jpg');
+  });
+
+  it('falls back to og:image when the Recipe node has no image', async () => {
+    const html = `<html><head><meta property="og:image" content="https://example.com/og.jpg"/><script type="application/ld+json">${JSON.stringify(fullRecipe)}</script></head></html>`;
+    mockFetchHtml(html);
+    const result = await importRecipeFromUrl('https://example.com/recipe');
+    expect(result.imageUrl).toBe('https://example.com/og.jpg');
+  });
+
+  it('is null when neither the Recipe node nor og:image has an image', async () => {
+    mockFetchHtml(htmlWithLdJson(fullRecipe));
+    const result = await importRecipeFromUrl('https://example.com/recipe');
+    expect(result.imageUrl).toBeNull();
+  });
+
   it('sends the package default User-Agent unless overridden', async () => {
     const fetchMock = vi.fn(async () => ({ ok: true, status: 200, text: async () => htmlWithLdJson(fullRecipe) }));
     vi.stubGlobal('fetch', fetchMock);

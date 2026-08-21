@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Stepper,
   ChipRow, ObInput, ObChipLabel, NewRow, approxValue, groupInt,
@@ -8,7 +8,7 @@ import {
 import {
   importRecipeFromUrl, draftFromImport, saveRecipe, listRecipes, getRecipeDetail, deleteRecipe,
   confirmRecipeMacros, logRecipeServing, addToGroceryList, ingredientConflicts,
-  scaleQty, fmtQty,
+  scaleQty, fmtQty, signedRecipePhotoUrls,
   type Recipe, type RecipeDetail, type SaveRecipeInput, type MealType,
   isSocialRecipeUrl, parseQtyText, type SocialRecipeResponse,
 } from '@basalt/nutrition';
@@ -25,6 +25,8 @@ export function RecipesTab() {
   const dietaryFlags = profile?.dietaryFlags ?? [];
 
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
+  const [detailPhotoUrl, setDetailPhotoUrl] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [importUrl, setImportUrl] = useState('');
   const [importing, setImporting] = useState(false);
@@ -39,6 +41,15 @@ export function RecipesTab() {
     void listRecipes(supabase).then((r) => r.ok && setRecipes(r.data));
   }, []);
   useEffect(() => refresh(), [refresh]);
+
+  useEffect(() => {
+    const paths = (recipes ?? []).map((r) => r.coverPath).filter((p): p is string => !!p);
+    if (paths.length === 0) {
+      setPhotoUrls(new Map());
+      return;
+    }
+    void signedRecipePhotoUrls(supabase, paths).then((r) => r.ok && setPhotoUrls(r.data));
+  }, [recipes]);
 
   const runImport = async () => {
     const url = importUrl.trim();
@@ -75,6 +86,7 @@ export function RecipesTab() {
         carbsPerServe: Math.round(social.carbs_per_serve * 10) / 10,
         fatPerServe: Math.round(social.fat_per_serve * 10) / 10,
         macrosConfirmed: false,
+        sourceImageUrl: social.cover_image_url,
         ingredients: social.ingredients.map((i) => ({
           qty: parseQtyText(i.quantity),
           unit: i.unit || null,
@@ -103,6 +115,12 @@ export function RecipesTab() {
       setServes(d.data.serves);
       setChecked(new Set());
       setGroceryNote(null);
+      setDetailPhotoUrl(null);
+      if (d.data.coverPath) {
+        void signedRecipePhotoUrls(supabase, [d.data.coverPath]).then(
+          (r) => r.ok && setDetailPhotoUrl(r.data.get(d.data.coverPath!) ?? null),
+        );
+      }
     }
   };
 
@@ -112,6 +130,9 @@ export function RecipesTab() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card>
           <ReceiptHeader label="Imported — edit before save" summary="~ until you confirm macros" />
+          {draft.sourceImageUrl ? (
+            <Image source={{ uri: draft.sourceImageUrl }} style={styles.draftCover} />
+          ) : null}
           <ObInput placeholder="Title" value={draft.title} onChangeText={(title) => setDraft({ ...draft, title })} />
           <ObChipLabel>{`Serves ${draft.serves} · per-serve macros (from the source, unconfirmed)`}</ObChipLabel>
           <View style={styles.macroRow}>
@@ -120,7 +141,13 @@ export function RecipesTab() {
             <NumField label="~C g" value={draft.carbsPerServe} onChange={(v) => setDraft({ ...draft, carbsPerServe: v })} />
             <NumField label="~F g" value={draft.fatPerServe} onChange={(v) => setDraft({ ...draft, fatPerServe: v })} />
           </View>
-          <SrcNote>{`${draft.ingredients.length} ingredients · ${draft.steps.length} steps pulled from ${draft.sourceUrl ?? 'the source'} · everything editable after save`}</SrcNote>
+          <SrcNote>
+            {[
+              `${draft.ingredients.length} ingredients · ${draft.steps.length} steps pulled from ${draft.sourceUrl ?? 'the source'}`,
+              draft.sourceImageUrl ? 'cover downloads into your own storage on save' : null,
+              'everything editable after save',
+            ].filter(Boolean).join(' · ')}
+          </SrcNote>
           <CTA label="Save recipe" onPress={async () => {
             const saved = await saveRecipe(supabase, draft);
             if (saved.ok) {
@@ -146,6 +173,7 @@ export function RecipesTab() {
           <Text style={styles.back}>← RECIPES</Text>
         </Pressable>
         <Card>
+          {detailPhotoUrl ? <Image source={{ uri: detailPhotoUrl }} style={styles.detailCover} /> : null}
           <View style={styles.detailHead}>
             <Text style={styles.detailTitle}>{detail.title}</Text>
             {detail.totalTimeMin ? <Text style={styles.detailMeta}>{`${detail.totalTimeMin} MIN`}</Text> : null}
@@ -277,6 +305,11 @@ export function RecipesTab() {
               >
                 <ReceiptRow
                   name={r.title}
+                  thumb={
+                    r.coverPath && photoUrls.get(r.coverPath) ? (
+                      <Image source={{ uri: photoUrls.get(r.coverPath)! }} style={styles.rowThumb} />
+                    ) : undefined
+                  }
                   meta={[
                     `P ${Math.round(r.proteinPerServe)} · C ${Math.round(r.carbsPerServe)} · F ${Math.round(r.fatPerServe)}`,
                     `serves ${r.serves}`,
@@ -344,6 +377,9 @@ const styles = StyleSheet.create({
   stepNum: { fontFamily: mono, fontSize: 10, color: color.faint, position: 'relative', top: 3 },
   stepText: { fontSize: 13, lineHeight: 21, color: color.ink2, flexShrink: 1 },
   macroRow: { flexDirection: 'row', gap: 8 },
+  rowThumb: { width: 30, height: 30, borderRadius: 7, backgroundColor: color.surface2 },
+  draftCover: { width: '100%', height: 160, borderRadius: 10, backgroundColor: color.surface2, marginTop: 12 },
+  detailCover: { width: '100%', height: 180, borderRadius: 10, backgroundColor: color.surface2, marginBottom: 12 },
   numLabel: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
   cancel: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 12 },
 });

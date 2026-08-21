@@ -3,6 +3,7 @@ import { ok, err, currentUserId, type Result } from '@basalt/core-data';
 import type { UrlRecipeImport } from './recipe-import';
 import { addFoodEntry, type FoodEntryRow, type MealType } from './food';
 import { aisleFor } from './grocery';
+import { downloadAndUploadRecipeCover, removeRecipePhoto } from './recipe-photos';
 
 // Recipes — persisted in Postgres at last (the source app kept them in
 // AsyncStorage). Imports follow the AI rule: capture → editable suggestion →
@@ -22,6 +23,8 @@ export type Recipe = {
   fatPerServe: number;
   fiberPerServe: number;
   macrosConfirmed: boolean;
+  /** Storage path in the private basalt-recipe-photos bucket — never a public URL. */
+  coverPath: string | null;
   createdAt: string;
 };
 
@@ -49,6 +52,8 @@ export type SaveRecipeInput = {
   fatPerServe: number;
   fiberPerServe?: number;
   macrosConfirmed: boolean;
+  /** Remote cover image URL to download into the private bucket at save time — never hotlinked. */
+  sourceImageUrl?: string | null;
   ingredients: { qty: number | null; unit: string | null; name: string }[];
   steps: string[];
 };
@@ -68,6 +73,7 @@ function mapRecipe(r: any): Recipe {
     fatPerServe: Number(r.fat_per_serve ?? 0),
     fiberPerServe: Number(r.fiber_per_serve ?? 0),
     macrosConfirmed: r.macros_confirmed ?? true,
+    coverPath: r.cover_path ?? null,
     createdAt: r.created_at,
   };
 }
@@ -141,6 +147,7 @@ export function draftFromImport(imp: UrlRecipeImport): SaveRecipeInput {
     carbsPerServe: imp.estimatedMacros.carbs,
     fatPerServe: imp.estimatedMacros.fat,
     macrosConfirmed: false,
+    sourceImageUrl: imp.imageUrl,
     ingredients: imp.ingredients.map((i) => ({
       qty: parseQtyText(i.quantity),
       unit: i.unit || null,
@@ -191,6 +198,19 @@ export async function saveRecipe(client: SupabaseClient, input: SaveRecipeInput)
   const u = await currentUserId(client);
   if (!u.ok) return u;
 
+  // Best-effort: a source image that fails to download never blocks saving
+  // the recipe itself — it just saves without a cover.
+  let coverPath: string | null = null;
+  if (input.sourceImageUrl) {
+    const dl = await downloadAndUploadRecipeCover(
+      client,
+      input.sourceImageUrl,
+      Date.now(),
+      Math.random().toString(36).slice(2),
+    );
+    if (dl.ok) coverPath = dl.data;
+  }
+
   const { data, error } = await client
     .from('basalt_recipes')
     .insert({
@@ -207,6 +227,7 @@ export async function saveRecipe(client: SupabaseClient, input: SaveRecipeInput)
       fat_per_serve: input.fatPerServe,
       fiber_per_serve: input.fiberPerServe ?? 0,
       macros_confirmed: input.macrosConfirmed,
+      cover_path: coverPath,
     })
     .select('*')
     .single();
@@ -282,8 +303,12 @@ export async function getRecipeDetail(client: SupabaseClient, id: string): Promi
 }
 
 export async function deleteRecipe(client: SupabaseClient, id: string): Promise<Result<void>> {
+  const found = await client.from('basalt_recipes').select('cover_path').eq('id', id).single();
   const { error } = await client.from('basalt_recipes').delete().eq('id', id);
   if (error) return err(error.message);
+  if (found.data?.cover_path) {
+    removeRecipePhoto(client, found.data.cover_path).catch(() => {});
+  }
   return ok(undefined);
 }
 

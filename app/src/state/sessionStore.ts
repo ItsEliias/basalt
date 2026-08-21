@@ -5,7 +5,7 @@ import {
   setExerciseRest, setSupersetGroup, bestE1rm, isSetPr, e1rm,
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
   collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
-  removeSessionExercise,
+  removeSessionExercise, startSessionFromTemplate, getExerciseById,
   type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange, type TimerMode,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
 } from '@basalt/training';
@@ -47,6 +47,8 @@ export type SessionExerciseState = {
   repPrs: RepPr[];
   /** One-tap post-exercise feedback, feeding the next suggestion. */
   feedback: ExerciseFeedback | null;
+  /** The user's own stated plan for this exercise, from a template — a ghost hint, never invented. */
+  target: { sets: number; reps: number | null; weightKg: number | null } | null;
 };
 
 type RestState = { sessionExerciseId: string; remaining: number } | null;
@@ -60,8 +62,9 @@ type SessionState = {
   error: string | null;
 
   start: () => Promise<void>;
+  startFromTemplate: (templateId: string) => Promise<void>;
   finish: (rpe: number | null) => Promise<void>;
-  addExercise: (exercise: Exercise, timed: boolean) => Promise<void>;
+  addExercise: (exercise: Exercise, timed: boolean, target?: SessionExerciseState['target']) => Promise<void>;
   updateRow: (sessionExerciseId: string, index: number, patch: Partial<SetRowState>) => void;
   addRow: (sessionExerciseId: string) => void;
   commitRow: (sessionExerciseId: string, index: number) => Promise<void>;
@@ -214,6 +217,27 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     set({ sessionId: r.data.id, startedAt: r.data.startedAt, exercises: [], rest: null, busy: false });
   },
 
+  startFromTemplate: async (templateId) => {
+    set({ busy: true, error: null });
+    const r = await startSessionFromTemplate(supabase, templateId);
+    if (!r.ok) {
+      set({ busy: false, error: r.error });
+      return;
+    }
+    set({ sessionId: r.data.session.id, startedAt: r.data.session.startedAt, exercises: [], rest: null, busy: false });
+    for (const te of r.data.exercises) {
+      const resolved = te.exerciseId ? await getExerciseById(supabase, te.exerciseId) : null;
+      const exercise: Exercise = resolved?.ok && resolved.data
+        ? resolved.data
+        : {
+            id: te.exerciseId ?? '', extId: '', source: 'template', name: te.exerciseName,
+            category: null, primaryMuscles: [], secondaryMuscles: [], equipment: null,
+            difficulty: null, instructions: [], imageUrls: [], videoUrl: null,
+          };
+      await get().addExercise(exercise, false, { sets: te.targetSets, reps: te.targetReps, weightKg: te.targetWeightKg });
+    }
+  },
+
   finish: async (rpe) => {
     const id = get().sessionId;
     if (!id) return;
@@ -222,7 +246,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     set({ sessionId: null, startedAt: null, exercises: [], rest: null, busy: false });
   },
 
-  addExercise: async (exercise, timed) => {
+  addExercise: async (exercise, timed, target) => {
     const state = get();
     if (!state.sessionId) return;
     set({ busy: true });
@@ -254,11 +278,12 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
               : null,
           today: new Date(),
         });
+    const rowCount = target?.sets || prevSets.filter((s) => s.setType !== 'warmup').length || 3;
     const rows = timed
       ? []
-      : Array.from({ length: Math.max(1, prevSets.filter((s) => s.setType !== 'warmup').length || 3) }, (_, i) => ({
+      : Array.from({ length: Math.max(1, rowCount) }, (_, i) => ({
           setNumber: i + 1,
-          kg: prevSets[i]?.weightKg != null ? String(prevSets[i]!.weightKg) : '',
+          kg: prevSets[i]?.weightKg != null ? String(prevSets[i]!.weightKg) : target?.weightKg != null ? String(target.weightKg) : '',
           reps: '',
           rir: '',
           comment: '',
@@ -285,6 +310,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           feedback: null,
           timerMode: 'custom',
           stations: 4,
+          target: target ?? null,
         },
       ],
     });

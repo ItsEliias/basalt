@@ -45,6 +45,7 @@ describe('draftFromImport — the ~ rule', () => {
     prepMinutes: 10, cookMinutes: 15,
     estimatedMacros: { calories: 548, protein: 38, fat: 22, carbs: 42 },
     source: 'https://example.com/miso', confidence: 90,
+    imageUrl: 'https://example.com/miso-cover.jpg',
   };
 
   it('maps to an editable draft with macrosConfirmed=false', () => {
@@ -58,6 +59,14 @@ describe('draftFromImport — the ~ rule', () => {
     expect(d.ingredients[0]).toEqual({ qty: 2, unit: null, name: 'salmon fillets' });
     expect(d.ingredients[1]).toEqual({ qty: 0.5, unit: 'cup', name: 'white miso' });
     expect(d.ingredients[2]).toEqual({ qty: null, unit: null, name: 'soba noodles' });
+  });
+
+  it('carries the source image URL through for a later download-at-save', () => {
+    expect(draftFromImport(imp).sourceImageUrl).toBe('https://example.com/miso-cover.jpg');
+  });
+
+  it('carries a null image URL through untouched', () => {
+    expect(draftFromImport({ ...imp, imageUrl: null }).sourceImageUrl).toBeNull();
   });
 });
 

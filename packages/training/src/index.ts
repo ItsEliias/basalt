@@ -3,6 +3,7 @@
 // engine. Ported in shape from Oathbound; gamification left behind.
 export * from './types';
 export * from './sessions';
+export * from './templates';
 export * from './e1rm';
 export * from './guided-timer';
 export * from './exercises';
