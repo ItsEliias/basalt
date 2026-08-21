@@ -10,6 +10,7 @@ import {
   confirmRecipeMacros, logRecipeServing, addToGroceryList, ingredientConflicts,
   scaleQty, fmtQty,
   type Recipe, type RecipeDetail, type SaveRecipeInput, type MealType,
+  isSocialRecipeUrl, parseQtyText, type SocialRecipeResponse,
 } from '@basalt/nutrition';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -40,10 +41,52 @@ export function RecipesTab() {
   useEffect(() => refresh(), [refresh]);
 
   const runImport = async () => {
-    if (!importUrl.trim()) return;
+    const url = importUrl.trim();
+    if (!url) return;
     setImporting(true);
     setImportError(null);
-    const imp = await importRecipeFromUrl(importUrl.trim());
+
+    // Social links go through the Edge Function (caption → structured
+    // draft); ordinary recipe sites keep the on-device JSON-LD importer.
+    if (isSocialRecipeUrl(url)) {
+      const { data, error } = await supabase.functions.invoke('social-recipe-import', { body: { url } });
+      setImporting(false);
+      if (error) {
+        let message = error.message ?? 'Import failed.';
+        try {
+          const ctx = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) message = body.error;
+          }
+        } catch { /* keep generic */ }
+        setImportError(message);
+        return;
+      }
+      const social = data as SocialRecipeResponse & { source_url: string };
+      setDraft({
+        title: social.title,
+        serves: Math.max(1, Math.round(social.serves)),
+        totalTimeMin: social.total_time_min,
+        sourceUrl: social.source_url,
+        source: 'social',
+        caloriesPerServe: Math.round(social.calories_per_serve),
+        proteinPerServe: Math.round(social.protein_per_serve * 10) / 10,
+        carbsPerServe: Math.round(social.carbs_per_serve * 10) / 10,
+        fatPerServe: Math.round(social.fat_per_serve * 10) / 10,
+        macrosConfirmed: false,
+        ingredients: social.ingredients.map((i) => ({
+          qty: parseQtyText(i.quantity),
+          unit: i.unit || null,
+          name: i.name,
+        })),
+        steps: social.steps,
+      });
+      setImportUrl('');
+      return;
+    }
+
+    const imp = await importRecipeFromUrl(url);
     setImporting(false);
     if (imp.error) {
       setImportError(imp.error);
@@ -209,7 +252,7 @@ export function RecipesTab() {
       <SearchBar placeholder={`Search ${recipes?.length ?? 0} saved recipes…`} value={query} onChangeText={setQuery} />
       <View style={styles.importRow}>
         <ObInput
-          placeholder="Paste a recipe URL — pulls steps, quantities, macros"
+          placeholder="Paste a recipe URL — or a TikTok / Instagram / YouTube link"
           autoCapitalize="none"
           value={importUrl}
           onChangeText={setImportUrl}
