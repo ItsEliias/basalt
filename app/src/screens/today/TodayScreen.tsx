@@ -15,7 +15,7 @@ import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, type SessionRow } from './model';
 import { Image } from 'react-native';
-import { signedPhotoUrls } from '@basalt/nutrition';
+import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
 
 // Today — the ledger's front page. Everything on it is real or absent:
 // targets from the versioned row, entries from the receipt tables, steps
@@ -146,6 +146,19 @@ export function TodayScreen() {
   const hero = targets && data ? heroModel(targets, data.totals, data.activeKcal) : null;
   const hideNumbers = profile?.hideNumbers ?? false;
 
+  const eatBack = targets && data ? trainingDayTarget(targets.calories, data.activeKcal ?? 0) : null;
+  const budgets =
+    targets && data && !hideNumbers
+      ? mealBudgets(
+          eatBack?.kcal ?? targets.calories,
+          data.entries.reduce((acc: Partial<Record<string, number>>, e) => {
+            acc[e.mealType] = (acc[e.mealType] ?? 0) + e.calories;
+            return acc;
+          }, {}),
+          new Date().getHours(),
+        )
+      : null;
+
   return (
     <ScrollView
       style={styles.scroll}
@@ -205,6 +218,30 @@ export function TodayScreen() {
               {targets.sodiumCapMg !== null ? (
                 <CapRow name="Sodium" value={data.totals.sodiumMg / 1000} cap={targets.sodiumCapMg / 1000} decimals={1} />
               ) : null}
+            </>
+          ) : null}
+          {budgets ? (
+            <>
+              <Rule />
+              <MicroLabel faint>Meal budgets — suggestion, never mandate</MicroLabel>
+              {budgets.rows.map((b) => (
+                <ReceiptRow
+                  key={b.meal}
+                  name={b.meal[0]!.toUpperCase() + b.meal.slice(1)}
+                  meta={b.state === 'passed' ? 'window passed — share flows forward' : undefined}
+                  value={
+                    b.state === 'eaten'
+                      ? String(b.eatenKcal)
+                      : b.suggestedKcal !== null
+                        ? `~${b.suggestedKcal}`
+                        : '—'
+                  }
+                  unit="kcal"
+                  valueColor={b.state === 'eaten' ? undefined : color.faint}
+                />
+              ))}
+              <SrcNote>{budgets.note}</SrcNote>
+              {eatBack?.note ? <SrcNote>{eatBack.note}</SrcNote> : null}
             </>
           ) : null}
           <SrcNote>
