@@ -95,7 +95,15 @@ function timerLabel(s: SessionState): string | null {
     (e) => e.guided && e.guided.phase !== 'idle' && e.guided.phase !== 'finished',
   );
   if (guided?.guided) return guidedDescribe(guided.guided).label;
-  if (s.rest !== null) return 'Rest timer running';
+  if (s.rest !== null) {
+    // 10 s buckets: the ongoing notification counts down without a
+    // per-second update storm; the final 5 s go exact for the cue.
+    const r = s.rest.remaining;
+    const shown = r <= 5 ? r : Math.ceil(r / 10) * 10;
+    const mm = Math.floor(shown / 60);
+    const ss = String(shown % 60).padStart(2, '0');
+    return `Rest — about ${mm}:${ss} left`;
+  }
   return null;
 }
 

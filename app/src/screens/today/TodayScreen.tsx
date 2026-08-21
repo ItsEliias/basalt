@@ -16,6 +16,11 @@ import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, type SessionRow } from './model';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requestWidgetUpdate } from 'react-native-android-widget';
+import { BasaltTodayWidget } from '../../widgets/BasaltTodayWidget';
+import { WIDGET_SNAPSHOT_KEY } from '../../widgets/handler';
+import { parseSnapshot } from '../../widgets/widgetModel';
 
 // Today — the ledger's front page. Everything on it is real or absent:
 // targets from the versioned row, entries from the receipt tables, steps
@@ -134,6 +139,7 @@ export function TodayScreen() {
 
   const sections = data ? groupEntriesByMeal(data.entries) : [];
   const micros = data ? microTotals(data.entries) : [];
+
   useEffect(() => {
     const paths = (data?.entries ?? []).map((e) => e.photoPath).filter((p): p is string => !!p);
     if (paths.length === 0) {
@@ -158,6 +164,28 @@ export function TodayScreen() {
           new Date().getHours(),
         )
       : null;
+
+  // Widget snapshot: written on every Today computation; the widget shows
+  // this with its age — never a number the app didn't compute.
+  useEffect(() => {
+    if (!hero || !data) return;
+    const snapshot = {
+      remainingKcal: hero.remaining,
+      over: hero.over,
+      waterFilled: Math.min(totalTicks, Math.floor(data.waterMl / tickMl)),
+      waterTotal: totalTicks,
+      entryCount: data.entries.length,
+      hideNumbers,
+      at: new Date().toISOString(),
+    };
+    void AsyncStorage.setItem(WIDGET_SNAPSHOT_KEY, JSON.stringify(snapshot)).then(() => {
+      void requestWidgetUpdate({
+        widgetName: 'BasaltToday',
+        renderWidget: () => <BasaltTodayWidget snapshot={parseSnapshot(JSON.stringify(snapshot))} nowMs={Date.now()} />,
+      }).catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, hideNumbers]);
 
   return (
     <ScrollView
