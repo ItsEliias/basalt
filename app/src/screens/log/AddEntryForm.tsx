@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
   photoThumb: { width: 44, height: 44, borderRadius: 7, backgroundColor: color.surface2 },
-  photoAction: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.mute, paddingVertical: 8 },
+  photoAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, paddingVertical: 8 },
   sheet: {
     backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -164,10 +164,10 @@ const styles = StyleSheet.create({
   grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
   row: { flexDirection: 'row', gap: 10 },
   field: { flex: 1 },
-  fieldLabel: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
+  fieldLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
   fieldInput: { marginTop: 8 },
   conflict: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.38, color: color.fat,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.38, color: color.fat,
     lineHeight: 15, marginTop: 12,
   },
 });

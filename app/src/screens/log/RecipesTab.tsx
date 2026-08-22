@@ -302,6 +302,7 @@ export function RecipesTab() {
                 key={r.id}
                 onPress={() => void openDetail(r.id)}
                 onLongPress={() => void deleteRecipe(supabase, r.id).then(refresh)}
+                hitSlop={8}
               >
                 <ReceiptRow
                   name={r.title}
@@ -357,29 +358,29 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   importRow: { flexDirection: 'row' },
-  back: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute, paddingTop: 12, paddingHorizontal: 4 },
+  back: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute, paddingTop: 12, paddingHorizontal: 4 },
   detailHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
   detailTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.15, color: color.ink, flexShrink: 1 },
-  detailMeta: { fontFamily: mono, fontSize: 10, color: color.faint, letterSpacing: 0.6 },
-  conflict: { fontFamily: mono, fontSize: 9.5, color: color.fat, marginTop: 10, letterSpacing: 0.38, lineHeight: 15 },
+  detailMeta: { fontFamily: mono, fontSize: 11.5, color: color.faint, letterSpacing: 0.6 },
+  conflict: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 10, letterSpacing: 0.38, lineHeight: 15 },
   servesRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
   perServe: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 14 },
   perServeText: { fontFamily: mono, fontSize: 12, color: color.ink2, fontVariant: ['tabular-nums'] },
-  microLabel: { fontFamily: mono, fontSize: 10, fontWeight: '600', letterSpacing: 1.2, color: color.mute },
+  microLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2, color: color.mute },
   checkRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
   box: { width: 14, height: 14, borderWidth: 1, borderColor: color.border2, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   boxDone: { backgroundColor: color.surface2, borderColor: color.faint },
-  boxTick: { fontSize: 9, color: color.mute, lineHeight: 11 },
+  boxTick: { fontSize: 11, color: color.mute, lineHeight: 11 },
   qty: { fontFamily: mono, fontSize: 12, color: color.ink2, minWidth: 74, fontVariant: ['tabular-nums'] },
-  ing: { fontSize: 13, color: color.ink, flexShrink: 1 },
+  ing: { fontSize: 14, color: color.ink, flexShrink: 1 },
   strike: { color: color.faint, textDecorationLine: 'line-through' },
   stepRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  stepNum: { fontFamily: mono, fontSize: 10, color: color.faint, position: 'relative', top: 3 },
-  stepText: { fontSize: 13, lineHeight: 21, color: color.ink2, flexShrink: 1 },
+  stepNum: { fontFamily: mono, fontSize: 11, color: color.faint, position: 'relative', top: 3 },
+  stepText: { fontSize: 14, lineHeight: 21, color: color.ink2, flexShrink: 1 },
   macroRow: { flexDirection: 'row', gap: 8 },
   rowThumb: { width: 30, height: 30, borderRadius: 7, backgroundColor: color.surface2 },
   draftCover: { width: '100%', height: 160, borderRadius: 10, backgroundColor: color.surface2, marginTop: 12 },
   detailCover: { width: '100%', height: 180, borderRadius: 10, backgroundColor: color.surface2, marginBottom: 12 },
-  numLabel: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
-  cancel: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 12 },
+  numLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
+  cancel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 12 },
 });

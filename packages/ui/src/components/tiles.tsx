@@ -72,7 +72,7 @@ export function Sparkline({ points, stroke, width = 140, height = 26 }: {
 /** 14px water ticks, 3px gaps; tap anywhere adds a tick (+250 instant). */
 export function WaterTicks({ total, filled, onAdd }: { total: number; filled: number; onAdd?: () => void }) {
   return (
-    <Pressable onPress={onAdd} style={styles.ticks}>
+    <Pressable onPress={onAdd} style={styles.ticks} hitSlop={12}>
       {Array.from({ length: total }, (_, i) => (
         <View key={i} style={[styles.tick, i < filled && { backgroundColor: color.recovery }]} />
       ))}
@@ -103,15 +103,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   tileHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 },
-  tileLabel: { fontFamily: mono, fontSize: 10, fontWeight: '600', letterSpacing: 1.2, color: color.mute, flexShrink: 1 },
-  tileSource: { fontFamily: mono, fontSize: 9, color: color.faint, letterSpacing: 0.36, flexShrink: 0 },
+  tileLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2, color: color.mute, flexShrink: 1 },
+  tileSource: { fontFamily: mono, fontSize: 10.5, color: color.faint, letterSpacing: 0.36, flexShrink: 0 },
   tileValue: { ...monoTabular, fontSize: 23, fontWeight: '600', letterSpacing: -0.46, color: color.ink, marginTop: 9 },
   tileUnit: { fontSize: 12, fontWeight: '400', color: color.mute },
-  tileDelta: { fontFamily: mono, fontSize: 10.5, marginTop: 5 },
+  tileDelta: { fontFamily: mono, fontSize: 11, marginTop: 5 },
   tileEmpty: { fontSize: 12.5, color: color.faint, lineHeight: 19, marginTop: 10 },
   ticks: { flexDirection: 'row', gap: 3, marginTop: 14 },
-  tick: { flex: 1, height: 14, borderRadius: 2.5, backgroundColor: color.border },
+  tick: { flex: 1, height: 18, borderRadius: 2.5, backgroundColor: color.border },
   tickCap: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  tickCapAction: { fontFamily: mono, fontSize: 10.5, color: color.ink2, fontWeight: '500' },
-  tickCapText: { fontFamily: mono, fontSize: 10.5, color: color.faint },
+  tickCapAction: { fontFamily: mono, fontSize: 11, color: color.ink2, fontWeight: '500' },
+  tickCapText: { fontFamily: mono, fontSize: 11, color: color.faint },
 });

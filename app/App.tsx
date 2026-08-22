@@ -143,9 +143,13 @@ function Gate() {
 }
 
 export default function App() {
+  // Settings → Display. Falls back to the ThemeProvider's own defaults
+  // (comfortable/system) before the profile has loaded — never blocks
+  // first paint on a network round trip.
+  const profile = useAppStore((s) => s.profile);
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
+      <ThemeProvider density={profile?.density} textScale={profile?.textScale}>
         <StatusBar style="light" />
         <Gate />
       </ThemeProvider>

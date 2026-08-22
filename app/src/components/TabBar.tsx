@@ -1,19 +1,20 @@
+import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono } from '@basalt/ui';
+import { color, mono, TodayIcon, LogIcon, TrainIcon, RecoverIcon, TrendsIcon } from '@basalt/ui';
 
-// The prototype tab bar: mono caps labels with a 4px dot indicator, and the
-// round + button raised in the centre. Tab switch resets scroll (screens
-// handle that); the + opens the quick-log sheet, never a screen.
+// The prototype tab bar: mono caps labels with a small line icon above each,
+// and the round + button raised in the centre. Tab switch resets scroll
+// (screens handle that); the + opens the quick-log sheet, never a screen.
 
 export type TabKey = 'today' | 'log' | 'train' | 'recover' | 'trends';
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'today', label: 'Today' },
-  { key: 'log', label: 'Log' },
-  { key: 'train', label: 'Train' },
-  { key: 'recover', label: 'Recover' },
-  { key: 'trends', label: 'Trends' },
+const TABS: { key: TabKey; label: string; Icon: (p: { color: string; size?: number }) => ReactElement }[] = [
+  { key: 'today', label: 'Today', Icon: TodayIcon },
+  { key: 'log', label: 'Log', Icon: LogIcon },
+  { key: 'train', label: 'Train', Icon: TrainIcon },
+  { key: 'recover', label: 'Recover', Icon: RecoverIcon },
+  { key: 'trends', label: 'Trends', Icon: TrendsIcon },
 ];
 
 export function TabBar({
@@ -27,12 +28,15 @@ export function TabBar({
   const left = TABS.slice(0, 2);
   const right = TABS.slice(2);
 
-  const renderTab = (t: { key: TabKey; label: string }) => {
+  const renderTab = (t: { key: TabKey; label: string; Icon: (p: { color: string; size?: number }) => ReactElement }) => {
     const on = t.key === active;
+    const iconColor = on ? color.ink : color.faint;
     return (
-      <Pressable key={t.key} onPress={() => onChange(t.key)} style={styles.tab}>
-        <View style={[styles.dot, on && { backgroundColor: color.ink }]} />
-        <Text style={[styles.label, on && { color: color.ink }]}>{t.label.toUpperCase()}</Text>
+      <Pressable key={t.key} onPress={() => onChange(t.key)} style={styles.tab} hitSlop={8}>
+        <t.Icon color={iconColor} size={18} />
+        <Text style={[styles.label, on && { color: color.ink }]} maxFontSizeMultiplier={1.3}>
+          {t.label.toUpperCase()}
+        </Text>
       </Pressable>
     );
   };
@@ -40,7 +44,7 @@ export function TabBar({
   return (
     <View style={[styles.bar, { paddingBottom: 14 + insets.bottom }]}>
       {left.map(renderTab)}
-      <Pressable onPress={onPlus} style={styles.plusWrap}>
+      <Pressable onPress={onPlus} style={styles.plusWrap} hitSlop={8}>
         <View style={styles.plusBtn}>
           <Text style={styles.plusText}>+</Text>
         </View>
@@ -62,8 +66,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.bg,
   },
   tab: { alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4 },
-  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent', marginBottom: 6 },
-  label: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.14, color: color.faint },
+  label: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1.14, color: color.faint, marginTop: 5 },
   plusWrap: { top: -4, paddingHorizontal: 4 },
   plusBtn: {
     width: 40,

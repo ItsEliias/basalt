@@ -472,7 +472,7 @@ function CaptureTab() {
           ) : aiItems && aiItems.length > 0 ? (
             <>
               {aiItems.map((item, i) => (
-                <Pressable key={i} onPress={() => openDraftFromAi(item)}>
+                <Pressable key={i} onPress={() => openDraftFromAi(item)} hitSlop={8}>
                   <ReceiptRow
                     name={item.food_name}
                     meta={`~P ${Math.round(item.protein_g)} · ~C ${Math.round(item.carbs_g)} · ~F ${Math.round(item.fat_g)} · ${item.portion_note}`}
@@ -496,7 +496,7 @@ function CaptureTab() {
         <Card>
           <ReceiptHeader label="Results" summary={`${results.length} from Open Food Facts`} />
           {results.slice(0, 10).map((p, i) => (
-            <Pressable key={p.id + i} onPress={() => openDraftFromProduct(p)}>
+            <Pressable key={p.id + i} onPress={() => openDraftFromProduct(p)} hitSlop={8}>
               <ReceiptRow
                 name={p.name}
                 meta={resultMeta(p)}
@@ -517,7 +517,7 @@ function CaptureTab() {
           {frequent.map((f, i) => {
             const fav = favorites.find((x) => x.foodName === f.foodName);
             return (
-              <Pressable key={f.foodName} onPress={() => fav && void relogFavorite(fav)} disabled={!fav}>
+              <Pressable key={f.foodName} onPress={() => fav && void relogFavorite(fav)} disabled={!fav} hitSlop={8}>
                 <ReceiptRow
                   name={f.foodName}
                   meta={`logged ${f.count}× around now${fav ? ' · tap to re-log' : ''}`}
@@ -536,7 +536,7 @@ function CaptureTab() {
         <Card>
           <ReceiptHeader label="Yesterday" summary="tap a meal to copy it to today" />
           {yesterday.map((m, i) => (
-            <Pressable key={m.meal} onPress={() => void copyYesterdayMeal(m.meal)}>
+            <Pressable key={m.meal} onPress={() => void copyYesterdayMeal(m.meal)} hitSlop={8}>
               <ReceiptRow
                 name={`Copy yesterday's ${m.label.toLowerCase()}`}
                 meta={`${m.count} ${m.count === 1 ? 'entry' : 'entries'}`}
@@ -554,7 +554,7 @@ function CaptureTab() {
         <ReceiptHeader label="Favorites" summary={favorites.length > 0 ? '1-tap re-log' : undefined} />
         {favorites.length > 0 ? (
           favorites.map((f, i) => (
-            <Pressable key={f.id} onPress={() => void relogFavorite(f)}>
+            <Pressable key={f.id} onPress={() => void relogFavorite(f)} hitSlop={8}>
               <ReceiptRow
                 name={f.foodName}
                 meta={`logged ${f.useCount}×${f.brand ? ` · ${f.brand}` : ''}`}
@@ -578,9 +578,9 @@ function CaptureTab() {
 
 const styles = StyleSheet.create({
   photoMinor: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
-  photoMinorLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
+  photoMinorLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
   queueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border, paddingVertical: 2 },
-  queueLabel: { fontFamily: mono, fontSize: 9.5, color: color.ink2, letterSpacing: 0.4 },
+  queueLabel: { fontFamily: mono, fontSize: 11.5, color: color.ink2, letterSpacing: 0.4 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   vf: {
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   modes: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 12, paddingBottom: 8 },
-  mode: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.24, color: color.faint, paddingBottom: 3 },
+  mode: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24, color: color.faint, paddingBottom: 3 },
   modeOn: { color: color.ink, borderBottomWidth: 1, borderBottomColor: color.ink },
   cameraWrap: { height: 260, borderRadius: 10, overflow: 'hidden', marginBottom: 12, justifyContent: 'flex-end' },
   cameraDenied: { paddingBottom: 12 },
@@ -607,13 +607,13 @@ const styles = StyleSheet.create({
   cBL: { left: 0, bottom: 0, borderLeftWidth: 1.5, borderBottomWidth: 1.5 },
   cBR: { right: 0, bottom: 0, borderRightWidth: 1.5, borderBottomWidth: 1.5 },
   hint: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 1.33, color: color.mute,
+    fontFamily: mono, fontSize: 11, letterSpacing: 1.33, color: color.mute,
     textAlign: 'center', paddingBottom: 14,
   },
   resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, paddingVertical: 11 },
-  resultName: { fontSize: 13, fontWeight: '500', color: color.ink },
-  resultMeta: { fontFamily: mono, fontSize: 10.5, color: color.faint, marginTop: 3 },
-  conflict: { fontFamily: mono, fontSize: 9.5, color: color.fat, marginTop: 4, letterSpacing: 0.38 },
+  resultName: { fontSize: 14, fontWeight: '500', color: color.ink },
+  resultMeta: { fontFamily: mono, fontSize: 11.5, color: color.faint, marginTop: 3 },
+  conflict: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 4, letterSpacing: 0.38 },
   addBtn: {
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 8,
     paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0,
@@ -623,6 +623,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
     paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border,
   },
-  qualityLabel: { fontFamily: mono, fontSize: 10, fontWeight: '600', letterSpacing: 1.2, color: color.faint },
+  qualityLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2, color: color.faint },
   qualityText: { fontFamily: mono, fontSize: 12, color: color.ink2 },
 });

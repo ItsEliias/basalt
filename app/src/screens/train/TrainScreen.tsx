@@ -129,6 +129,7 @@ function SessionTab() {
                 <Pressable
                   onPress={() => void session.startFromTemplate(t.id)}
                   onLongPress={() => void deleteTemplate(supabase, t.id).then(refreshTemplates)}
+                  hitSlop={8}
                 >
                   <ReceiptRow
                     name={t.name}
@@ -164,6 +165,7 @@ function SessionTab() {
               <Pressable
                 key={r.region}
                 onPress={() => void toggleRecoveryOverride(r.region, Date.now()).then(refreshRecovery)}
+                hitSlop={8}
               >
                 <ReceiptRow
                   name={r.region[0]!.toUpperCase() + r.region.slice(1)}
@@ -687,7 +689,7 @@ export function ExercisePicker({
         </ScrollView>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           {results.map((e, i) => (
-            <Pressable key={e.id} onPress={() => setDetailFor(e)}>
+            <Pressable key={e.id} onPress={() => setDetailFor(e)} hitSlop={8}>
               <ReceiptRow
                 name={e.name}
                 meta={
@@ -719,32 +721,32 @@ export function ExercisePicker({
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
-  elapsed: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'right', marginTop: 10 },
+  elapsed: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'right', marginTop: 10 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  addSet: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
+  addSet: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
   rowActions: { flexDirection: 'row', justifyContent: 'space-between' },
-  linkAction: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
-  suggestion: { fontFamily: mono, fontSize: 9.5, letterSpacing: 0.38, color: color.mute, lineHeight: 15, marginTop: 6 },
+  linkAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
+  suggestion: { fontFamily: mono, fontSize: 11, letterSpacing: 0.38, color: color.mute, lineHeight: 15, marginTop: 6 },
   fbRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  fbLabel: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint },
+  fbLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint },
   fbChip: {
-    fontFamily: mono, fontSize: 9, letterSpacing: 0.7, color: color.mute,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.7, color: color.mute,
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
     paddingHorizontal: 10, paddingVertical: 5, overflow: 'hidden',
   },
   fbChipOn: { color: color.ink, borderColor: color.ink2 },
-  warmupTitle: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, marginTop: 16 },
-  warmupLine: { fontFamily: mono, fontSize: 13, color: color.ink, marginTop: 6, fontVariant: ['tabular-nums'] },
-  warmupPct: { fontSize: 10, color: color.faint },
+  warmupTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, marginTop: 16 },
+  warmupLine: { fontFamily: mono, fontSize: 14, color: color.ink, marginTop: 6, fontVariant: ['tabular-nums'] },
+  warmupPct: { fontSize: 11, color: color.faint },
   pickerLinks: { flexDirection: 'row', justifyContent: 'space-between' },
   detailRow: { flexDirection: 'row', gap: 18, alignItems: 'flex-start', marginTop: 14 },
-  detailMeta: { fontFamily: mono, fontSize: 10, color: color.ink2, lineHeight: 17, letterSpacing: 0.3 },
+  detailMeta: { fontFamily: mono, fontSize: 11.5, color: color.ink2, lineHeight: 17, letterSpacing: 0.3 },
   detailInstructions: { fontSize: 12.5, color: color.mute, lineHeight: 18, marginTop: 12 },
   mediaSlot: {
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderStyle: 'dashed',
     borderRadius: 10, padding: 12, marginTop: 12, alignItems: 'center',
   },
-  mediaSlotText: { fontFamily: mono, fontSize: 8, letterSpacing: 0.8, color: color.faint },
+  mediaSlotText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.8, color: color.faint },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
     backgroundColor: color.surface,
@@ -755,17 +757,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
   },
-  sheetTitle: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute },
+  sheetTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
   platesLine: { fontFamily: mono, fontSize: 14, color: color.ink, marginTop: 14 },
-  platesResidual: { fontFamily: mono, fontSize: 10.5, color: color.fat, marginTop: 8 },
-  skipRpe: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 14 },
+  platesResidual: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 8 },
+  skipRpe: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 14 },
   error: { fontSize: 12.5, color: color.fat, marginTop: 10 },
   cfgRow: { flexDirection: 'row', gap: 10, marginTop: 12, justifyContent: 'center' },
   picker: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 0 },
   pickerHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16 },
   pickerTitle: { fontSize: 21, fontWeight: '650' as any, letterSpacing: -0.21, color: color.ink },
-  pickerClose: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint },
+  pickerClose: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint },
   chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  timedLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingBottom: 8, marginTop: -4 },
-  addAsTimed: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.mute, textAlign: 'center', paddingVertical: 12 },
+  timedLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, paddingBottom: 8, marginTop: -4 },
+  addAsTimed: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, textAlign: 'center', paddingVertical: 12 },
 });

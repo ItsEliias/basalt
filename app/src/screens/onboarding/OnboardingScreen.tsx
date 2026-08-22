@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 22 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   brand: { fontFamily: mono, fontSize: 11, letterSpacing: 2.42, color: color.ink },
-  skip: { fontFamily: mono, fontSize: 10, letterSpacing: 1, color: color.faint },
+  skip: { fontFamily: mono, fontSize: 11, letterSpacing: 1, color: color.faint },
   step: { flex: 1, minHeight: 0 },
   scroll: { flex: 1, marginTop: 16, marginBottom: 10 },
   error: { fontSize: 12.5, color: color.fat, lineHeight: 18 },

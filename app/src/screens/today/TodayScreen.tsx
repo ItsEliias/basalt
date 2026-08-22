@@ -298,7 +298,7 @@ export function TodayScreen() {
               <View key={s.meal}>
                 <MealTag>{`${s.label}${s.time ? ` — ${s.time}` : ''}`}</MealTag>
                 {s.entries.map((e, i) => (
-                  <Pressable key={e.id} onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)}>
+                  <Pressable key={e.id} onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)} hitSlop={8}>
                     <ReceiptRow
                       name={e.foodName}
                       thumb={
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   heroSub: { fontFamily: mono, fontSize: 11.5, color: color.mute, marginTop: 10 },
   entryThumb: { width: 30, height: 30, borderRadius: 7, backgroundColor: color.surface2 },
   undo: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.95, color: color.faint,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.95, color: color.faint,
     textAlign: 'center', marginTop: 14, paddingVertical: 4,
   },
 });

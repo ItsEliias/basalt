@@ -29,6 +29,7 @@ export function Chip({ label, on, onPress, accent }: {
   return (
     <Pressable
       onPress={onPress}
+      hitSlop={8}
       style={[styles.chip, on && styles.chipOn, on && accent ? { borderColor: `${accent}59` } : null]}
     >
       <Text style={[styles.chipText, on && { color: accent ?? color.ink }]}>{label.toUpperCase()}</Text>
@@ -69,7 +70,7 @@ export function SubNav({ items, active, onChange }: {
       {items.map((item) => {
         const on = item === active;
         return (
-          <Pressable key={item} onPress={() => onChange(item)} style={[styles.segBtn, on && styles.segBtnOn]}>
+          <Pressable key={item} onPress={() => onChange(item)} hitSlop={8} style={[styles.segBtn, on && styles.segBtnOn]}>
             <Text style={[styles.segText, on && { color: color.ink }]}>{item.toUpperCase()}</Text>
           </Pressable>
         );
@@ -100,9 +101,9 @@ export function Stepper({ value, unit, onMinus, onPlus }: {
 }) {
   return (
     <View style={styles.stepper}>
-      <Pressable onPress={onMinus} style={styles.stepBtn}><Text style={styles.stepBtnText}>−</Text></Pressable>
+      <Pressable onPress={onMinus} style={styles.stepBtn} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}><Text style={styles.stepBtnText}>−</Text></Pressable>
       <Text style={styles.stepVal}>{value}{unit ? ` ${unit}` : ''}</Text>
-      <Pressable onPress={onPlus} style={styles.stepBtn}><Text style={styles.stepBtnText}>+</Text></Pressable>
+      <Pressable onPress={onPlus} style={styles.stepBtn} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}><Text style={styles.stepBtnText}>+</Text></Pressable>
     </View>
   );
 }
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
   },
   chipOn: { borderColor: color.border2, backgroundColor: color.surface },
-  chipText: { fontFamily: mono, fontSize: 9.5, letterSpacing: 0.95, color: color.mute },
+  chipText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.95, color: color.mute },
   seg: {
     flexDirection: 'row',
     gap: 20,
@@ -154,9 +155,9 @@ const styles = StyleSheet.create({
     borderBottomColor: color.border,
     marginHorizontal: 2,
   },
-  segBtn: { paddingTop: 6, paddingBottom: 10, marginBottom: -StyleSheet.hairlineWidth, borderBottomWidth: 1, borderBottomColor: 'transparent' },
+  segBtn: { paddingTop: 6, paddingBottom: 10, marginBottom: -StyleSheet.hairlineWidth, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   segBtnOn: { borderBottomColor: color.ink },
-  segText: { fontFamily: mono, fontSize: 10, letterSpacing: 1.3, color: color.faint },
+  segText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.3, color: color.faint },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
   },
   stepBtn: { width: 38, height: 34, backgroundColor: color.surface2, alignItems: 'center', justifyContent: 'center' },
   stepBtnText: { color: color.ink2, fontSize: 16, fontFamily: mono },
-  stepVal: { fontFamily: mono, fontSize: 13, minWidth: 74, textAlign: 'center', color: color.ink },
+  stepVal: { fontFamily: mono, fontSize: 14, minWidth: 74, textAlign: 'center', color: color.ink },
   newRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

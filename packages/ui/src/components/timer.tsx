@@ -23,7 +23,7 @@ export function GuidedTimerDisplay({
   const numColor = tone === 'warn' ? color.fat : tone === 'rest' ? color.recovery : color.ink;
   return (
     <View>
-      <Text style={[styles.num, { color: numColor }]}>{seconds}</Text>
+      <Text style={[styles.num, { color: numColor }]} maxFontSizeMultiplier={1.3}>{seconds}</Text>
       <Text style={styles.phase}>{phaseLabel.toUpperCase()}</Text>
       <View style={styles.barTrack}>
         <View style={[styles.barFill, { width: `${Math.max(0, Math.min(1, progress)) * 100}%` }]} />
@@ -69,17 +69,17 @@ const styles = StyleSheet.create({
   },
   phase: {
     fontFamily: mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.8,
     color: color.mute,
     textAlign: 'center',
     marginTop: 10,
   },
-  barTrack: { height: 3, borderRadius: 2, backgroundColor: color.border, marginTop: 16, overflow: 'hidden' },
+  barTrack: { height: 4, borderRadius: 2, backgroundColor: color.border, marginTop: 16, overflow: 'hidden' },
   barFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: color.ink2 },
   setTicks: { flexDirection: 'row', gap: 5, marginTop: 14, justifyContent: 'center' },
   setTick: { width: 26, height: 4, borderRadius: 2, backgroundColor: color.border },
   cfg: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 14, flexWrap: 'wrap' },
-  cfgItem: { fontFamily: mono, fontSize: 10.5, color: color.faint },
+  cfgItem: { fontFamily: mono, fontSize: 11, color: color.faint },
   cfgValue: { color: color.ink2, fontWeight: '500' },
 });

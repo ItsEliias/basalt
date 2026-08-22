@@ -100,7 +100,7 @@ export function PlannerTab() {
                 dayPlans.map((p) => {
                   const recipe = recipeFor(p.recipeId);
                   return (
-                    <Pressable key={p.id} onPress={() => void logPlan(p)} onLongPress={() => void deleteMealPlan(supabase, p.id).then(refresh)}>
+                    <Pressable key={p.id} onPress={() => void logPlan(p)} onLongPress={() => void deleteMealPlan(supabase, p.id).then(refresh)} hitSlop={8}>
                       <ReceiptRow
                         name={recipe?.title ?? p.note ?? 'Planned meal'}
                         meta={`${p.mealSlot} · ×${p.serves} ${p.serves === 1 ? 'serve' : 'serves'} · tap to log · hold to remove`}
@@ -140,6 +140,7 @@ export function PlannerTab() {
                     setAdding(false);
                     void refresh();
                   }}
+                  hitSlop={8}
                 >
                   <ReceiptRow name={r.title} meta={`serves ${r.serves}`} value="plan" valueColor={color.faint} />
                 </Pressable>
@@ -224,13 +225,13 @@ export function PlannerTab() {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
-  microLabel: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.14, color: color.mute, marginTop: 14 },
-  cancel: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 12 },
+  microLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, color: color.mute, marginTop: 14 },
+  cancel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 12 },
   checkRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
   box: { width: 14, height: 14, borderWidth: 1, borderColor: color.border2, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   boxDone: { backgroundColor: color.surface2, borderColor: color.faint },
-  boxTick: { fontSize: 9, color: color.mute, lineHeight: 11 },
+  boxTick: { fontSize: 11, color: color.mute, lineHeight: 11 },
   qty: { fontFamily: mono, fontSize: 12, color: color.ink2, minWidth: 74, fontVariant: ['tabular-nums'] },
-  ing: { fontSize: 13, color: color.ink, flexShrink: 1 },
+  ing: { fontSize: 14, color: color.ink, flexShrink: 1 },
   strike: { color: color.faint, textDecorationLine: 'line-through' },
 });

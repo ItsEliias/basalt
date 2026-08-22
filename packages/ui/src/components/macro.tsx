@@ -17,7 +17,7 @@ export function Bar({ pct, fill }: { pct: number; fill: string }) {
 
 function Ratio({ value, target, unit, over }: { value: string; target: string; unit: string; over?: boolean }) {
   return (
-    <Text style={[styles.ratio, over && { color: color.fat }]}>
+    <Text style={[styles.ratio, over && { color: color.fat }]} maxFontSizeMultiplier={1.3}>
       {value} <Text style={[styles.ratioOf, over && { color: color.fat }]}>/ {target} {unit}</Text>
       {over ? '' : null}
     </Text>
@@ -62,7 +62,7 @@ export function CapRow({
           <View style={[styles.dot, { backgroundColor: s.over ? color.fat : color.faint }]} />
           {'  '}{name}
         </Text>
-        <Text style={[styles.ratio, s.over && { color: color.fat }]}>
+        <Text style={[styles.ratio, s.over && { color: color.fat }]} maxFontSizeMultiplier={1.3}>
           {fmt(value)} <Text style={[styles.ratioOf, s.over && { color: color.fat }]}>/ {fmt(cap)} {unit}</Text>
           {s.over ? ` · ${fmt(s.overBy)} over` : ''}
         </Text>
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 2 },
   ratio: { ...monoTabular, fontSize: 12, color: color.ink2 },
   ratioOf: { fontFamily: mono, color: color.faint },
-  barTrack: { height: 3, borderRadius: 2, backgroundColor: color.border, marginTop: 7, overflow: 'hidden' },
+  barTrack: { height: 4, borderRadius: 2, backgroundColor: color.border, marginTop: 7, overflow: 'hidden' },
   barFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2 },
   stack: { height: 6, borderRadius: 3, marginTop: 14, flexDirection: 'row', gap: 2 },
   stackSeg: { borderRadius: 2 },

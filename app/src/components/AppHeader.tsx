@@ -16,7 +16,7 @@ export function AppHeader({
       <View style={styles.right}>
         {context ? <Text style={styles.context}>{context.toUpperCase()}</Text> : null}
         {onPressGear ? (
-          <Pressable onPress={onPressGear} hitSlop={10}>
+          <Pressable onPress={onPressGear} hitSlop={18}>
             <Text style={styles.gear}>⚙</Text>
           </Pressable>
         ) : null}

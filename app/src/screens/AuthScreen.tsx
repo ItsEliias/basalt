@@ -93,10 +93,10 @@ const styles = StyleSheet.create({
   lede: { fontSize: 24, fontWeight: '650' as any, letterSpacing: -0.36, color: color.ink, marginTop: 34 },
   error: { fontSize: 12.5, color: color.fat, marginTop: 12, lineHeight: 18 },
   pwRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
-  pwToggle: { fontFamily: mono, fontSize: 9.5, letterSpacing: 0.9, color: color.mute, paddingVertical: 4 },
+  pwToggle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, paddingVertical: 4 },
   switch: {
     fontFamily: mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.2,
     color: color.mute,
     textAlign: 'center',

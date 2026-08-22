@@ -282,16 +282,16 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   footer: {
-    fontFamily: mono, fontSize: 9.5, color: color.faint, letterSpacing: 0.38,
+    fontFamily: mono, fontSize: 10.5, color: color.faint, letterSpacing: 0.38,
     lineHeight: 16, marginTop: 14, paddingHorizontal: 4,
   },
   lede: { fontSize: 13.5, color: color.ink, lineHeight: 20, marginBottom: 12 },
   wstatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 12 },
   wstat: { minWidth: 68 },
   wstatK: {
-    fontFamily: mono, fontSize: 9.5, color: color.ink2, letterSpacing: 0.38,
+    fontFamily: mono, fontSize: 11, color: color.ink2, letterSpacing: 0.38,
     textTransform: 'uppercase', marginBottom: 2,
   },
   wstatV: { fontFamily: mono, fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },
-  shareLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
+  shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
 });

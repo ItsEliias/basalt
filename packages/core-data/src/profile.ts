@@ -37,6 +37,10 @@ export type ProfileRecord = {
   /** Monthly-challenge opt-in — private, optional, off by default. */
   challengeEnabled: boolean;
   useMetric: boolean;
+  /** Settings → Display. Layered on top of the OS accessibility text-size setting, not a replacement for it. */
+  textScale: 'system' | 'plus1' | 'plus2';
+  /** Settings → Display. Comfortable (+4dp row/card padding) is the default for new installs. */
+  density: 'comfortable' | 'compact';
 };
 
 function mapProfile(r: any): ProfileRecord {
@@ -67,6 +71,8 @@ function mapProfile(r: any): ProfileRecord {
     fastingEnabled: r.fasting_enabled ?? false,
     challengeEnabled: r.challenge_enabled ?? false,
     useMetric: r.use_metric ?? true,
+    textScale: r.text_scale ?? 'system',
+    density: r.density ?? 'comfortable',
   };
 }
 
@@ -81,6 +87,7 @@ function profilePayload(p: Partial<ProfileRecord>): Record<string, unknown> {
     ['equipment', 'equipment'], ['jobActivity', 'job_activity'], ['exerciseFrequency', 'exercise_frequency'],
     ['typicalSleep', 'typical_sleep'], ['stressLevel', 'stress_level'], ['motivations', 'motivations'],
     ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'], ['challengeEnabled', 'challenge_enabled'],
+    ['textScale', 'text_scale'], ['density', 'density'],
   ];
   for (const [key, col] of map) {
     if (p[key] !== undefined) out[col] = p[key];
