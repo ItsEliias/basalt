@@ -219,11 +219,15 @@ export function TrendsScreen() {
               </EmptyState>
             ) : null}
             {correlations.checkedNotShown.length > 0 ? (
-              <SrcNote>
-                {`Checked, not shown: ${correlations.checkedNotShown
-                  .map((c) => `${c.pair.aLabel} × ${c.pair.bLabel}${c.pair.lag ? ' (next day)' : ''} (${c.r === null ? 'no signal' : `r ${c.r.toFixed(2)}`}, ${c.n} d)`)
-                  .join(' · ')} · |r| ≥ 0.45 and ≥ 30 days required · correlation, never cause`}
-              </SrcNote>
+              <View style={{ marginTop: 6, gap: 3 }}>
+                <SrcNote>Checked, not shown</SrcNote>
+                {correlations.checkedNotShown.map((c) => (
+                  <SrcNote key={`${c.pair.aKey}-${c.pair.bKey}`} style={{ opacity: 0.75 }}>
+                    {`${c.pair.aLabel} × ${c.pair.bLabel}${c.pair.lag ? ' (next day)' : ''} — ${c.r === null ? 'no signal' : `r ${c.r.toFixed(2)}`}, ${c.n} d`}
+                  </SrcNote>
+                ))}
+                <SrcNote>|r| ≥ 0.45 and ≥ 30 days required · correlation, never cause</SrcNote>
+              </View>
             ) : null}
           </>
         )}

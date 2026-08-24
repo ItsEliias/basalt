@@ -55,6 +55,10 @@ export type SetInput = {
   rpe?: number | null;
   restS?: number | null;
   comment?: string | null;
+  /** Backdates the row's own completion timestamp — without it the DB
+   *  default (`now()`) applies even for a set logged inside a backdated
+   *  session, which is only wrong for backdated writes (seed scripts). */
+  completedAt?: string;
 };
 
 export function mapSession(r: any): WorkoutSession {

@@ -27,6 +27,7 @@ import { AdaptSheet } from './AdaptSheet';
 import { timerServiceFailed } from '../../lib/timerService';
 import { loadRecovery, toggleRecoveryOverride } from '../../lib/recoveryData';
 import { PrShareCard, ShareSheet } from '../../components/ShareCards';
+import { SessionDetailSheet } from '../../components/SessionDetailSheet';
 
 // Train — the relational set logger. Prev values ghost as editable defaults,
 // completion is a typographic state change with a quiet PR mark, rest timers
@@ -74,6 +75,7 @@ function SessionTab() {
     if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
   };
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
+  const [viewSessionId, setViewSessionId] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<RegionRecovery[] | null>(null);
   const refreshRecovery = () => void loadRecovery(Date.now()).then((r) => setRecovery(r.recovery));
   const [, forceClock] = useState(0);
@@ -111,6 +113,7 @@ function SessionTab() {
 
   if (!session.sessionId) {
     return (
+      <>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card>
           <ReceiptHeader label="Session" />
@@ -184,20 +187,23 @@ function SessionTab() {
           <ReceiptHeader label="Recent sessions" />
           {recent.length > 0 ? (
             recent.map((s, i) => (
-              <ReceiptRow
-                key={s.id}
-                name={s.notes?.trim() || 'Training session'}
-                meta={new Date(s.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}
-                value={s.endedAt ? mmss((Date.parse(s.endedAt) - Date.parse(s.startedAt)) / 1000) : '—'}
-                unit={s.endedAt ? 'duration' : 'open'}
-                last={i === recent.length - 1}
-              />
+              <Pressable key={s.id} onPress={() => setViewSessionId(s.id)} hitSlop={8}>
+                <ReceiptRow
+                  name={s.notes?.trim() || 'Training session'}
+                  meta={`${new Date(s.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })} · tap for detail`}
+                  value={s.endedAt ? mmss((Date.parse(s.endedAt) - Date.parse(s.startedAt)) / 1000) : '—'}
+                  unit={s.endedAt ? 'duration' : 'open'}
+                  last={i === recent.length - 1}
+                />
+              </Pressable>
             ))
           ) : (
             <EmptyState>No sessions yet. The first one starts the history every Prev column draws from.</EmptyState>
           )}
         </Card>
       </ScrollView>
+      <SessionDetailSheet sessionId={viewSessionId} onClose={() => setViewSessionId(null)} />
+    </>
     );
   }
 

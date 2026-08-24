@@ -37,3 +37,6 @@ export { MINDFULNESS_EXERCISE_TYPES } from './types';
 export { ANDROID_HEALTH_PERMISSIONS, ANDROID_PERMISSION_FOR, ALL_HEALTH_PERMISSIONS } from './manifest';
 // Ledger sync — provider-injected, idempotent, tested against fakes.
 export { syncHealthData, type SyncReport } from './sync';
+// The fake provider itself — reusable anywhere a HealthProvider needs
+// stubbing out (tests, seed scripts), not just internal to this package.
+export { stubProvider } from './stubProvider';

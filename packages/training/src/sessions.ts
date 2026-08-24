@@ -96,24 +96,24 @@ export async function logSet(
     return err('A set needs reps or a duration.');
   }
 
+  const payload: Record<string, unknown> = {
+    session_exercise_id: sessionExerciseId,
+    user_id: u.data,
+    set_number: input.setNumber,
+    set_type: input.setType ?? 'normal',
+    reps: input.reps ?? null,
+    weight_kg: input.weightKg ?? null,
+    duration_s: input.durationS ?? null,
+    rir: input.rir ?? null,
+    rpe: input.rpe ?? null,
+    rest_s: input.restS ?? null,
+    comment: input.comment ?? null,
+  };
+  if (input.completedAt) payload.completed_at = input.completedAt;
+
   const { data, error } = await client
     .from('basalt_set_entries')
-    .upsert(
-      {
-        session_exercise_id: sessionExerciseId,
-        user_id: u.data,
-        set_number: input.setNumber,
-        set_type: input.setType ?? 'normal',
-        reps: input.reps ?? null,
-        weight_kg: input.weightKg ?? null,
-        duration_s: input.durationS ?? null,
-        rir: input.rir ?? null,
-        rpe: input.rpe ?? null,
-        rest_s: input.restS ?? null,
-        comment: input.comment ?? null,
-      },
-      { onConflict: 'session_exercise_id,set_number' },
-    )
+    .upsert(payload, { onConflict: 'session_exercise_id,set_number' })
     .select('*')
     .single();
   if (error || !data) return err(error?.message ?? 'Could not save set.');

@@ -168,19 +168,28 @@ async function refreshDailyLogTotals(client: SupabaseClient, logId: string): Pro
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Insert one food entry for the authed user, for today's date. Find-or-create
- * the day's `basalt_daily_logs` row first; use its id as the entry's `log_id`.
+ * Insert one food entry for the authed user. Find-or-create the day's
+ * `basalt_daily_logs` row first; use its id as the entry's `log_id`.
+ *
+ * `options.date` defaults to today (device-local) — the normal app never
+ * passes it. `options.createdAt` backdates the row's own timestamp too;
+ * without it the DB default (`now()`) applies even when `date` is in the
+ * past, which is only wrong for backdated writes (seed scripts).
  */
 export async function addFoodEntry(
   client: SupabaseClient,
   input: FoodEntryInput,
+  options: { date?: string; createdAt?: string } = {},
 ): Promise<Result<FoodEntryRow>> {
-  const log = await findOrCreateDailyLog(client, todayISO());
+  const log = await findOrCreateDailyLog(client, options.date ?? todayISO());
   if (!log.ok) return log;
+
+  const payload = insertPayloadFrom(input, log.data.id, log.data.userId);
+  if (options.createdAt) payload.created_at = options.createdAt;
 
   const insert = await client
     .from('basalt_food_entries')
-    .insert(insertPayloadFrom(input, log.data.id, log.data.userId))
+    .insert(payload)
     .select('*')
     .single();
 
