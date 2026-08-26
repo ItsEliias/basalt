@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { color } from '../tokens';
 import { mono, monoTabular } from '../typography';
-import { capState, fillPct } from '../format';
+import { capState, fillPct, overCapSuffix } from '../format';
 import { useTheme, resolveTypeface } from '../theme';
 
 // Macro rows, cap rows, hairline bars and the segmented macro stack —
@@ -67,11 +67,7 @@ export function CapRow({
   const { theme } = useTheme();
   const s = capState(value, cap);
   const fmt = (n: number) => n.toFixed(decimals);
-  const overSuffix =
-    !s.over ? '' :
-    theme.expression.overCap === 'all' ? ` · ${fmt(s.overBy)} over` :
-    theme.expression.overCap === 'word' ? ' — over' :
-    '';
+  const overSuffix = overCapSuffix(s.over, theme.expression.overCap, s.overBy, fmt);
   const dataFont = resolveTypeface(theme.typography.data);
 
   return (

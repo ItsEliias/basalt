@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { groupInt, capState, fillPct, mmss, paceText, hoursMinutes, approxValue, kgText } from './format';
+import { groupInt, capState, fillPct, mmss, paceText, hoursMinutes, approxValue, kgText, overCapSuffix } from './format';
+// Deep path, not the './theme' barrel: the barrel re-exports typeface.ts,
+// which imports typography.ts, which imports react-native — and vitest's
+// parser can't handle react-native's own Flow-syntax source. themes/index
+// itself is pure data with no such dependency.
+import { THEMES, THEME_IDS, type ThemeId } from './theme/themes';
 
 describe('groupInt', () => {
   it('groups thousands and rounds', () => {
@@ -88,5 +93,52 @@ describe('kgText', () => {
     expect(kgText(81.4)).toBe('81.4');
     expect(kgText(75)).toBe('75');
     expect(kgText(72.5)).toBe('72.5');
+  });
+});
+
+// CapRow (packages/ui/src/components/macro.tsx) is the first component
+// reading from the theme contract — this is the "does the contract
+// actually work" test for its overCap branching, exercised for every
+// theme's real value rather than eyeballed on-device per theme.
+describe('overCapSuffix', () => {
+  const fmt = (n: number) => n.toFixed(0);
+
+  it('never appends anything when not over', () => {
+    for (const style of ['all', 'word', 'fill', 'color'] as const) {
+      expect(overCapSuffix(false, style, 5, fmt)).toBe('');
+    }
+  });
+
+  it("'all' states the numeric delta", () => {
+    expect(overCapSuffix(true, 'all', 5, fmt)).toBe(' · 5 over');
+  });
+
+  it("'word' states plainly, no delta", () => {
+    expect(overCapSuffix(true, 'word', 5, fmt)).toBe(' — over');
+  });
+
+  it("'fill' carries the over-state through the fill alone — no text", () => {
+    expect(overCapSuffix(true, 'fill', 5, fmt)).toBe('');
+  });
+
+  it("'color' (contractually forbidden, but the type allows it structurally) degrades to no text — never silently drops the visual fill/bar signal it would otherwise rely on alone", () => {
+    expect(overCapSuffix(true, 'color', 5, fmt)).toBe('');
+  });
+
+  describe('against every real theme value', () => {
+    const ids = Object.keys(THEMES) as ThemeId[];
+    it.each(ids)('%s produces a non-empty suffix only for all/word', (id) => {
+      const style = THEMES[id].expression.overCap;
+      const suffix = overCapSuffix(true, style, 5, fmt);
+      if (style === 'all' || style === 'word') {
+        expect(suffix.length).toBeGreaterThan(0);
+      } else {
+        expect(suffix).toBe('');
+      }
+    });
+
+    it('registry agrees with THEME_IDS (sanity — same guard as themeConformance)', () => {
+      expect([...THEME_IDS].sort()).toEqual(ids.sort());
+    });
   });
 });

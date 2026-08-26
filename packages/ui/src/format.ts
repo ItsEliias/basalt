@@ -1,9 +1,31 @@
 // Pure formatting helpers backing the honesty rules — every numeral the UI
 // prints goes through one of these so the rules live in exactly one place.
+//
+// Deliberately zero react-native dependency: this file needs to import
+// cleanly under plain Node/vitest. react-native's own package source uses
+// Flow syntax vitest's parser can't handle, so anything that pulls it in
+// transitively (any component file) can't be unit-tested directly — pure
+// logic used by a component belongs here, not co-located with the component.
+
+import type { OverCapStyle } from './theme/contract';
 
 /** Thousands-grouped integer, e.g. 2340 → "2,340". */
 export function groupInt(n: number): string {
   return Math.round(n).toLocaleString('en-US');
+}
+
+/**
+ * How an over-cap state is WORDED, never whether it's shown — the caller's
+ * bar/dot always fill in the over colour regardless of this. Exercised for
+ * every theme's `expression.overCap` value in format.test.ts.
+ */
+export function overCapSuffix(over: boolean, style: OverCapStyle, overBy: number, fmt: (n: number) => string): string {
+  if (!over) return '';
+  if (style === 'all') return ` · ${fmt(overBy)} over`;
+  if (style === 'word') return ' — over';
+  // 'fill' (and the contractually-forbidden 'color') state the over-cap
+  // through the fill alone — no extra text.
+  return '';
 }
 
 /**
