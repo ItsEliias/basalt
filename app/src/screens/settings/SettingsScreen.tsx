@@ -6,6 +6,7 @@ import * as Sharing from 'expo-sharing';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel,
   ChipRow, ChipGroup, kgText, groupInt,
+  THEME_IDS, THEMES, type ThemeId,
   color, mono,
 } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
@@ -14,6 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
+import { logThemeLayoutEvent } from '../../lib/instrumentation';
 import { zipSync, strToU8 } from 'fflate';
 import {
   buildPerTableCsvs, buildExportReadme, u8ToBase64,
@@ -39,6 +41,17 @@ function textScaleKey(label: string | null): 'system' | 'plus1' | 'plus2' {
   if (label === '+1') return 'plus1';
   if (label === '+2') return 'plus2';
   return 'system';
+}
+
+// THEME_IDS order is the registry's own — Minimal first (the default).
+const THEME_OPTIONS = THEME_IDS.map((id) => THEMES[id].name);
+function themeIdForLabel(label: string): ThemeId {
+  return THEME_IDS.find((id) => THEMES[id].name === label) ?? 'minimal';
+}
+
+const LAYOUT_OPTIONS = ['Ledger', 'Tiles'];
+function layoutKey(label: string): 'ledger' | 'tiles' {
+  return label === 'Tiles' ? 'tiles' : 'ledger';
 }
 
 export function SettingsScreen() {
@@ -298,6 +311,28 @@ export function SettingsScreen() {
           onChange={(v) => void save({ density: v.toLowerCase() === 'compact' ? 'compact' : 'comfortable' })}
         />
         <SrcNote>Comfortable adds extra breathing room to every row and card — on by default</SrcNote>
+        <ObChipLabel>Theme</ObChipLabel>
+        <ChipRow
+          options={THEME_OPTIONS}
+          value={THEMES[profile?.theme ?? 'minimal'].name}
+          onChange={(v) => {
+            const next = themeIdForLabel(v);
+            logThemeLayoutEvent({ type: 'theme_selected', theme: next, previous: profile?.theme ?? 'minimal' });
+            void save({ theme: next });
+          }}
+        />
+        <SrcNote>{THEMES[profile?.theme ?? 'minimal'].description} · every colour contrast-verified</SrcNote>
+        <ObChipLabel>Today layout</ObChipLabel>
+        <ChipRow
+          options={LAYOUT_OPTIONS}
+          value={profile?.todayLayout === 'tiles' ? 'Tiles' : 'Ledger'}
+          onChange={(v) => {
+            const next = layoutKey(v);
+            logThemeLayoutEvent({ type: 'layout_selected', surface: 'today', layout: next, previous: profile?.todayLayout ?? 'ledger' });
+            void save({ todayLayout: next });
+          }}
+        />
+        <SrcNote>Tiles is Today only — Log, Train, Recover and Trends stay ledger for now</SrcNote>
       </Card>
 
       {/* ── Your data ──────────────────────────────────────────────── */}

@@ -122,12 +122,8 @@ export function TodayScreen() {
   const [data, setData] = useState<TodayData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
-  // Tiles Today layout (docs/basalt-layouts.md). Step 6 wires this to a
-  // real Settings → Display picker backed by profile.todayLayout; useState
-  // (not a plain const) keeps the branch below genuinely reachable rather
-  // than TS narrowing an unreassigned const to its literal value. Fixed at
-  // 'ledger' — current behavior, unchanged — for every real user until then.
-  const [layout] = useState<'ledger' | 'tiles'>('ledger');
+  // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
+  const layout = profile?.todayLayout ?? 'ledger';
 
   const refresh = useCallback(async () => {
     setData(await loadToday());

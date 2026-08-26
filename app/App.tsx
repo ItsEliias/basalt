@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ThemeProvider, color, mono } from '@basalt/ui';
+import { ThemeProvider, THEMES, DEFAULT_THEME, color, mono } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
@@ -144,12 +144,13 @@ function Gate() {
 
 export default function App() {
   // Settings → Display. Falls back to the ThemeProvider's own defaults
-  // (comfortable/system) before the profile has loaded — never blocks
-  // first paint on a network round trip.
+  // (Minimal/comfortable/system) before the profile has loaded — never
+  // blocks first paint on a network round trip.
   const profile = useAppStore((s) => s.profile);
+  const theme = profile?.theme ? THEMES[profile.theme] : THEMES[DEFAULT_THEME];
   return (
     <SafeAreaProvider>
-      <ThemeProvider density={profile?.density} textScale={profile?.textScale}>
+      <ThemeProvider theme={theme} density={profile?.density} textScale={profile?.textScale}>
         <StatusBar style="light" />
         <Gate />
       </ThemeProvider>
