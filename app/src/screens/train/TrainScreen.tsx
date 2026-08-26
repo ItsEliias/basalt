@@ -6,7 +6,7 @@ import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, BodyFigure,
   ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav,
   GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput,
-  color, mono, mmss, groupInt,
+  color, mono, mmss, groupInt, useTheme,
 } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
@@ -34,17 +34,18 @@ import { SessionDetailSheet } from '../../components/SessionDetailSheet';
 // remember per exercise, timed movements get the guided set timer.
 
 export function TrainScreen() {
+  const { theme } = useTheme();
   const [sub, setSub] = useState('Session');
   if (sub === 'Outdoor') {
     return (
-      <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <View style={{ flex: 1, backgroundColor: theme.surfaces.bg }}>
         <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
         <OutdoorTab />
       </View>
     );
   }
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.surfaces.bg }}>
       <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
       <SessionTab />
     </View>
@@ -52,6 +53,7 @@ export function TrainScreen() {
 }
 
 function SessionTab() {
+  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
@@ -114,7 +116,7 @@ function SessionTab() {
   if (!session.sessionId) {
     return (
       <>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <Card>
           <ReceiptHeader label="Session" />
           <EmptyState>
@@ -209,7 +211,7 @@ function SessionTab() {
 
   return (
     <>
-      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
             <Text style={[styles.addSet, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>
@@ -648,6 +650,7 @@ export function ExercisePicker({
   hasEquipmentProfile: boolean;
   loadedRegions?: Set<BodyRegion>;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const conditions = useAppStore((s) => s.profile?.conditions ?? []);
   const [query, setQuery] = useState('');
@@ -675,7 +678,7 @@ export function ExercisePicker({
 
   return (
     <Modal visible={open} animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.picker, { paddingTop: insets.top + 12, paddingBottom: insets.bottom }]}>
+      <View style={[styles.picker, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 12, paddingBottom: insets.bottom }]}>
         <View style={styles.pickerHead}>
           <Text style={styles.pickerTitle}>Library</Text>
           <Pressable onPress={onClose} hitSlop={10}>

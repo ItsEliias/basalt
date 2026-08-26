@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, ObChipLabel, SrcNote } from '@basalt/ui';
+import { color, mono, CTA, ObInput, ObChipLabel, SrcNote, useTheme } from '@basalt/ui';
 import { supabase } from '../lib/supabase';
 
 // Sign in / create account — email + password, nothing else. No quiz, no
@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 // skippable.
 
 export function AuthScreen() {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -31,7 +32,7 @@ export function AuthScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.root, { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}
+      style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text style={styles.brand}>BASALT</Text>

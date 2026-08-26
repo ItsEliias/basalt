@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav,
   TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow,
-  color, mono, kgText, hoursMinutes, groupInt,
+  color, mono, kgText, hoursMinutes, groupInt, useTheme,
   ChipGroup,
 } from '@basalt/ui';
 import { healthService, labelForPackage, type SleepSessionSummary } from '@basalt/health-connect';
@@ -34,9 +34,10 @@ type Vitals = {
 };
 
 export function RecoverScreen() {
+  const { theme } = useTheme();
   const [sub, setSub] = useState('Vitals');
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.surfaces.bg }}>
       <SubNav items={['Vitals', 'Mind']} active={sub} onChange={setSub} />
       {sub === 'Vitals' ? <VitalsTab /> : <MindTab />}
     </View>
@@ -44,6 +45,7 @@ export function RecoverScreen() {
 }
 
 function VitalsTab() {
+  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const [vitals, setVitals] = useState<Vitals | null>(null);
   const [weights, setWeights] = useState<WeightEntry[]>([]);
@@ -146,7 +148,7 @@ function VitalsTab() {
   const bands = readiness?.ok ? readiness.data.bands : null;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {/* ── Readiness — published formula, math one tap away ───────── */}
       <Card>
         <ReceiptHeader label="Readiness" summary={ready?.score !== null && ready ? 'tap for the math' : undefined} />
@@ -389,6 +391,7 @@ function hhmm(iso: string): string {
 // ─── Mind ───────────────────────────────────────────────────────────────────
 
 function MindTab() {
+  const { theme } = useTheme();
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [protocol, setProtocol] = useState<BreathProtocol>(PROTOCOLS[0]!);
   const [minutes, setMinutes] = useState(5);
@@ -473,7 +476,7 @@ function MindTab() {
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       <Card>
         <KV label={protocol.name} right={protocol.phases.filter((p) => p > 0).join(' · ')} />
         <View style={styles.pacer}>

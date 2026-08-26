@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays,
-  color, mono,
+  color, mono, useTheme,
 } from '@basalt/ui';
 import {
   activeDaysFor, currentAndLongest, monthCells, loadWeekReview, loadDailySeries, computeCorrelations,
@@ -21,6 +21,7 @@ import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
 type Records = { name: string; e1rm: number; date: string }[];
 
 export function TrendsScreen() {
+  const { theme } = useTheme();
   const [fullDays, setFullDays] = useState<Set<string> | null>(null);
   const [anyDays, setAnyDays] = useState<Set<string> | null>(null);
   const [records, setRecords] = useState<Records | null>(null);
@@ -92,7 +93,7 @@ export function TrendsScreen() {
     : 0;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {/* ── Week in review — composed, never cheered ───────────────── */}
       <Card>
         <ReceiptHeader label="Week in review" summary={review?.rangeLabel} />

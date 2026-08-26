@@ -24,7 +24,7 @@ import {
   CormorantGaramond_400Regular,
   CormorantGaramond_500Medium,
 } from '@expo-google-fonts/cormorant-garamond';
-import { ThemeProvider, THEMES, DEFAULT_THEME, color, mono } from '@basalt/ui';
+import { ThemeProvider, useTheme, THEMES, DEFAULT_THEME, color, mono } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
@@ -67,6 +67,7 @@ const TITLES: Record<ViewKey, string> = {
 
 function MainShell() {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   const [tab, setTab] = useState<TabKey>('today');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [weightOpen, setWeightOpen] = useState(false);
@@ -116,7 +117,7 @@ function MainShell() {
     : today.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 8 }]}>
       <AppHeader
         title={TITLES[view]}
         context={context}
@@ -145,6 +146,7 @@ function MainShell() {
 
 function Gate() {
   const { session, sessionLoaded, profile, bootstrapped, init } = useAppStore();
+  const { theme } = useTheme();
 
   useEffect(() => {
     init();
@@ -154,8 +156,8 @@ function Gate() {
 
   if (!sessionLoaded || (session && !bootstrapped)) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.brand}>BASALT</Text>
+      <View style={[styles.loading, { backgroundColor: theme.surfaces.bg }]}>
+        <Text style={[styles.brand, { color: theme.text.faint }]}>BASALT</Text>
       </View>
     );
   }
@@ -189,8 +191,8 @@ export default function App() {
 
   if (!fontsLoaded) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.brand}>BASALT</Text>
+      <View style={[styles.loading, { backgroundColor: theme.surfaces.bg }]}>
+        <Text style={[styles.brand, { color: theme.text.faint }]}>BASALT</Text>
       </View>
     );
   }

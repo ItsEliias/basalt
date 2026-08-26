@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   color, mono, CTA, ObDots, ObQuestion, ObSub, ObOption, ObInput, ObInRow,
-  ObChipLabel, ObNote, ChipRow, ChipGroup,
+  ObChipLabel, ObNote, ChipRow, ChipGroup, useTheme,
 } from '@basalt/ui';
 import { saveProfile, saveTargets, addWeightEntry } from '@basalt/core-data';
 import { computeTargets } from '@basalt/nutrition';
@@ -22,6 +22,7 @@ import {
 // its reachability contract lives in layout.ts and is regression-tested.
 
 export function OnboardingScreen() {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const refreshCore = useAppStore((s) => s.refreshCore);
   const [step, setStep] = useState(1);
@@ -215,7 +216,7 @@ export function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.root, { paddingTop: insets.top + 22 }]}
+      style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 22 }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.topRow}>
