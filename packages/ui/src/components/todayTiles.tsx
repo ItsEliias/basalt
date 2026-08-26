@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme, resolveTypeface } from '../theme';
+import { useContainerStyle } from './base';
 
 // The Tiles Today layout (docs/basalt-layouts.md) — a grid of single-metric
 // cells, each tappable, drilling into the matching ledger section. Fixed v1
@@ -10,41 +11,13 @@ import { useTheme, resolveTypeface } from '../theme';
 // from a token (shape.container/elevation/radius/align, typography.display/
 // data, fill.mark/markOn, expression.overCap/emptyState). If a theme needed
 // `theme.id === '...'` here, the contract would be missing a token.
+// Container chrome (shape.container/elevation) is shared with Card — see
+// useContainerStyle in ./base — so a tile and a card never drift apart.
 
 export type TileSpan = 'full' | 'half';
 
 export function TileGridThemed({ children }: { children: ReactNode }) {
   return <View style={styles.grid}>{children}</View>;
-}
-
-function useContainerStyle() {
-  const { theme } = useTheme();
-  const filled = theme.shape.container === 'card' || theme.shape.container === 'boxed';
-  const base = {
-    borderRadius: theme.shape.radius.md,
-    backgroundColor: filled
-      ? theme.shape.elevation === 'blur'
-        // Depth's translucent-over-gradient look, approximated without a
-        // real backdrop blur (no expo-blur dependency added for this) —
-        // see docs/THEME-SYSTEM-REPORT.md, flagged as a compromise.
-        ? theme.surfaces.surface2
-        : theme.surfaces.surface
-      : 'transparent',
-  };
-  const borderWidth =
-    theme.shape.elevation === 'none' ? 0 :
-    theme.shape.elevation === 'hardShadow' ? theme.shape.borderWidth.thick :
-    theme.shape.elevation === 'blur' ? theme.shape.borderWidth.hairline :
-    theme.shape.borderWidth.thin;
-  const border = borderWidth > 0
-    ? { borderWidth, borderColor: theme.shape.elevation === 'hardShadow' ? theme.surfaces.borderStrong : theme.surfaces.border }
-    : null;
-  // A flat, non-blurred offset shadow (Brutalist) — not the soft glow the
-  // pre-contract spec banned; see the design-spec §6 amendment.
-  const hardShadow = theme.shape.elevation === 'hardShadow'
-    ? { shadowColor: theme.surfaces.borderStrong, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 }
-    : null;
-  return [base, border, hardShadow].filter(Boolean) as object[];
 }
 
 /**
@@ -73,7 +46,7 @@ export function Tile({
   onPress?: () => void;
 }) {
   const { theme } = useTheme();
-  const containerStyle = useContainerStyle();
+  const containerStyle = useContainerStyle(theme);
   const displayFont = resolveTypeface(theme.typography.display);
   const dataFont = resolveTypeface(theme.typography.data);
   const align = theme.shape.align === 'center' ? 'center' : 'left';
@@ -128,7 +101,7 @@ export function Tile({
     <Wrapper
       style={[
         styles.tile,
-        { minHeight: theme.expression.rowMinHeight + 34, flexBasis: span === 'full' ? '100%' : '47%' },
+        { borderRadius: theme.shape.radius.md, minHeight: theme.expression.rowMinHeight + 34, flexBasis: span === 'full' ? '100%' : '47%' },
         ...containerStyle,
       ]}
       onPress={onPress}

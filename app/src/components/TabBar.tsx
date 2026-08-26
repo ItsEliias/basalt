@@ -1,11 +1,16 @@
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, TodayIcon, LogIcon, TrainIcon, RecoverIcon, TrendsIcon } from '@basalt/ui';
+import { useTheme, resolveTypeface, TodayIcon, LogIcon, TrainIcon, RecoverIcon, TrendsIcon } from '@basalt/ui';
 
-// The prototype tab bar: mono caps labels with a small line icon above each,
-// and the round + button raised in the centre. Tab switch resets scroll
-// (screens handle that); the + opens the quick-log sheet, never a screen.
+// The prototype tab bar. `expression.nav` decides its voice per theme:
+//   'iconLabel' — line icon above a mono-caps label (Minimal)
+//   'label'     — label only, no icon (most themes)
+//   'inverted'  — active tab gets a filled pill, fill.mark on fill.markOn
+//                 (Brutalist — verified against reference/themes-today.html:
+//                 .brutalist .nav .on { color: #F2F0E8; background: #111111 })
+// Tab switch resets scroll (screens handle that); the + opens the quick-log
+// sheet, never a screen.
 
 export type TabKey = 'today' | 'log' | 'train' | 'recover' | 'trends';
 
@@ -25,28 +30,45 @@ export function TabBar({
   onPlus: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   const left = TABS.slice(0, 2);
   const right = TABS.slice(2);
+  const labelFont = resolveTypeface(theme.typography.ui);
+  const upper = theme.typography.labelCase === 'upper';
 
   const renderTab = (t: { key: TabKey; label: string; Icon: (p: { color: string; size?: number }) => ReactElement }) => {
     const on = t.key === active;
-    const iconColor = on ? color.ink : color.faint;
+    const inverted = theme.expression.nav === 'inverted';
+    const showIcon = theme.expression.nav === 'iconLabel';
+    const iconColor = on ? theme.text.ink : theme.text.faint;
+    const labelColor = inverted ? (on ? theme.fill.markOn : theme.text.faint) : (on ? theme.text.accent : theme.text.faint);
+    const label = upper ? t.label.toUpperCase() : t.label;
     return (
       <Pressable key={t.key} onPress={() => onChange(t.key)} style={styles.tab} hitSlop={8}>
-        <t.Icon color={iconColor} size={18} />
-        <Text style={[styles.label, on && { color: color.ink }]} maxFontSizeMultiplier={1.3}>
-          {t.label.toUpperCase()}
-        </Text>
+        <View
+          style={[
+            styles.tabInner,
+            inverted && on ? { backgroundColor: theme.fill.mark, borderRadius: theme.shape.radius.sm } : null,
+          ]}
+        >
+          {showIcon ? <t.Icon color={iconColor} size={18} /> : null}
+          <Text
+            style={[styles.label, { fontFamily: labelFont, letterSpacing: theme.typography.tracking.label, color: labelColor }]}
+            maxFontSizeMultiplier={1.3}
+          >
+            {label}
+          </Text>
+        </View>
       </Pressable>
     );
   };
 
   return (
-    <View style={[styles.bar, { paddingBottom: 14 + insets.bottom }]}>
+    <View style={[styles.bar, { borderTopColor: theme.surfaces.border, backgroundColor: theme.surfaces.bg, paddingBottom: 14 + insets.bottom }]}>
       {left.map(renderTab)}
       <Pressable onPress={onPlus} style={styles.plusWrap} hitSlop={8}>
-        <View style={styles.plusBtn}>
-          <Text style={styles.plusText}>+</Text>
+        <View style={[styles.plusBtn, { borderRadius: theme.shape.radius.lg, borderColor: theme.surfaces.borderStrong, backgroundColor: theme.surfaces.surface2 }]}>
+          <Text style={[styles.plusText, { color: theme.text.ink, fontFamily: resolveTypeface(theme.typography.data) }]}>+</Text>
         </View>
       </Pressable>
       {right.map(renderTab)}
@@ -58,25 +80,21 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
     paddingTop: 12,
     paddingHorizontal: 6,
     justifyContent: 'space-around',
     alignItems: 'flex-start',
-    backgroundColor: color.bg,
   },
   tab: { alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4 },
-  label: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1.14, color: color.faint, marginTop: 5 },
+  tabInner: { alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4 },
+  label: { fontSize: 10.5, marginTop: 5 },
   plusWrap: { top: -4, paddingHorizontal: 4 },
   plusBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border2,
-    backgroundColor: color.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plusText: { color: color.ink, fontSize: 19, fontWeight: '300' as any, fontFamily: mono, lineHeight: 22 },
+  plusText: { fontSize: 19, fontWeight: '300' as any, lineHeight: 22 },
 });

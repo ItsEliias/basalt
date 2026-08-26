@@ -1,25 +1,38 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { color, type as typeScale } from '../tokens';
-import { mono, monoTabular } from '../typography';
+import { type as typeScale } from '../tokens';
+import { monoTabular } from '../typography';
 import { MicroLabel } from './base';
-import { useTheme, DENSITY_PAD, TEXT_SCALE_MULTIPLIER } from '../theme';
+import { useTheme, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER } from '../theme';
 
-// The receipt — Basalt's signature list. Name + mono meta line left,
-// right-aligned mono value + unit; 1px hairline separators; meal tags as
-// light typographic section headers, never containers.
+// The receipt — Basalt's signature list. Name + meta line left, right-
+// aligned value + unit; hairline separators; meal tags as light
+// typographic section headers, never containers. Name/mealTag read
+// typography.ui (chrome); meta/value/unit read typography.data (numerals,
+// timestamps, tables) per the contract's own split.
 
 export function ReceiptHeader({ label, summary }: { label: string; summary?: string }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.header}>
       <MicroLabel>{label}</MicroLabel>
-      {summary ? <Text style={styles.sum}>{summary}</Text> : null}
+      {summary ? (
+        <Text style={[styles.sum, { fontFamily: resolveTypeface(theme.typography.data), color: theme.text.faint }]}>
+          {summary}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 export function MealTag({ children }: { children: string }) {
-  return <Text style={styles.mealTag}>{children.toUpperCase()}</Text>;
+  const { theme } = useTheme();
+  const upper = theme.typography.labelCase === 'upper';
+  return (
+    <Text style={[styles.mealTag, { fontFamily: resolveTypeface(theme.typography.ui), color: theme.text.mute, letterSpacing: theme.typography.tracking.label }]}>
+      {upper ? children.toUpperCase() : children}
+    </Text>
+  );
 }
 
 export function ReceiptRow({
@@ -36,18 +49,38 @@ export function ReceiptRow({
   /** Render `meta` in an accent (e.g. a dietary-conflict line in --fat). */
   metaAccent?: string;
 }) {
-  const { density, textScale } = useTheme();
+  const { theme, density, textScale } = useTheme();
   const nameSize = typeScale.rowName.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
   const metaSize = typeScale.rowMeta.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
+  const dataFont = resolveTypeface(theme.typography.data);
   return (
-    <View style={[styles.row, { paddingVertical: 10 + DENSITY_PAD[density] }, last && styles.rowLast]}>
+    <View
+      style={[
+        styles.row,
+        {
+          minHeight: theme.expression.rowMinHeight,
+          borderBottomColor: theme.surfaces.border,
+          paddingVertical: 10 + DENSITY_PAD[density],
+        },
+        last && styles.rowLast,
+      ]}
+    >
       <View style={styles.left}>
         {thumb}
         <View style={{ flexShrink: 1 }}>
-          <Text style={[styles.name, { fontSize: nameSize }]} maxFontSizeMultiplier={1.3}>{name}</Text>
+          <Text
+            style={[styles.name, { fontSize: nameSize, fontFamily: resolveTypeface(theme.typography.ui), color: theme.text.ink }]}
+            maxFontSizeMultiplier={1.3}
+          >
+            {name}
+          </Text>
           {meta ? (
             <Text
-              style={[styles.meta, { fontSize: metaSize }, metaAccent ? { color: metaAccent } : null]}
+              style={[
+                styles.meta,
+                { fontSize: metaSize, fontFamily: dataFont, color: theme.text.faint },
+                metaAccent ? { color: metaAccent } : null,
+              ]}
               maxFontSizeMultiplier={1.3}
             >
               {meta}
@@ -57,10 +90,17 @@ export function ReceiptRow({
       </View>
       {value !== undefined ? (
         <View style={styles.right}>
-          <Text style={[styles.value, valueColor ? { color: valueColor } : null]} maxFontSizeMultiplier={1.3}>
+          <Text
+            style={[styles.value, { fontFamily: dataFont, color: theme.text.ink }, valueColor ? { color: valueColor } : null]}
+            maxFontSizeMultiplier={1.3}
+          >
             {value}
           </Text>
-          {unit ? <Text style={styles.unit} maxFontSizeMultiplier={1.3}>{unit}</Text> : null}
+          {unit ? (
+            <Text style={[styles.unit, { fontFamily: dataFont, color: theme.text.faint }]} maxFontSizeMultiplier={1.3}>
+              {unit}
+            </Text>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -69,12 +109,9 @@ export function ReceiptRow({
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  sum: { fontFamily: mono, fontSize: 11, color: color.faint },
+  sum: { fontSize: 11 },
   mealTag: {
-    fontFamily: mono,
     fontSize: 11,
-    letterSpacing: 0.95,
-    color: color.mute,
     paddingTop: 14,
     paddingBottom: 2,
   },
@@ -84,13 +121,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
   },
   rowLast: { borderBottomWidth: 0, paddingBottom: 2 },
   left: { flexDirection: 'row', alignItems: 'center', gap: 11, flexShrink: 1, paddingRight: 12 },
-  name: { fontSize: 14, fontWeight: '500', color: color.ink },
-  meta: { fontFamily: mono, fontSize: 11.5, color: color.faint, marginTop: 3 },
+  name: { fontSize: 14, fontWeight: '500' },
+  meta: { fontSize: 11.5, marginTop: 3 },
   right: { alignItems: 'flex-end', flexShrink: 0 },
-  value: { ...monoTabular, fontSize: 15, color: color.ink },
-  unit: { fontFamily: mono, fontSize: 11.5, color: color.faint, marginTop: 3 },
+  value: { ...monoTabular, fontSize: 15 },
+  unit: { fontSize: 11.5, marginTop: 3 },
 });

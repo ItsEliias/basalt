@@ -2,21 +2,39 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { color, radius } from '../tokens';
 import { mono } from '../typography';
+import { useTheme, resolveTypeface } from '../theme';
 
 // Interactive primitives: CTA, chips, sub-nav segments, search, stepper.
 // Set completion and selection are typographic state changes — no springs,
 // no bounces, nothing louder than a color and a border.
 
+/** The one filled button — fill.mark/markOn, so it's the same pair as any
+ *  other filled element in a theme (nav's active pill, a tile's accent). */
 export function CTA({ label, onPress, style, disabled }: {
   label: string; onPress?: () => void; style?: StyleProp<ViewStyle>; disabled?: boolean;
 }) {
+  const { theme } = useTheme();
+  const upper = theme.typography.labelCase === 'upper';
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }, disabled && { opacity: 0.45 }, style]}
+      style={({ pressed }) => [
+        styles.cta,
+        { backgroundColor: theme.fill.mark, borderRadius: theme.shape.radius.md },
+        pressed && { opacity: 0.85 },
+        disabled && { opacity: 0.45 },
+        style,
+      ]}
     >
-      <Text style={styles.ctaText}>{label.toUpperCase()}</Text>
+      <Text
+        style={[
+          styles.ctaText,
+          { fontFamily: resolveTypeface(theme.typography.ui), letterSpacing: theme.typography.tracking.label, color: theme.fill.markOn },
+        ]}
+      >
+        {upper ? label.toUpperCase() : label}
+      </Text>
     </Pressable>
   );
 }
@@ -26,13 +44,28 @@ export function Chip({ label, on, onPress, accent }: {
   /** Accent color for semantically-meaningful chips (e.g. "My equipment"). */
   accent?: string;
 }) {
+  const { theme } = useTheme();
+  const upper = theme.typography.labelCase === 'upper';
   return (
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      style={[styles.chip, on && styles.chipOn, on && accent ? { borderColor: `${accent}59` } : null]}
+      style={[
+        styles.chip,
+        { borderColor: theme.surfaces.border, borderRadius: theme.shape.radius.sm },
+        on && { borderColor: theme.surfaces.borderStrong, backgroundColor: theme.surfaces.surface },
+        on && accent ? { borderColor: `${accent}59` } : null,
+      ]}
     >
-      <Text style={[styles.chipText, on && { color: accent ?? color.ink }]}>{label.toUpperCase()}</Text>
+      <Text
+        style={[
+          styles.chipText,
+          { fontFamily: resolveTypeface(theme.typography.ui), letterSpacing: theme.typography.tracking.label, color: theme.text.mute },
+          on && { color: accent ?? theme.text.ink },
+        ]}
+      >
+        {upper ? label.toUpperCase() : label}
+      </Text>
     </Pressable>
   );
 }
@@ -61,17 +94,27 @@ export function ChipGroup({ options, values, onToggle }: {
   );
 }
 
-/** `.seg` — mono caps, underline active. Sub-nav switch preserves the tab. */
+/** `.seg` — caps, underline active. Sub-nav switch preserves the tab. */
 export function SubNav({ items, active, onChange }: {
   items: string[]; active: string; onChange: (v: string) => void;
 }) {
+  const { theme } = useTheme();
+  const upper = theme.typography.labelCase === 'upper';
+  const uiFont = resolveTypeface(theme.typography.ui);
   return (
-    <View style={styles.seg}>
+    <View style={[styles.seg, { borderBottomColor: theme.surfaces.border }]}>
       {items.map((item) => {
         const on = item === active;
         return (
-          <Pressable key={item} onPress={() => onChange(item)} hitSlop={8} style={[styles.segBtn, on && styles.segBtnOn]}>
-            <Text style={[styles.segText, on && { color: color.ink }]}>{item.toUpperCase()}</Text>
+          <Pressable
+            key={item}
+            onPress={() => onChange(item)}
+            hitSlop={8}
+            style={[styles.segBtn, on && { borderBottomColor: theme.text.accent }]}
+          >
+            <Text style={[styles.segText, { fontFamily: uiFont, letterSpacing: theme.typography.tracking.label, color: theme.text.faint }, on && { color: theme.text.accent }]}>
+              {upper ? item.toUpperCase() : item}
+            </Text>
           </Pressable>
         );
       })}
@@ -127,37 +170,28 @@ export function useToggleList(initial: string[] = []): [string[], (v: string) =>
 
 const styles = StyleSheet.create({
   cta: {
-    backgroundColor: color.surface2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border2,
-    borderRadius: radius.timer,
     paddingVertical: 13,
     marginTop: 12,
     alignItems: 'center',
   },
-  ctaText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.32, color: color.ink },
+  ctaText: { fontSize: 11 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   chip: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    borderRadius: radius.chip,
     paddingVertical: 6,
     paddingHorizontal: 11,
   },
-  chipOn: { borderColor: color.border2, backgroundColor: color.surface },
-  chipText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.95, color: color.mute },
+  chipText: { fontSize: 11 },
   seg: {
     flexDirection: 'row',
     gap: 20,
     paddingTop: 10,
     paddingHorizontal: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
     marginHorizontal: 2,
   },
   segBtn: { paddingTop: 6, paddingBottom: 10, marginBottom: -StyleSheet.hairlineWidth, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  segBtnOn: { borderBottomColor: color.ink },
-  segText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.3, color: color.faint },
+  segText: { fontSize: 11 },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
