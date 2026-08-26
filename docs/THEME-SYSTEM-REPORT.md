@@ -1,6 +1,6 @@
 # Basalt — Theme System Report
 
-**Date:** 26 August 2026 · **Branch:** `m1-theme-system` (not merged, not pushed).
+**Date:** 26–27 August 2026 · **Branch:** `m1-theme-system` (not merged, not pushed).
 **Suite: 610/610 green** (ui 129, core-data 26, analytics 42, nutrition 139, training 151,
 health-connect 31, app 92); `tsc --noEmit` clean in every package. Every step is its own
 commit; history below.
@@ -14,12 +14,16 @@ b18bf92 Step 5: Tiles Today layout, Ledger unchanged and still default
 c2990f4 Step 6: Settings theme + layout picker, migration + instrumentation
 1b4eb7d Expand reskin beyond Step 6's scope: core chrome is now theme-driven
 74d4ce5 Bundle the nine theme typefaces; make resolveTypeface weight-aware
+22ecd64 Add docs/THEME-SYSTEM-REPORT.md
+a7a8982 Fix root/screen backgrounds still hardcoded to Minimal's static color.bg
 ```
 
-The last two commits are not in the original six-step plan. They exist because live
+The last three commits are not in the original six-step plan. They exist because live
 on-device feedback after Step 6 showed the plan's own gate criteria hadn't actually been
-met — see "Where this stands, honestly" below before reading the rest as a clean success
-story.
+met, and a follow-up on-device session (once USB debugging was reauthorized) found one more
+real bug on top of that — see "Where this stands, honestly" below before reading the rest
+as a clean success story. Short version: as of `a7a8982`, the on-device verification is
+done and the originally reported bug is confirmed fixed, not just reasoned about.
 
 ## What the contract is
 
@@ -173,21 +177,57 @@ onboarding primitives, and the viz components — not touched, not urgent unless
   `reference/themes-today.html` doesn't show a sub-nav in any theme. It's extrapolated from
   the nav-bar's own active-state pattern, not confirmed against anything.
 
-**Still outstanding, explicitly deferred per instruction ("just do everything else first
-then we'll fix bugs"), not silently dropped:**
+## On-device verification — the bug that was still there
 
-- A live on-device pass of the expanded reskin across all six themes — blocked on USB
-  debugging re-authorization as of the last check.
-- The specific bug reported live mid-session: theme switching didn't visibly restyle most
-  of the app (now substantially addressed by `1b4eb7d`, but not yet re-verified on-device),
-  and the Tiles layout's "placement and colour... out of whack" when a theme was active.
-  One data point worth flagging for that debugging session: a Tiles-layout screenshot taken
-  earlier under Minimal (`shots/80_tiles_layout.png`, Step 5's own verification) shows the
-  grid structurally correct — full-width Energy, half Protein/Steps, half Sleep/Water,
-  full-width Training "Rest day" — which suggests the reported breakage is more likely tied
-  to a non-Minimal theme's rendering (plausible now, since Card/Tile share
-  `useContainerStyle` but weren't both theme-aware at the time of that report) than to the
-  Tiles content model itself. Worth checking first.
+Once USB debugging was reauthorized, live verification found the reported bug still
+reproduced: switching to **Brutalist** (a light theme) under **Tiles** layout rendered with
+the Settings/Today header title invisible (dark-on-near-black) and a black rectangle
+filling the space below the last tile — "placement and colour... out of whack," exactly as
+originally reported, and not fixed by `1b4eb7d` after all.
+
+**Root cause**: `1b4eb7d` migrated every component inside `packages/ui` onto `useTheme()`,
+but never touched the app's own screen-container chrome, which lives in `app/`, outside
+that package. `app/App.tsx`'s `MainShell` root `View`, both of its loading-state screens,
+and the outermost `View`/`ScrollView` in **every one of the app's 12 screens** (Today, Log
++ its Recipes/Planner tabs, Train + its Outdoor tab and TemplateBuilder, Recover, Trends,
+Settings, Auth, Onboarding) all still read the static, pre-theme-system `color.bg` token.
+For the four dark themes this was invisible — their own dark tone happened to be close
+enough, or fully covered by themed cards — which is exactly why it passed unnoticed through
+Steps 1–6 and the `1b4eb7d` expansion: nobody was looking at a light theme. Fixed in
+`a7a8982` — same mechanical change at all 13 sites: `useTheme()` in scope,
+`backgroundColor: theme.surfaces.bg` overriding the static style.
+
+**Confirmed on real hardware, not just reasoned about** — the device (`R5CT90NW3NN`,
+Samsung SM-S908E) survived a laptop restart and a USB-debugging re-auth mid-session:
+
+- Reproduced first: Brutalist + Tiles showed the invisible header and black gap exactly as
+  reported.
+- After the fix: Brutalist renders correctly everywhere the bug hit — header title visible,
+  cream (`#F2F0E8`) background behind every card and the empty space below Tiles' last row,
+  tab bar cream with the correct black inverted pill on the active tab and the yellow
+  ground-accent `+` button.
+- Humanist (the other light theme) confirmed clean on Ledger layout too — warm off-white
+  background, filled white cards with no border (`elevation: 'none'`), Nunito visibly
+  applied.
+- Minimal reconfirmed pixel-identical to its pre-fix baseline — no regression for dark
+  themes from touching this shared code path.
+- Depth and Athletic were live-confirmed correctly re-themed (background, hero-numeral
+  typeface, tab bar) in the same session, before the background bug was found — Depth's
+  `shape.elevation: 'blur'` approximation read as intended on-device, though the
+  gradient-backdrop caveat below still stands; a flat translucent card over a flat dark
+  background isn't the same test as a real ambient gradient.
+
+Live testing hit a real infrastructure snag worth recording: Supabase's shared project
+(`ezsrwwfieihelfekgclz`) hit its egress/edge-function invocation quota mid-session, which
+blocked auth entirely (this is also almost certainly why an earlier device session's saved
+theme selection appeared to have changed on its own between sessions — it hadn't; a session
+expiry plus a later real sign-in are the more mundane explanation once the quota message
+showed up). Verification continued using a temporary local mock session/profile injected
+directly into the Zustand store in `Gate()`, reverted before `a7a8982` was committed — that
+commit is the theme fix only, nothing quota-related ships.
+
+The two second-opinion items below (CTA, SubNav) and Tiles' fifth-slot judgment call are
+still open — they're design calls, not bugs, and don't need a device to resolve.
 
 ## Fonts
 
@@ -232,12 +272,15 @@ implementation, trivial to point at a real analytics call later without touching
 In one place, everything above flagged as needing outside judgment rather than an
 automated check:
 
-1. **Depth's blur approximation** — needs a real device contrast check over an actual
-   gradient backdrop; the flat-sample test is necessary but not sufficient.
+1. **Depth's blur approximation** — confirmed on-device against a flat dark background and
+   reads correctly there, but that still isn't the real ambient-gradient test the design-spec
+   amendment calls for. Still needs that specific check before Depth is called fully done.
 2. **CTA's Minimal-visible colour change** — defensible against the reference mockup, but
    breaks Step 1's "zero visual change" premise for a component outside Step 1's scope.
 3. **SubNav's active-state colour** — my own extrapolation, no reference-file precedent.
 4. **Tiles' fifth slot: Water (doc table) vs. Fat (reference mockup)** — went with the doc
    table; worth confirming that was the right call if the reference was meant literally.
-5. **The reported Tiles/theme-carryover bug** — partially explained (see above), not yet
-   confirmed fixed on-device.
+
+The reported Tiles/theme-carryover bug (item 5 in earlier drafts of this report) is no
+longer open — root-caused, fixed, and confirmed live on-device across Brutalist, Humanist,
+and Minimal (regression check). See "On-device verification" above.
