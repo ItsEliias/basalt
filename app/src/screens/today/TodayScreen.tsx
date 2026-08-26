@@ -4,6 +4,7 @@ import {
   Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule,
   MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag,
   TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow,
+  TileGridThemed, Tile,
   color, mono, groupInt,
 } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
@@ -13,7 +14,7 @@ import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
-import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, type SessionRow } from './model';
+import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow } from './model';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +34,9 @@ type TodayData = {
   sessions: (SessionRow & { setCount: number; volumeKg: number })[];
   steps: number | null;
   activeKcal: number | null;
+  /** Fractional hours, e.g. 7.2 = 7:12. null when the sync job hasn't
+   *  written a session for today (see basalt_sleep_sessions.date). */
+  sleepHours: number | null;
 };
 
 const EMPTY_TOTALS: DailyTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodiumMg: 0 };
@@ -86,10 +90,25 @@ async function loadToday(): Promise<TodayData> {
     }
   }
 
+  // Sleep — persisted only (the Tiles layout's Sleep tile; matches the
+  // same source-of-truth pattern as steps above). No live HC fallback: a
+  // single night's sleep is already the sync job's job, not this screen's.
+  let sleepHours: number | null = null;
+  const sleepRow = await supabase
+    .from('basalt_sleep_sessions')
+    .select('bedtime, waketime')
+    .eq('date', today)
+    .maybeSingle();
+  if (sleepRow.data?.bedtime && sleepRow.data?.waketime) {
+    const hours = (Date.parse(sleepRow.data.waketime) - Date.parse(sleepRow.data.bedtime)) / 3600000;
+    if (hours > 0) sleepHours = hours;
+  }
+
   return {
     entries: entriesR.ok ? entriesR.data : [],
     totals: totalsR.ok ? totalsR.data : EMPTY_TOTALS,
     waterMl: waterR.ok ? waterR.data : 0,
+    sleepHours,
     sessions,
     steps,
     activeKcal,
@@ -103,6 +122,12 @@ export function TodayScreen() {
   const [data, setData] = useState<TodayData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
+  // Tiles Today layout (docs/basalt-layouts.md). Step 6 wires this to a
+  // real Settings → Display picker backed by profile.todayLayout; useState
+  // (not a plain const) keeps the branch below genuinely reachable rather
+  // than TS narrowing an unreassigned const to its literal value. Fixed at
+  // 'ledger' — current behavior, unchanged — for every real user until then.
+  const [layout] = useState<'ledger' | 'tiles'>('ledger');
 
   const refresh = useCallback(async () => {
     setData(await loadToday());
@@ -152,6 +177,19 @@ export function TodayScreen() {
   const hero = targets && data ? heroModel(targets, data.totals, data.activeKcal) : null;
   const hideNumbers = profile?.hideNumbers ?? false;
 
+  // hydrationEnabled has no backing setting in the app yet (the spec
+  // assumes one) — treated as always-on, matching Ledger's current
+  // unconditional Water tile, until that setting exists.
+  const tileSpecs = data
+    ? todayTileSpecs({
+        hero, hideNumbers, targets: targets ?? null, totals: data.totals,
+        steps: data.steps, sleepHours: data.sleepHours,
+        waterMl: data.waterMl, waterTargetMl: waterTarget,
+        hydrationEnabled: true,
+        trainingTitle: data.sessions[0]?.title ?? null,
+      })
+    : [];
+
   const eatBack = targets && data ? trainingDayTarget(targets.calories, data.activeKcal ?? 0) : null;
   const budgets =
     targets && data && !hideNumbers
@@ -186,6 +224,31 @@ export function TodayScreen() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, hideNumbers]);
+
+  if (layout === 'tiles') {
+    return (
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
+      >
+        <TileGridThemed>
+          {tileSpecs.map((t) => (
+            <Tile
+              key={t.key}
+              span={t.span}
+              label={t.label}
+              value={t.value}
+              unit={t.unit}
+              over={t.over}
+              empty={t.empty}
+              emptyMessage={t.emptyMessage}
+            />
+          ))}
+        </TileGridThemed>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView

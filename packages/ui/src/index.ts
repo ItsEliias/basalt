@@ -9,6 +9,7 @@ export * from './components/macro';
 export * from './components/receipt';
 export * from './components/controls';
 export * from './components/tiles';
+export * from './components/todayTiles';
 export * from './components/sets';
 export * from './components/timer';
 export * from './components/onboarding';
