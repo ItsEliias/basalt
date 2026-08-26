@@ -3,8 +3,9 @@ import type { Theme } from './contract';
 import { THEMES, DEFAULT_THEME } from './themes';
 
 // Token-provider pattern from the quarry's ui-primitives (kept theme-generic).
-// Basalt is editorial-dark only across every theme — no light/dark pair, no
-// color-scheme switch; a theme is a full, self-contained dark palette.
+// A theme is a full, self-contained palette (Theme.isDark records which) —
+// there's no separate light/dark toggle layered on top of a theme; picking
+// a theme picks its whole palette.
 //
 // Settings → Display (density, text scale) rides this same context rather
 // than a second one: it's still "how do the tokens resolve right now,"

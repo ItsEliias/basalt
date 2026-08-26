@@ -40,6 +40,7 @@ export const humanist: Theme = {
     accentOn: '#FFFFFF',
     mark: '#8F5228',
     markOn: '#FFFFFF',
+    faint: '#655B50',
   },
 
   typography: {

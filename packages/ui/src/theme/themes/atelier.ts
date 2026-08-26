@@ -40,6 +40,7 @@ export const atelier: Theme = {
     accentOn: '#0C0D10',
     mark: '#C4AC7C',
     markOn: '#0C0D10',
+    faint: '#A89877',
   },
 
   typography: {

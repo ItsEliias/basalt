@@ -4,3 +4,4 @@ export * from './contract';
 export * from './contrast';
 export * from './provider';
 export * from './themes';
+export * from './typeface';

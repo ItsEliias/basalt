@@ -40,6 +40,7 @@ export const depth: Theme = {
     accentOn: '#0B0F1A',
     mark: '#8B9BF5',
     markOn: '#0B0F1A',
+    faint: '#949FB4',
   },
 
   typography: {

@@ -40,6 +40,10 @@ export const minimal: Theme = {
     accentOn: '#0F1115',
     mark: '#3E9B78',
     markOn: '#0F1115',
+    // Preserved exactly from the pre-contract palette's single flat
+    // `color.faint` (#7A828E) — this is the cap-bar's neutral/under-cap
+    // fill, and changing it would be a visual change Step 1 doesn't allow.
+    faint: '#7A828E',
   },
 
   typography: {

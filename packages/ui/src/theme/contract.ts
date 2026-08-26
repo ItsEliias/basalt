@@ -49,6 +49,11 @@ export interface ThemeFillColours {
   mark: string;
   /** Text drawn on top of `mark`. Must clear 4.5:1 against it. */
   markOn: string;
+  /** The neutral/unfilled state of a graphical mark (e.g. a cap bar's track
+   *  before it's over) — distinct from `text.faint` because a mark only
+   *  needs 3.0:1, not 4.5:1, and reusing the text value can be a stronger
+   *  visual change than necessary. */
+  faint: string;
   protein: string; carbs: string; fat: string; recovery: string;
   warnBg: string;
 }

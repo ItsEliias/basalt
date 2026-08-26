@@ -40,6 +40,7 @@ export const brutalist: Theme = {
     accentOn: '#111111',
     mark: '#111111',
     markOn: '#F2F0E8',
+    faint: '#454545',
   },
 
   typography: {

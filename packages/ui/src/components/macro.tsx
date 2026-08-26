@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { color } from '../tokens';
 import { mono, monoTabular } from '../typography';
 import { capState, fillPct } from '../format';
+import { useTheme, resolveTypeface } from '../theme';
 
 // Macro rows, cap rows, hairline bars and the segmented macro stack —
 // prototype .macro / .bar / .stack, metrics copied exactly.
@@ -45,29 +46,53 @@ export function MacroRow({
 }
 
 /**
- * Cap row — under is the goal. Over-state: bar 100% in --fat, ratio text in
- * --fat with "· N over" stated plainly. Never hidden, never scolded.
+ * Cap row — under is the goal. First component migrated onto the theme
+ * contract (see packages/ui/src/theme/): text colour, fill colour, and
+ * `expression.overCap` together decide the over-state, so it renders
+ * correctly in any of the six themes, not just Minimal.
+ *
+ * `overCap` controls how the over-state is WORDED, never whether it's
+ * shown — the bar and dot always fill in `fill.fat` regardless:
+ *   'all'  -> numeric delta stated ("· 5 over")
+ *   'word' -> plain word, no delta ("— over")
+ *   'fill' -> the fill alone carries it, no extra text
+ * ('color' is contractually forbidden — colour alone fails WCAG 1.4.1 and
+ * the honesty rule that over-cap is stated plainly.)
  */
 export function CapRow({
   name, value, cap, unit = 'g', decimals = 0,
 }: {
   name: string; value: number; cap: number; unit?: string; decimals?: number;
 }) {
+  const { theme } = useTheme();
   const s = capState(value, cap);
   const fmt = (n: number) => n.toFixed(decimals);
+  const overSuffix =
+    !s.over ? '' :
+    theme.expression.overCap === 'all' ? ` · ${fmt(s.overBy)} over` :
+    theme.expression.overCap === 'word' ? ' — over' :
+    '';
+  const dataFont = resolveTypeface(theme.typography.data);
+
   return (
     <View style={styles.macro}>
       <View style={styles.kv}>
-        <Text style={styles.name}>
-          <View style={[styles.dot, { backgroundColor: s.over ? color.fat : color.faint }]} />
+        <Text style={[styles.name, { color: theme.text.ink2 }]}>
+          <View style={[styles.dot, { backgroundColor: s.over ? theme.fill.fat : theme.fill.faint }]} />
           {'  '}{name}
         </Text>
-        <Text style={[styles.ratio, s.over && { color: color.fat }]} maxFontSizeMultiplier={1.3}>
-          {fmt(value)} <Text style={[styles.ratioOf, s.over && { color: color.fat }]}>/ {fmt(cap)} {unit}</Text>
-          {s.over ? ` · ${fmt(s.overBy)} over` : ''}
+        <Text
+          style={[styles.ratio, { fontFamily: dataFont, color: s.over ? theme.text.fat : theme.text.ink2 }]}
+          maxFontSizeMultiplier={1.3}
+        >
+          {fmt(value)}{' '}
+          <Text style={[styles.ratioOf, { fontFamily: dataFont, color: s.over ? theme.text.fat : theme.text.faint }]}>
+            / {fmt(cap)} {unit}
+          </Text>
+          {overSuffix}
         </Text>
       </View>
-      <Bar pct={s.fillPct} fill={s.over ? color.fat : color.faint} />
+      <Bar pct={s.fillPct} fill={s.over ? theme.fill.fat : theme.fill.faint} />
     </View>
   );
 }

@@ -40,6 +40,7 @@ export const athletic: Theme = {
     accentOn: '#000000',
     mark: '#D7FF3E',
     markOn: '#000000',
+    faint: '#8E8E8E',
   },
 
   typography: {

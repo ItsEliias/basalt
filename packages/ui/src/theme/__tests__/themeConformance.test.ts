@@ -17,7 +17,7 @@ describe('theme contract conformance', () => {
     expect(Object.keys(t.text).sort()).toEqual(
       ['accent', 'carbs', 'faint', 'fat', 'ink', 'ink2', 'mute', 'protein', 'recovery', 'warn']);
     expect(Object.keys(t.fill).sort()).toEqual(
-      ['accent', 'accentOn', 'carbs', 'fat', 'mark', 'markOn', 'protein', 'recovery', 'warnBg']);
+      ['accent', 'accentOn', 'carbs', 'faint', 'fat', 'mark', 'markOn', 'protein', 'recovery', 'warnBg']);
     expect(Object.keys(t.typography.scale).length).toBe(8);
     expect(t.shape.container).toBeDefined();
     expect(t.shape.elevation).toBeDefined();

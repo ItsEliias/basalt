@@ -50,10 +50,17 @@ missed it because it tested `ink / ink2 / mute / faint`, not the accents.
 `ink` · `ink2` · `mute` · `faint` · `accent` · `protein` · `carbs` · `fat` · `recovery` · `warn`
 
 ### `fill` — all >= 3.0:1
-`accent` · `accentOn` · `protein` · `carbs` · `fat` · `recovery` · `warnBg`
+`accent` · `accentOn` · `mark` · `markOn` · `faint` · `protein` · `carbs` · `fat` · `recovery` · `warnBg`
+
+`faint` is the neutral/unfilled state of a graphical mark (a cap bar's track before it's
+over) — added in Step 1 when the macro-row migration needed it and found the contract
+didn't have one. Distinct from `text.faint`: reusing the text value here would be a
+stronger (and for Minimal, unwanted) visual change than a 3.0:1 mark actually needs.
 
 `accentRole: 'ground'` exempts `fill.accent` from the mark test — Brutalist's yellow *is* a
-surface, so testing it as a mark on a surface is the wrong test.
+surface, so testing it as a mark on a surface is the wrong test. `accentOn` and `markOn` are
+text drawn on a fill, not marks meant to read against the app background — they're checked
+against their own fill (invariant 3) instead of every surface.
 
 ### `typography`
 `ui` · `data` · `display` · `scale` (8 fixed steps) · `weight` · `tracking` · `labelCase`
@@ -69,7 +76,7 @@ surface, so testing it as a mark on a surface is the wrong test.
 
 1. Every `text.*` clears **4.5:1** on `bg`, `surface` and `surface2`.
 2. Every `fill.*` clears **3.0:1** on every surface (except a `ground` accent).
-3. `fill.accentOn` clears 4.5:1 on `fill.accent`.
+3. `fill.accentOn` clears 4.5:1 on `fill.accent`; `fill.markOn` clears 4.5:1 on `fill.mark`.
 4. No type step below **11**.
 5. `rowMinHeight` >= **48**.
 6. `overCap` is never `'color'` — colour alone fails WCAG 1.4.1 and fails the honesty rule
