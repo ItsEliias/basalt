@@ -1,13 +1,14 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { tokens, type BasaltTokens } from './tokens';
+import type { Theme } from './contract';
+import { THEMES, DEFAULT_THEME } from './themes';
 
-// Token-provider pattern from the quarry's ui-primitives (kept token-generic),
-// with one deliberate difference: Basalt is editorial-dark only, so there is a
-// single token set — no light/dark pair, no color-scheme switch.
+// Token-provider pattern from the quarry's ui-primitives (kept theme-generic).
+// Basalt is editorial-dark only across every theme — no light/dark pair, no
+// color-scheme switch; a theme is a full, self-contained dark palette.
 //
 // Settings → Display (density, text scale) rides this same context rather
 // than a second one: it's still "how do the tokens resolve right now,"
-// just two more inputs alongside the static palette/type scale.
+// just two more inputs alongside the active theme.
 
 export type Density = 'comfortable' | 'compact';
 export type TextScale = 'system' | 'plus1' | 'plus2';
@@ -19,28 +20,32 @@ export const DENSITY_PAD: Record<Density, number> = { comfortable: 4, compact: 0
 export const TEXT_SCALE_MULTIPLIER: Record<TextScale, number> = { system: 1, plus1: 1.08, plus2: 1.16 };
 
 export type ThemeValue = {
-  tokens: BasaltTokens;
+  theme: Theme;
   density: Density;
   textScale: TextScale;
 };
 
-const defaultTheme: ThemeValue = { tokens, density: 'comfortable', textScale: 'system' };
+const defaultThemeValue: ThemeValue = {
+  theme: THEMES[DEFAULT_THEME],
+  density: 'comfortable',
+  textScale: 'system',
+};
 
-const ThemeContext = createContext<ThemeValue>(defaultTheme);
+const ThemeContext = createContext<ThemeValue>(defaultThemeValue);
 
 export function ThemeProvider({
-  value = tokens,
+  theme = THEMES[DEFAULT_THEME],
   density = 'comfortable',
   textScale = 'system',
   children,
 }: {
-  value?: BasaltTokens;
+  theme?: Theme;
   density?: Density;
   textScale?: TextScale;
   children: ReactNode;
 }) {
   return (
-    <ThemeContext.Provider value={{ tokens: value, density, textScale }}>
+    <ThemeContext.Provider value={{ theme, density, textScale }}>
       {children}
     </ThemeContext.Provider>
   );
