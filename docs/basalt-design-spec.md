@@ -66,7 +66,57 @@ Real-or-hidden: no data → quiet typographic empty state ("No glucose data reco
 
 ## 6. Forbidden
 
-Rings/circular gauges · glow, neon, glassmorphism, heavy shadows (the single phone-frame shadow on desktop is the only shadow) · mascots, emoji in UI copy, motivational cheerleading ("You're crushing it!") · XP/levels/coins/badges-as-currency · big rounded card diaries (MFP-style) · dashboard-as-forced-home · upsells inside onboarding, countdown timers, pre-selected annual plans, ads to paying users · bright color without semantic meaning · AI summaries that displace data · localStorage in web builds · new fonts, new hues, new radii.
+Rings/circular gauges · mascots, emoji in UI copy, motivational cheerleading ("You're crushing it!") · XP/levels/coins/badges-as-currency · big rounded card diaries (MFP-style) · dashboard-as-forced-home · upsells inside onboarding, countdown timers, pre-selected annual plans, ads to paying users · bright color without semantic meaning · AI summaries that displace data · localStorage in web builds.
+
+**Glow, neon, glassmorphism, heavy shadows, new fonts, new hues, new radii** are forbidden
+*per theme* (Minimal's own values are unchanged — the prototype is still its source of
+truth), not forbidden absolutely. See the amendment below for why, and
+`packages/ui/src/theme/contract.ts` / `docs/basalt-theme-contract.md` for what actually
+governs a theme now.
+
+### Amendment (2026-08-26) — scoping the visual-language bans per theme
+
+These bans existed as a **proxy** for protecting text contrast — no principled way existed
+to check whether a glow, a heavy shadow, or an off-palette hue would leave type unreadable,
+so the spec forbade the whole category. The six-theme contract now asserts the actual
+property directly, per theme, not per a single fixed palette: every `text.*` clears 4.5:1
+on every surface, every `fill.*` clears 3.0:1, every on-colour clears 4.5:1 against its own
+fill — enforced by `themeConformance.test.ts` across all six themes, not just Minimal.
+Scoping the bans per theme is acceptable **precisely because** those assertions exist now;
+without the contract and its tests, this amendment would not be justified.
+
+This is not "the forbidden list no longer applies" — it is one theme (or a documented
+group of themes) declaring a specific, contract-verified exception, recorded here rather
+than silently violated:
+
+- **Depth** uses `shape.elevation: 'blur'` (translucent cards over an ambient gradient
+  ground) — a glassmorphism exception. **Caveat, not fully closed by this contract:**
+  `themeConformance.test.ts` checks contrast against Depth's *flat* surface colours: a
+  representative sample, not the actual gradient a card sits over on-device, whose
+  effective backdrop varies by position and content. The test is necessary but not
+  sufficient for Depth — passing it does not by itself prove the blur reads on a real
+  device. Depth needs a device contrast check before it's called done, independent of
+  the automated suite.
+- **Brutalist** uses `shape.elevation: 'hardShadow'` (a flat, non-blurred drop shadow,
+  distinct from the soft/glow shadows the ban originally targeted) and `accentRole:
+  'ground'` (its yellow accent is a surface, not a mark).
+- **Every non-Minimal theme** uses its own typography (`typography.ui/data/display`),
+  hue palette (`surfaces`/`text`/`fill`), and radius scale (`shape.radius`) — the contract
+  is what keeps six palettes one system rather than six forks: "if a theme needs a
+  component override, the contract is missing a token — add the token, never branch the
+  component."
+
+**Accessibility corrections recorded alongside this amendment** (not aesthetic changes):
+the pre-contract palette validated `--fat` and `--recovery` at the 3:1 graphical threshold,
+correct for bars but not for the over-cap ratio, which renders as *text* — `--fat #BE5540`
+scored as low as 3.63:1 as text on `surface2`, `--recovery #5E72E4` as low as 3.98:1. The
+contract's `text.*` vs `fill.*` split fixes this: `text.fat`/`text.recovery` now clear 4.5:1
+everywhere, `fill.fat`/`fill.recovery` keep the original 3:1-verified values for graphical
+marks. A third, related correction the same per-surface checking caught: `--faint` (labels,
+metadata, ghost values) cleared 4.5:1 on `bg` and `surface` but only 4.30:1 on `surface2`
+(nested/raised elements) — `text.faint` is now `#848C98`, which clears all three. The
+*fill* use of the same colour (a cap bar's neutral/under-cap state, which only needs 3.0:1)
+keeps the original `#7A828E` unchanged — see `fill.faint` in the contract.
 
 ## 7. Reference files
 
