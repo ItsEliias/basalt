@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { type as typeScale } from '../tokens';
 import { monoTabular } from '../typography';
 import { MicroLabel } from './base';
@@ -17,7 +17,16 @@ export function ReceiptHeader({ label, summary }: { label: string; summary?: str
     <View style={styles.header}>
       <MicroLabel>{label}</MicroLabel>
       {summary ? (
-        <Text style={[styles.sum, { fontFamily: resolveTypeface(theme.typography.data), color: theme.text.faint }]}>
+        <Text
+          style={[
+            styles.sum,
+            {
+              fontFamily: resolveTypeface(theme.typography.data, theme.typography.weight.regular),
+              fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+              color: theme.text.faint,
+            },
+          ]}
+        >
           {summary}
         </Text>
       ) : null}
@@ -29,7 +38,17 @@ export function MealTag({ children }: { children: string }) {
   const { theme } = useTheme();
   const upper = theme.typography.labelCase === 'upper';
   return (
-    <Text style={[styles.mealTag, { fontFamily: resolveTypeface(theme.typography.ui), color: theme.text.mute, letterSpacing: theme.typography.tracking.label }]}>
+    <Text
+      style={[
+        styles.mealTag,
+        {
+          fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.medium),
+          fontWeight: String(theme.typography.weight.medium) as TextStyle['fontWeight'],
+          color: theme.text.mute,
+          letterSpacing: theme.typography.tracking.label,
+        },
+      ]}
+    >
       {upper ? children.toUpperCase() : children}
     </Text>
   );
@@ -52,7 +71,8 @@ export function ReceiptRow({
   const { theme, density, textScale } = useTheme();
   const nameSize = typeScale.rowName.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
   const metaSize = typeScale.rowMeta.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
-  const dataFont = resolveTypeface(theme.typography.data);
+  const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
+  const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
   return (
     <View
       style={[
@@ -69,7 +89,15 @@ export function ReceiptRow({
         {thumb}
         <View style={{ flexShrink: 1 }}>
           <Text
-            style={[styles.name, { fontSize: nameSize, fontFamily: resolveTypeface(theme.typography.ui), color: theme.text.ink }]}
+            style={[
+              styles.name,
+              {
+                fontSize: nameSize,
+                fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.medium),
+                fontWeight: String(theme.typography.weight.medium) as TextStyle['fontWeight'],
+                color: theme.text.ink,
+              },
+            ]}
             maxFontSizeMultiplier={1.3}
           >
             {name}
@@ -78,7 +106,7 @@ export function ReceiptRow({
             <Text
               style={[
                 styles.meta,
-                { fontSize: metaSize, fontFamily: dataFont, color: theme.text.faint },
+                { fontSize: metaSize, fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.faint },
                 metaAccent ? { color: metaAccent } : null,
               ]}
               maxFontSizeMultiplier={1.3}
@@ -91,13 +119,13 @@ export function ReceiptRow({
       {value !== undefined ? (
         <View style={styles.right}>
           <Text
-            style={[styles.value, { fontFamily: dataFont, color: theme.text.ink }, valueColor ? { color: valueColor } : null]}
+            style={[styles.value, { fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.ink }, valueColor ? { color: valueColor } : null]}
             maxFontSizeMultiplier={1.3}
           >
             {value}
           </Text>
           {unit ? (
-            <Text style={[styles.unit, { fontFamily: dataFont, color: theme.text.faint }]} maxFontSizeMultiplier={1.3}>
+            <Text style={[styles.unit, { fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.faint }]} maxFontSizeMultiplier={1.3}>
               {unit}
             </Text>
           ) : null}
@@ -124,7 +152,7 @@ const styles = StyleSheet.create({
   },
   rowLast: { borderBottomWidth: 0, paddingBottom: 2 },
   left: { flexDirection: 'row', alignItems: 'center', gap: 11, flexShrink: 1, paddingRight: 12 },
-  name: { fontSize: 14, fontWeight: '500' },
+  name: { fontSize: 14 },
   meta: { fontSize: 11.5, marginTop: 3 },
   right: { alignItems: 'flex-end', flexShrink: 0 },
   value: { ...monoTabular, fontSize: 15 },

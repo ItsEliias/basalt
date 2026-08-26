@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { color } from '../tokens';
 import { mono, monoTabular } from '../typography';
 import { capState, fillPct, overCapSuffix } from '../format';
@@ -73,7 +73,8 @@ export function CapRow({
   const s = capState(value, cap);
   const fmt = (n: number) => n.toFixed(decimals);
   const overSuffix = overCapSuffix(s.over, theme.expression.overCap, s.overBy, fmt);
-  const dataFont = resolveTypeface(theme.typography.data);
+  const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
+  const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
 
   return (
     <View style={styles.macro}>
@@ -83,11 +84,11 @@ export function CapRow({
           {'  '}{name}
         </Text>
         <Text
-          style={[styles.ratio, { fontFamily: dataFont, color: s.over ? theme.text.fat : theme.text.ink2 }]}
+          style={[styles.ratio, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.ink2 }]}
           maxFontSizeMultiplier={1.3}
         >
           {fmt(value)}{' '}
-          <Text style={[styles.ratioOf, { fontFamily: dataFont, color: s.over ? theme.text.fat : theme.text.faint }]}>
+          <Text style={[styles.ratioOf, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.faint }]}>
             / {fmt(cap)} {unit}
           </Text>
           {overSuffix}

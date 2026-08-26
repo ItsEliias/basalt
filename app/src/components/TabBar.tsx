@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, resolveTypeface, TodayIcon, LogIcon, TrainIcon, RecoverIcon, TrendsIcon } from '@basalt/ui';
 
@@ -33,7 +33,8 @@ export function TabBar({
   const { theme } = useTheme();
   const left = TABS.slice(0, 2);
   const right = TABS.slice(2);
-  const labelFont = resolveTypeface(theme.typography.ui);
+  const labelFont = resolveTypeface(theme.typography.ui, theme.typography.weight.regular);
+  const labelWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
   const upper = theme.typography.labelCase === 'upper';
 
   const renderTab = (t: { key: TabKey; label: string; Icon: (p: { color: string; size?: number }) => ReactElement }) => {
@@ -53,7 +54,7 @@ export function TabBar({
         >
           {showIcon ? <t.Icon color={iconColor} size={18} /> : null}
           <Text
-            style={[styles.label, { fontFamily: labelFont, letterSpacing: theme.typography.tracking.label, color: labelColor }]}
+            style={[styles.label, { fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label, color: labelColor }]}
             maxFontSizeMultiplier={1.3}
           >
             {label}
@@ -68,7 +69,18 @@ export function TabBar({
       {left.map(renderTab)}
       <Pressable onPress={onPlus} style={styles.plusWrap} hitSlop={8}>
         <View style={[styles.plusBtn, { borderRadius: theme.shape.radius.lg, borderColor: theme.surfaces.borderStrong, backgroundColor: theme.surfaces.surface2 }]}>
-          <Text style={[styles.plusText, { color: theme.text.ink, fontFamily: resolveTypeface(theme.typography.data) }]}>+</Text>
+          <Text
+            style={[
+              styles.plusText,
+              {
+                color: theme.text.ink,
+                fontFamily: resolveTypeface(theme.typography.data, theme.typography.weight.regular),
+                fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+              },
+            ]}
+          >
+            +
+          </Text>
         </View>
       </Pressable>
       {right.map(renderTab)}
@@ -96,5 +108,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plusText: { fontSize: 19, fontWeight: '300' as any, lineHeight: 22 },
+  plusText: { fontSize: 19, lineHeight: 22 },
 });

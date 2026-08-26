@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { useTheme, resolveTypeface } from '../theme';
 import { useContainerStyle } from './base';
 
@@ -47,30 +47,34 @@ export function Tile({
 }) {
   const { theme } = useTheme();
   const containerStyle = useContainerStyle(theme);
-  const displayFont = resolveTypeface(theme.typography.display);
-  const dataFont = resolveTypeface(theme.typography.data);
+  const displayFont = resolveTypeface(theme.typography.display, theme.typography.weight.bold);
+  const displayWeight = String(theme.typography.weight.bold) as TextStyle['fontWeight'];
+  const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
+  const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
+  const labelFont = resolveTypeface(theme.typography.data, theme.typography.weight.medium);
+  const labelWeight = String(theme.typography.weight.medium) as TextStyle['fontWeight'];
   const align = theme.shape.align === 'center' ? 'center' : 'left';
   const suffix = overSuffix ?? '';
 
   const content = empty ? (
     <>
-      <Text style={[styles.label, { color: theme.text.mute, textAlign: align, fontFamily: dataFont, letterSpacing: theme.typography.tracking.label }]}>
+      <Text style={[styles.label, { color: theme.text.mute, textAlign: align, fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label }]}>
         {theme.typography.labelCase === 'upper' ? label.toUpperCase() : label}
       </Text>
       {/* Real-or-hidden: the theme's own emptyState voice, never a zero.
           'ruled'/'boxed' still read as quiet prose here — the tile's own
           container already supplies the visual weight those styles add
           elsewhere; a tile doesn't need a second one. */}
-      <Text style={[styles.empty, { color: theme.text.faint, textAlign: align }]}>{emptyMessage}</Text>
+      <Text style={[styles.empty, { color: theme.text.faint, textAlign: align, fontFamily: dataFont, fontWeight: dataWeight }]}>{emptyMessage}</Text>
     </>
   ) : (
     <>
       <View style={[styles.head, { justifyContent: align === 'center' ? 'center' : 'space-between' }]}>
-        <Text style={[styles.label, { color: theme.text.mute, fontFamily: dataFont, letterSpacing: theme.typography.tracking.label }]}>
+        <Text style={[styles.label, { color: theme.text.mute, fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label }]}>
           {theme.typography.labelCase === 'upper' ? label.toUpperCase() : label}
         </Text>
         {source && align !== 'center' ? (
-          <Text style={[styles.source, { color: theme.text.faint, fontFamily: dataFont }]}>
+          <Text style={[styles.source, { color: theme.text.faint, fontFamily: dataFont, fontWeight: dataWeight }]}>
             {theme.typography.labelCase === 'upper' ? source.toUpperCase() : source}
           </Text>
         ) : null}
@@ -80,6 +84,7 @@ export function Tile({
           styles.value,
           {
             fontFamily: displayFont,
+            fontWeight: displayWeight,
             color: over ? theme.text.fat : theme.text.ink,
             textAlign: align,
             fontSize: span === 'full' ? theme.typography.scale.hero : theme.typography.scale.xl,
@@ -88,10 +93,10 @@ export function Tile({
         maxFontSizeMultiplier={1.3}
       >
         {value}
-        {unit ? <Text style={[styles.unit, { color: theme.text.mute, fontFamily: dataFont }]}> {unit}</Text> : null}
+        {unit ? <Text style={[styles.unit, { color: theme.text.mute, fontFamily: dataFont, fontWeight: dataWeight }]}> {unit}</Text> : null}
       </Text>
       {suffix ? (
-        <Text style={[styles.suffix, { color: theme.text.fat, fontFamily: dataFont, textAlign: align }]}>{suffix.trim()}</Text>
+        <Text style={[styles.suffix, { color: theme.text.fat, fontFamily: dataFont, fontWeight: dataWeight, textAlign: align }]}>{suffix.trim()}</Text>
       ) : null}
     </>
   );
@@ -116,10 +121,10 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 12 },
   tile: { flexGrow: 1, minWidth: 0, padding: 12, justifyContent: 'center', gap: 3 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  label: { fontSize: 11, fontWeight: '600' },
+  label: { fontSize: 11 },
   source: { fontSize: 10.5 },
-  value: { fontWeight: '700', marginTop: 4 },
-  unit: { fontSize: 12, fontWeight: '400' },
+  value: { marginTop: 4 },
+  unit: { fontSize: 12 },
   suffix: { fontSize: 11, marginTop: 2 },
   empty: { fontSize: 12, lineHeight: 17, marginTop: 8 },
 });

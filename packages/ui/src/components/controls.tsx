@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { color, radius } from '../tokens';
 import { mono } from '../typography';
 import { useTheme, resolveTypeface } from '../theme';
@@ -30,7 +30,11 @@ export function CTA({ label, onPress, style, disabled }: {
       <Text
         style={[
           styles.ctaText,
-          { fontFamily: resolveTypeface(theme.typography.ui), letterSpacing: theme.typography.tracking.label, color: theme.fill.markOn },
+          {
+            fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.bold),
+            fontWeight: String(theme.typography.weight.bold) as TextStyle['fontWeight'],
+            letterSpacing: theme.typography.tracking.label, color: theme.fill.markOn,
+          },
         ]}
       >
         {upper ? label.toUpperCase() : label}
@@ -60,7 +64,11 @@ export function Chip({ label, on, onPress, accent }: {
       <Text
         style={[
           styles.chipText,
-          { fontFamily: resolveTypeface(theme.typography.ui), letterSpacing: theme.typography.tracking.label, color: theme.text.mute },
+          {
+            fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.regular),
+            fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+            letterSpacing: theme.typography.tracking.label, color: theme.text.mute,
+          },
           on && { color: accent ?? theme.text.ink },
         ]}
       >
@@ -100,7 +108,8 @@ export function SubNav({ items, active, onChange }: {
 }) {
   const { theme } = useTheme();
   const upper = theme.typography.labelCase === 'upper';
-  const uiFont = resolveTypeface(theme.typography.ui);
+  const uiFont = resolveTypeface(theme.typography.ui, theme.typography.weight.regular);
+  const uiWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
   return (
     <View style={[styles.seg, { borderBottomColor: theme.surfaces.border }]}>
       {items.map((item) => {
@@ -112,7 +121,7 @@ export function SubNav({ items, active, onChange }: {
             hitSlop={8}
             style={[styles.segBtn, on && { borderBottomColor: theme.text.accent }]}
           >
-            <Text style={[styles.segText, { fontFamily: uiFont, letterSpacing: theme.typography.tracking.label, color: theme.text.faint }, on && { color: theme.text.accent }]}>
+            <Text style={[styles.segText, { fontFamily: uiFont, fontWeight: uiWeight, letterSpacing: theme.typography.tracking.label, color: theme.text.faint }, on && { color: theme.text.accent }]}>
               {upper ? item.toUpperCase() : item}
             </Text>
           </Pressable>

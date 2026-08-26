@@ -73,7 +73,8 @@ export function MicroLabel({ children, faint, style }: { children: ReactNode; fa
       style={[
         styles.microLabel,
         {
-          fontSize, fontFamily: resolveTypeface(theme.typography.ui),
+          fontSize, fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.medium),
+          fontWeight: String(theme.typography.weight.medium) as TextStyle['fontWeight'],
           letterSpacing: theme.typography.tracking.label, color: theme.text.mute,
         },
         faint && { color: theme.text.faint },
@@ -94,7 +95,14 @@ export function KV({ label, right, faint, style }: { label: ReactNode; right?: R
       {typeof label === 'string' ? <MicroLabel faint={faint}>{label}</MicroLabel> : label}
       {typeof right === 'string' ? (
         <Text
-          style={[styles.kvRight, { fontFamily: resolveTypeface(theme.typography.data), color: theme.text.ink2 }]}
+          style={[
+            styles.kvRight,
+            {
+              fontFamily: resolveTypeface(theme.typography.data, theme.typography.weight.regular),
+              fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+              color: theme.text.ink2,
+            },
+          ]}
           maxFontSizeMultiplier={1.3}
         >
           {right}
@@ -114,7 +122,9 @@ export function SrcNote({ children, center, style }: { children: ReactNode; cent
       style={[
         styles.srcNote,
         {
-          fontSize, fontFamily: resolveTypeface(theme.typography.ui), color: theme.text.faint,
+          fontSize, fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.regular),
+          fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+          color: theme.text.faint,
           letterSpacing: theme.typography.tracking.label,
         },
         center && { textAlign: 'center' },
@@ -140,7 +150,7 @@ export function HeroNumeral({ value, unit, style }: { value: string; unit?: stri
       style={[
         styles.hero,
         {
-          fontFamily: resolveTypeface(theme.typography.display),
+          fontFamily: resolveTypeface(theme.typography.display, theme.typography.weight.bold),
           fontSize: theme.typography.scale.hero,
           fontWeight: String(theme.typography.weight.bold) as TextStyle['fontWeight'],
           letterSpacing: theme.typography.tracking.hero,
@@ -154,7 +164,14 @@ export function HeroNumeral({ value, unit, style }: { value: string; unit?: stri
       {value}
       {unit ? (
         <Text
-          style={[styles.heroUnit, { fontFamily: resolveTypeface(theme.typography.ui), color: theme.text.mute }]}
+          style={[
+            styles.heroUnit,
+            {
+              fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.regular),
+              fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+              color: theme.text.mute,
+            },
+          ]}
           maxFontSizeMultiplier={1.3}
         >
           {' '}{unit}
@@ -174,7 +191,17 @@ export function HeroNumeral({ value, unit, style }: { value: string; unit?: stri
 export function EmptyState({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
   const { theme } = useTheme();
   const text = (
-    <Text style={[styles.empty, { color: theme.text.faint, fontFamily: resolveTypeface(theme.typography.ui) }, style]}>
+    <Text
+      style={[
+        styles.empty,
+        {
+          color: theme.text.faint,
+          fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.regular),
+          fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+        },
+        style,
+      ]}
+    >
       {children}
     </Text>
   );
@@ -209,7 +236,6 @@ const styles = StyleSheet.create({
   },
   microLabel: {
     fontSize: typeScale.microLabel.fontSize,
-    fontWeight: '600',
     letterSpacing: typeScale.microLabel.letterSpacing,
   },
   kv: {
@@ -227,12 +253,10 @@ const styles = StyleSheet.create({
     lineHeight: typeScale.srcNote.lineHeight,
   },
   hero: {
-    fontWeight: '600',
     marginTop: 12,
   },
   heroUnit: {
     fontSize: typeScale.heroUnit.fontSize,
-    fontWeight: '400',
     letterSpacing: 0,
   },
   empty: {

@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { useTheme, resolveTypeface } from '@basalt/ui';
 
 // The app head — title left, mono context + gear right (prototype .apphead).
@@ -11,7 +11,8 @@ export function AppHeader({
   onPressGear?: () => void;
 }) {
   const { theme } = useTheme();
-  const dataFont = resolveTypeface(theme.typography.data);
+  const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
+  const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
   const upper = theme.typography.labelCase === 'upper';
   // shape.align is a body/tile-content token (docs/basalt-layouts.md:
   // "Atelier centres tile contents") — the header's Settings entry point
@@ -23,8 +24,8 @@ export function AppHeader({
         style={[
           styles.title,
           {
-            fontFamily: resolveTypeface(theme.typography.display),
-            fontWeight: String(theme.typography.weight.bold) as any,
+            fontFamily: resolveTypeface(theme.typography.display, theme.typography.weight.bold),
+            fontWeight: String(theme.typography.weight.bold) as TextStyle['fontWeight'],
             color: theme.text.ink,
           },
         ]}
@@ -33,7 +34,7 @@ export function AppHeader({
       </Text>
       <View style={styles.right}>
         {context ? (
-          <Text style={[styles.context, { fontFamily: dataFont, color: theme.text.mute }]}>
+          <Text style={[styles.context, { fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.mute }]}>
             {upper ? context.toUpperCase() : context}
           </Text>
         ) : null}

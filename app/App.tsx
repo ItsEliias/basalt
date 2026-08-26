@@ -2,6 +2,28 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
+import { Barlow_400Regular, Barlow_600SemiBold, Barlow_700Bold } from '@expo-google-fonts/barlow';
+import {
+  BarlowCondensed_400Regular,
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+} from '@expo-google-fonts/barlow-condensed';
+import { Archivo_400Regular, Archivo_600SemiBold, Archivo_900Black } from '@expo-google-fonts/archivo';
+import { ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
+import { Manrope_400Regular, Manrope_600SemiBold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
+import { Jost_300Light, Jost_400Regular, Jost_500Medium } from '@expo-google-fonts/jost';
+import {
+  IBMPlexMono_300Light,
+  IBMPlexMono_400Regular,
+  IBMPlexMono_500Medium,
+} from '@expo-google-fonts/ibm-plex-mono';
+import {
+  CormorantGaramond_300Light,
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium,
+} from '@expo-google-fonts/cormorant-garamond';
 import { ThemeProvider, THEMES, DEFAULT_THEME, color, mono } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { AppHeader } from './src/components/AppHeader';
@@ -143,11 +165,36 @@ function Gate() {
 }
 
 export default function App() {
+  // The five non-Minimal themes' typography (docs/THEME-SYSTEM-REPORT.md)
+  // needs these bundled — resolveTypeface can't return a family expo-font
+  // hasn't registered yet, so first paint waits on this the same way it
+  // already waits on session/profile below.
+  const [fontsLoaded] = useFonts({
+    Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold,
+    Barlow_400Regular, Barlow_600SemiBold, Barlow_700Bold,
+    BarlowCondensed_400Regular, BarlowCondensed_600SemiBold, BarlowCondensed_700Bold,
+    Archivo_400Regular, Archivo_600SemiBold, Archivo_900Black,
+    ArchivoBlack_400Regular,
+    Manrope_400Regular, Manrope_600SemiBold, Manrope_800ExtraBold,
+    Jost_300Light, Jost_400Regular, Jost_500Medium,
+    IBMPlexMono_300Light, IBMPlexMono_400Regular, IBMPlexMono_500Medium,
+    CormorantGaramond_300Light, CormorantGaramond_400Regular, CormorantGaramond_500Medium,
+  });
+
   // Settings → Display. Falls back to the ThemeProvider's own defaults
   // (Minimal/comfortable/system) before the profile has loaded — never
   // blocks first paint on a network round trip.
   const profile = useAppStore((s) => s.profile);
   const theme = profile?.theme ? THEMES[profile.theme] : THEMES[DEFAULT_THEME];
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loading}>
+        <Text style={styles.brand}>BASALT</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <ThemeProvider theme={theme} density={profile?.density} textScale={profile?.textScale}>

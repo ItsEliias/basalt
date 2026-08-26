@@ -88,3 +88,40 @@ export function kgText(kg: number): string {
   const rounded = Math.round(kg * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
+
+const FONT_WEIGHT_NAMES: Record<number, string> = {
+  100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular',
+  500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black',
+};
+
+// Google-Fonts export prefix per bundled family name (theme.typography.ui/
+// data/display) — not always the family name with spaces stripped, so kept
+// explicit rather than derived.
+const FONT_FAMILY_PREFIXES: Record<string, string> = {
+  Nunito: 'Nunito',
+  Barlow: 'Barlow',
+  'Barlow Condensed': 'BarlowCondensed',
+  Archivo: 'Archivo',
+  Manrope: 'Manrope',
+  Jost: 'Jost',
+  'IBM Plex Mono': 'IBMPlexMono',
+  'Cormorant Garamond': 'CormorantGaramond',
+};
+
+/**
+ * A bundled family name + numeric weight (400/600/900...) → the exact
+ * fontFamily string expo-font registers for it, e.g. ('Nunito', 700) ->
+ * 'Nunito_700Bold'. Pure Google-Fonts-naming logic only — the 'System'/
+ * 'Mono' sentinels are theme/theme/typeface.ts's concern (they need the
+ * platform mono constant, which pulls in react-native and can't live in
+ * this RN-free file).
+ *
+ * 'Archivo Black' ships exactly one static weight (already visually black)
+ * — every role that names it gets that one file regardless of `weight`.
+ */
+export function resolveFontFamily(name: string, weight: number): string {
+  if (name === 'Archivo Black') return 'ArchivoBlack_400Regular';
+  const prefix = FONT_FAMILY_PREFIXES[name] ?? name.replace(/\s+/g, '');
+  const weightName = FONT_WEIGHT_NAMES[weight] ?? FONT_WEIGHT_NAMES[400];
+  return `${prefix}_${weight}${weightName}`;
+}
