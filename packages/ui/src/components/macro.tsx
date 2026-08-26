@@ -51,6 +51,11 @@ export function MacroRow({
  * `expression.overCap` together decide the over-state, so it renders
  * correctly in any of the six themes, not just Minimal.
  *
+ * Deliberately does NOT read `shape.align` — verified against
+ * reference/themes-today.html: every theme including Atelier keeps list
+ * rows left-aligned (`align: 'center'` only centres hero/tile content).
+ * Not a gap; a row component has nothing to center.
+ *
  * `overCap` controls how the over-state is WORDED, never whether it's
  * shown — the bar and dot always fill in `fill.fat` regardless:
  *   'all'  -> numeric delta stated ("· 5 over")
