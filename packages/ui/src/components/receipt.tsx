@@ -137,7 +137,7 @@ export function ReceiptRow({
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  sum: { fontSize: 11 },
+  sum: { fontSize: 11, flexShrink: 1, marginLeft: 12, textAlign: 'right' },
   mealTag: {
     fontSize: 11,
     paddingTop: 14,
