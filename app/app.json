@@ -47,7 +47,7 @@
       "react-native-health-connect",
       "@maplibre/maplibre-react-native",
       "expo-notifications",
-      "./plugins/withTimerFgs.js",
+      "./plugins/withForegroundServiceTypes.js",
       "./plugins/withNotifeeMavenRepo.js",
       "./plugins/withHealthConnectQueries.js",
       "./plugins/withHealthConnectPermissionDelegate.js",
