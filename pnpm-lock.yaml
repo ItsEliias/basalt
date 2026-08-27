@@ -167,7 +167,7 @@ importers:
         version: 2.32.0(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-health-connect:
         specifier: ^3.5.3
-        version: 3.6.0(@expo/config-plugins@57.0.8(typescript@5.7.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+        version: 3.6.0(@expo/config-plugins@56.0.15(typescript@5.7.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-safe-area-context:
         specifier: ^5.8.0
         version: 5.9.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -187,6 +187,9 @@ importers:
         specifier: ^5.0.13
         version: 5.0.15(@types/react@19.2.18)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
     devDependencies:
+      '@expo/config-plugins':
+        specifier: ~56.0.15
+        version: 56.0.15(typescript@5.7.3)
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.18
@@ -1443,6 +1446,7 @@ packages:
   '@xmldom/xmldom@0.9.11':
     resolution: {integrity: sha512-tW8bcK3hsG0/uqSnNz6TK4BkcuZSezoU7DlnYssILmZDktPnSHHuDJJFM0AJv+13gz2r0iGdrj6qqKeUnxXEDg==}
     engines: {node: '>=14.6'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -6298,9 +6302,9 @@ snapshots:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
 
-  react-native-health-connect@3.6.0(@expo/config-plugins@57.0.8(typescript@5.7.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+  react-native-health-connect@3.6.0(@expo/config-plugins@56.0.15(typescript@5.7.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:
-      '@expo/config-plugins': 57.0.8(typescript@5.7.3)
+      '@expo/config-plugins': 56.0.15(typescript@5.7.3)
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
 
