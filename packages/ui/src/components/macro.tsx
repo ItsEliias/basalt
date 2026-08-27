@@ -7,11 +7,25 @@ import { useTheme, resolveTypeface } from '../theme';
 // Macro rows, cap rows, hairline bars and the segmented macro stack —
 // prototype .macro / .bar / .stack, metrics copied exactly.
 
-/** 3px hairline progress bar. */
+/** Progress bar — track geometry/colour from the theme (reference/themes-
+ *  today.html's `.meter`), fill colour stays caller-supplied so macro/cap
+ *  rows keep their own semantic colours (protein/carbs/fat, or fat/faint
+ *  for cap state) rather than every bar collapsing to one accent. */
 export function Bar({ pct, fill }: { pct: number; fill: string }) {
+  const { theme } = useTheme();
   return (
-    <View style={styles.barTrack}>
-      <View style={[styles.barFill, { width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: fill }]} />
+    <View
+      style={[
+        styles.barTrack,
+        { height: theme.shape.meterHeight, borderRadius: theme.shape.meterRadius, backgroundColor: theme.surfaces.surface2 },
+      ]}
+    >
+      <View
+        style={[
+          styles.barFill,
+          { width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: fill, borderRadius: theme.shape.meterRadius },
+        ]}
+      />
     </View>
   );
 }
@@ -124,8 +138,8 @@ const styles = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 2 },
   ratio: { ...monoTabular, fontSize: 12, color: color.ink2 },
   ratioOf: { fontFamily: mono, color: color.faint },
-  barTrack: { height: 4, borderRadius: 2, backgroundColor: color.border, marginTop: 7, overflow: 'hidden' },
-  barFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2 },
+  barTrack: { marginTop: 7, overflow: 'hidden' },
+  barFill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
   stack: { height: 6, borderRadius: 3, marginTop: 14, flexDirection: 'row', gap: 2 },
   stackSeg: { borderRadius: 2 },
   stackRest: { backgroundColor: color.border },

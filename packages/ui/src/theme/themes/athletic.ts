@@ -59,6 +59,8 @@ export const athletic: Theme = {
     container: 'bare',
     elevation: 'border',
     meter: 'bar',
+    meterHeight: 5,
+    meterRadius: 2,
     align: 'left',
   },
 

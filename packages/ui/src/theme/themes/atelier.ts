@@ -59,6 +59,8 @@ export const atelier: Theme = {
     container: 'bare',
     elevation: 'none',
     meter: 'line',
+    meterHeight: 1,
+    meterRadius: 0,
     align: 'center',
   },
 

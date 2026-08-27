@@ -59,6 +59,8 @@ export const brutalist: Theme = {
     container: 'boxed',
     elevation: 'hardShadow',
     meter: 'stepped',
+    meterHeight: 12,
+    meterRadius: 0,
     align: 'left',
   },
 

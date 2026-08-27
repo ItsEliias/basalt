@@ -62,6 +62,8 @@ export const minimal: Theme = {
     container: 'card',
     elevation: 'border',
     meter: 'bar',
+    meterHeight: 5,
+    meterRadius: 2,
     align: 'left',
   },
 

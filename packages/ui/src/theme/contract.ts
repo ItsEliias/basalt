@@ -75,6 +75,14 @@ export interface ThemeShape {
   container: ContainerStrategy;
   elevation: Elevation;
   meter: MeterStyle;
+  /** Progress-bar track/fill geometry (reference/themes-today.html's
+   *  `.meter`/`.meter i`) — every theme has its own; nothing derives these
+   *  from `meter` alone (Minimal and Athletic are both 'bar' but share no
+   *  other value). The track colour is always `surfaces.surface2` and the
+   *  fill colour is always whatever the caller passes (macro/cap rows keep
+   *  their own semantic colours) — only geometry lives here. */
+  meterHeight: number;
+  meterRadius: number;
   align: Align;
 }
 

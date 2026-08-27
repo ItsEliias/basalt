@@ -59,6 +59,8 @@ export const humanist: Theme = {
     container: 'card',
     elevation: 'none',
     meter: 'pill',
+    meterHeight: 11,
+    meterRadius: 99,
     align: 'left',
   },
 

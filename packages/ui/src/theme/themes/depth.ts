@@ -59,6 +59,8 @@ export const depth: Theme = {
     container: 'card',
     elevation: 'blur',
     meter: 'pill',
+    meterHeight: 11,
+    meterRadius: 99,
     align: 'left',
   },
 
