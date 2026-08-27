@@ -287,6 +287,64 @@ background task or permission) and didn't log a walk taken with the phone locked
 app-behavior bug, not a theme-system one; deliberately not fixed here, sequenced for its own
 session per the user's explicit choice.
 
+## Third device session — a full six-theme sweep, and two things that were never themed at all
+
+Asked (after the walk-tracking fix from the previous session) to "go over all the themes and
+screens and usability again." This time every one of the six themes was cycled through on a
+real device (later an emulator once the phone was disconnected mid-session) and every major
+screen checked — not just Depth against its one reference file. Found two systemic bugs, both
+invisible on Minimal for the same reason: Minimal predates the theme system, so anything that
+still reads the legacy static token instead of `useTheme()` happens to look right on Minimal
+by coincidence, not by design.
+
+**Every screen's own scroll/root background used the legacy static `color.bg`
+(`#0F1115`), not the active theme.** Ten screen files (`TodayScreen`, `LogScreen`'s
+`CaptureTab`, `PlannerTab`, `RecipesTab`, `RecoverScreen`'s `VitalsTab`/`MindTab`,
+`SettingsScreen`, `OutdoorTab`, `TemplateBuilder`, `TrainScreen`'s `SessionTab`,
+`TrendsScreen`) hard-coded that one dark value for their own container background instead of
+`theme.surfaces.bg`. Minimal's `bg` happens to equal `color.bg` exactly (Minimal *is* the
+former default), and Depth/Atelier are close enough in the same dark family that the seam
+didn't jump out. Humanist's cream and Brutalist's off-white made it undeniable: every gap
+between cards showed the old near-black canvas instead of the theme's own background. Fixed
+by adding `useTheme()` where it wasn't already in scope and overriding the static style's
+`backgroundColor` inline at each usage site — the same pattern `AuthScreen`/
+`OnboardingScreen`/`TrainScreen`'s exercise-picker overlay already used correctly.
+
+**`packages/ui/src/components/tiles.tsx` was never migrated to the theme system at all.**
+`TileGrid`, `StatTile`, `EmptyTile`, `Sparkline`, `WaterTicks`, `TickCaption` — the component
+family behind Today's Ledger-layout Steps/Water tiles, Recover's HRV/Resting HR/SpO2/Blood
+Glucose vitals tiles, and Train — read every colour from the static `color`/`radius` tokens,
+never `useTheme()`. This is a different, older sibling of `todayTiles.tsx`'s `Tile`/
+`TileGridThemed` (built later, for the Tiles Today layout, and correctly theme-driven from
+the start) — the two component families just never got reconciled. Deliberately fixed this
+as a surgical token swap rather than a consolidation: same shape, same call sites, each
+static `color.*` mapped to its contract equivalent (`surface`/`border` → `theme.surfaces.*`,
+`ink`/`ink2`/`mute`/`faint` → `theme.text.*`, the recovery-tint water tick → `theme.fill.
+recovery`, its neutral/unfilled state → `theme.fill.faint` per the contract's own
+documented guidance for a graphical mark's neutral state). Whether `StatTile`/`EmptyTile`
+should eventually be replaced by `Tile` outright is a separate design question, not answered
+here.
+
+Also fixed in the same pass: `ReceiptHeader` (`receipt.tsx`) let a long summary string
+collide with its label — fine for the short summaries used everywhere else, broken on
+Recover's Progress Photos card ("private vault · never shared · out of exports unless you
+say so"). Added `flexShrink`, a minimum gap, and right-alignment so it wraps under itself
+instead of touching.
+
+All three fixes confirmed across all six themes on-device — physical phone through Humanist
+and the start of Athletic, then a `Pixel_10_Pro` emulator (`adb -e`/`-s emulator-5554`, APK
+reused directly via `adb install` since nothing native had changed) for Athletic through
+Atelier once the phone was disconnected. Verification used a temporary `useAppStore.
+setState()` mock in `Gate()` (`app/App.tsx`) to skip the real Supabase-backed session —
+reverted before every commit, confirmed via `git diff app/App.tsx` showing clean each time.
+One caveat worth recording honestly: the mock has no real backing auth, so anything that
+calls `saveProfile`/`refreshCore` against it (e.g. the in-app theme picker) fails and clears
+`profile` to null, which is why theme switches for this pass were done by editing the mock's
+`theme` field directly and relaunching rather than using Settings' own picker UI — a
+limitation of the QA harness, not a product bug. For the same reason, actual write-path
+submission flows (logging food, a set, a weigh-in) were reviewed for correct per-theme
+*rendering* but not exercised end-to-end against a live backend in this pass.
+
 ## Fonts
 
 Nine `@expo-google-fonts/*` families cover every non-Minimal theme's `typography.ui` /
@@ -341,8 +399,11 @@ automated check:
    that check fails. Not blocking; worth a look if the app ever needs to support those
    devices.
 
-Two items from earlier drafts of this report are no longer open, both root-caused, fixed,
+Four items from earlier drafts of this report are no longer open, all root-caused, fixed,
 and confirmed live on-device rather than just reasoned about: the reported Tiles/theme-
 carryover bug (across Brutalist, Humanist, and a Minimal regression check — see "On-device
-verification" above) and Depth's flat-fill blur approximation (now genuine glass over a real
-ambient glow — see "Compromises, per theme" and "Second device session" above).
+verification" above), Depth's flat-fill blur approximation (now genuine glass over a real
+ambient glow — see "Compromises, per theme" and "Second device session" above), every
+screen's own background reading the legacy static token instead of the active theme, and
+the entire `StatTile`/`EmptyTile`/`WaterTicks` component family never having been migrated
+to the theme system at all (see "Third device session" above).
