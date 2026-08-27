@@ -34,18 +34,17 @@ import { SessionDetailSheet } from '../../components/SessionDetailSheet';
 // remember per exercise, timed movements get the guided set timer.
 
 export function TrainScreen() {
-  const { theme } = useTheme();
   const [sub, setSub] = useState('Session');
   if (sub === 'Outdoor') {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.surfaces.bg }}>
+      <View style={{ flex: 1 }}>
         <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
         <OutdoorTab />
       </View>
     );
   }
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surfaces.bg }}>
+    <View style={{ flex: 1 }}>
       <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
       <SessionTab />
     </View>
@@ -53,7 +52,6 @@ export function TrainScreen() {
 }
 
 function SessionTab() {
-  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
@@ -116,7 +114,7 @@ function SessionTab() {
   if (!session.sessionId) {
     return (
       <>
-      <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card>
           <ReceiptHeader label="Session" />
           <EmptyState>
@@ -211,7 +209,7 @@ function SessionTab() {
 
   return (
     <>
-      <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
             <Text style={[styles.addSet, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>

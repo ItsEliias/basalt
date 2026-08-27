@@ -16,3 +16,4 @@ export * from './components/onboarding';
 export * from './components/viz';
 export * from './components/body-figure';
 export * from './components/tab-icons';
+export * from './components/groundGlow';

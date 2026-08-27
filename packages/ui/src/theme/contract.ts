@@ -84,6 +84,18 @@ export interface ThemeShape {
   meterHeight: number;
   meterRadius: number;
   align: Align;
+  /** Ambient radial-gradient glow rendered once behind the screen root —
+   *  Depth's signature look (reference/themes-today.html's `.depth .scr`
+   *  background: two colour blobs over a near-black base). cx/cy/rx/ry are
+   *  fractions of the screen, mirroring CSS radial-gradient position/size
+   *  semantics; `color` carries its own alpha. Undefined for every theme
+   *  that doesn't need one — a plain `surfaces.bg` fill is the default. */
+  groundGlow?: { cx: number; cy: number; rx: number; ry: number; color: string }[];
+  /** Translucent glass fill + border for `elevation: 'blur'` containers
+   *  (Depth only) — the rgba pair rendered inside a real BlurView, matching
+   *  the CSS backdrop-filter recipe. Unused when elevation !== 'blur'. */
+  glassFill?: string;
+  glassBorder?: string;
 }
 
 export interface ThemeExpression {

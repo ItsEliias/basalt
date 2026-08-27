@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, MealTag, CTA, ChipRow,
-  groupInt, color, mono, useTheme,
+  groupInt, color, mono,
 } from '@basalt/ui';
 import {
   listMealPlans, addMealPlan, deleteMealPlan, listRecipes, getRecipeDetail, logRecipeServing,
@@ -39,7 +39,6 @@ function nextDays(n: number): { date: string; label: string }[] {
 }
 
 export function PlannerTab() {
-  const { theme } = useTheme();
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -84,7 +83,7 @@ export function PlannerTab() {
   const checkedCount = grocery.filter((g) => g.checked).length;
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       {/* ── This week ──────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader

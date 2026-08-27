@@ -7,7 +7,7 @@ import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel,
   ChipRow, ChipGroup, kgText, groupInt,
   THEME_IDS, THEMES, type ThemeId,
-  color, mono, useTheme,
+  color, mono,
 } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
@@ -55,7 +55,6 @@ function layoutKey(label: string): 'ledger' | 'tiles' {
 }
 
 export function SettingsScreen() {
-  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const profile = useAppStore((s) => s.profile);
   const targets = useAppStore((s) => s.targets);
@@ -175,7 +174,7 @@ export function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       {/* ── Profile ────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Profile" summary="everything editable" />

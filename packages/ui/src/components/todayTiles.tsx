@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useTheme, resolveTypeface } from '../theme';
 import { useContainerStyle } from './base';
 
@@ -101,25 +102,32 @@ export function Tile({
     </>
   );
 
+  const isGlass = theme.shape.elevation === 'blur';
   const Wrapper = onPress ? Pressable : View;
   return (
     <Wrapper
       style={[
         styles.tile,
         { borderRadius: theme.shape.radius.md, minHeight: theme.expression.rowMinHeight + 34, flexBasis: span === 'full' ? '100%' : '47%' },
-        ...containerStyle,
+        isGlass ? { overflow: 'hidden' } : null,
+        !isGlass ? containerStyle : null,
       ]}
       onPress={onPress}
       hitSlop={onPress ? 4 : undefined}
     >
-      {content}
+      {/* Depth's glass tiles need a REAL backdrop blur — of the GroundGlow
+          behind them (app/App.tsx) — full-bleed behind the padded content,
+          since Card/Tile share the exact same blur treatment. */}
+      {isGlass ? <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, ...containerStyle]} /> : null}
+      <View style={styles.tileInner}>{content}</View>
     </Wrapper>
   );
 }
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 12 },
-  tile: { flexGrow: 1, minWidth: 0, padding: 12, justifyContent: 'center', gap: 3 },
+  tile: { flexGrow: 1, minWidth: 0 },
+  tileInner: { flex: 1, padding: 12, justifyContent: 'center', gap: 3 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   label: { fontSize: 11 },
   source: { fontSize: 10.5 },

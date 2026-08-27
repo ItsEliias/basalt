@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type TextStyle, type ViewStyle, type StyleProp } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { space, type as typeScale } from '../tokens';
 import { monoTabular } from '../typography';
 import { useTheme, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER, type Theme } from '../theme';
@@ -20,14 +21,14 @@ import { useTheme, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER, type The
  */
 export function useContainerStyle(theme: Theme): object[] {
   const filled = theme.shape.container === 'card' || theme.shape.container === 'boxed';
+  const isGlass = theme.shape.elevation === 'blur' && theme.shape.glassFill;
   const base = {
     backgroundColor: filled
-      ? theme.shape.elevation === 'blur'
-        // Depth's translucent-over-gradient look, approximated without a
-        // real backdrop blur (no expo-blur dependency added for this) —
-        // see docs/THEME-SYSTEM-REPORT.md, flagged as a compromise and a
-        // device check.
-        ? theme.surfaces.surface2
+      ? isGlass
+        // Depth's translucent-over-gradient look — the real blur itself is
+        // applied by the BlurView this style renders inside of (see Card/
+        // Tile); this is just the tint layered on top of it.
+        ? theme.shape.glassFill
         : theme.surfaces.surface
       : 'transparent',
   };
@@ -37,7 +38,14 @@ export function useContainerStyle(theme: Theme): object[] {
     theme.shape.elevation === 'blur' ? theme.shape.borderWidth.hairline :
     theme.shape.borderWidth.thin;
   const border = borderWidth > 0
-    ? { borderWidth, borderColor: theme.shape.elevation === 'hardShadow' ? theme.surfaces.borderStrong : theme.surfaces.border }
+    ? {
+        borderWidth,
+        borderColor: theme.shape.elevation === 'hardShadow'
+          ? theme.surfaces.borderStrong
+          : isGlass && theme.shape.glassBorder
+            ? theme.shape.glassBorder
+            : theme.surfaces.border,
+      }
     : null;
   // A flat, non-blurred offset shadow (Brutalist) — not the soft glow the
   // pre-contract spec banned; see the design-spec §6 amendment.
@@ -50,18 +58,22 @@ export function useContainerStyle(theme: Theme): object[] {
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { theme, density } = useTheme();
   const containerStyle = useContainerStyle(theme);
-  return (
-    <View
-      style={[
-        styles.card,
-        ...containerStyle,
-        { borderRadius: theme.shape.radius.md, padding: space.card + DENSITY_PAD[density] },
-        style,
-      ]}
-    >
-      {children}
-    </View>
-  );
+  const cardStyle = [
+    styles.card,
+    ...containerStyle,
+    { borderRadius: theme.shape.radius.md, padding: space.card + DENSITY_PAD[density] },
+    style,
+  ];
+  // Depth's glass cards need a REAL backdrop blur — of the GroundGlow behind
+  // them (app/App.tsx), not something a flat backgroundColor can fake.
+  if (theme.shape.elevation === 'blur') {
+    return (
+      <BlurView intensity={40} tint="dark" style={[{ overflow: 'hidden' }, cardStyle]}>
+        {children}
+      </BlurView>
+    );
+  }
+  return <View style={cardStyle}>{children}</View>;
 }
 
 export function MicroLabel({ children, faint, style }: { children: ReactNode; faint?: boolean; style?: StyleProp<TextStyle> }) {

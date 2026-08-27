@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, Chip, ObInput, ObChipLabel, color, mono, useTheme } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, Chip, ObInput, ObChipLabel, color, mono } from '@basalt/ui';
 import { saveTemplate, type TemplateLocation } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -22,7 +22,6 @@ type DraftExercise = {
 };
 
 export function TemplateBuilder({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const profile = useAppStore((s) => s.profile);
   const [name, setName] = useState('');
@@ -53,7 +52,7 @@ export function TemplateBuilder({ onClose, onSaved }: { onClose: () => void; onS
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 12 }]}>
+    <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
         <View style={styles.head}>
           <Text style={styles.title}>New template</Text>

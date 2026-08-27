@@ -24,7 +24,7 @@ import {
   CormorantGaramond_400Regular,
   CormorantGaramond_500Medium,
 } from '@expo-google-fonts/cormorant-garamond';
-import { ThemeProvider, useTheme, THEMES, DEFAULT_THEME, color, mono } from '@basalt/ui';
+import { ThemeProvider, useTheme, THEMES, DEFAULT_THEME, color, mono, GroundGlow } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
@@ -118,6 +118,7 @@ function MainShell() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 8 }]}>
+      <GroundGlow />
       <AppHeader
         title={TITLES[view]}
         context={context}

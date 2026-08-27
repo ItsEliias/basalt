@@ -62,6 +62,15 @@ export const depth: Theme = {
     meterHeight: 11,
     meterRadius: 99,
     align: 'left',
+    // reference/themes-today.html: .depth .scr background — two radial
+    // gradients (indigo top-left, green top-right) over the #0B0F1A base.
+    groundGlow: [
+      { cx: 0.25, cy: 0.0, rx: 0.70, ry: 0.40, color: 'rgba(94,114,228,0.5)' },
+      { cx: 0.9, cy: 0.06, rx: 0.6, ry: 0.34, color: 'rgba(62,155,120,0.34)' },
+    ],
+    // reference/themes-today.html: .depth .grp,.hero,.tile background/border.
+    glassFill: 'rgba(255,255,255,0.06)',
+    glassBorder: 'rgba(255,255,255,0.13)',
   },
 
   expression: {

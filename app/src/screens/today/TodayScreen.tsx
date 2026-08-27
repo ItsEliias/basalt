@@ -5,7 +5,7 @@ import {
   MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag,
   TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow,
   TileGridThemed, Tile,
-  color, mono, groupInt, useTheme,
+  color, mono, groupInt,
 } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
@@ -116,7 +116,6 @@ async function loadToday(): Promise<TodayData> {
 }
 
 export function TodayScreen() {
-  const { theme } = useTheme();
   const targets = useAppStore((s) => s.targets);
   const profile = useAppStore((s) => s.profile);
   const todayVersion = useAppStore((s) => s.todayVersion);
@@ -225,7 +224,7 @@ export function TodayScreen() {
   if (layout === 'tiles') {
     return (
       <ScrollView
-        style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
       >
@@ -249,7 +248,7 @@ export function TodayScreen() {
 
   return (
     <ScrollView
-      style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
+      style={styles.scroll}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
     >

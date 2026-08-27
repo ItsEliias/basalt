@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav, ObInput,
-  color, mono, groupInt, useTheme,
+  color, mono, groupInt,
 } from '@basalt/ui';
 import { RecipesTab } from './RecipesTab';
 import { PlannerTab } from './PlannerTab';
@@ -53,10 +53,9 @@ type ScanState =
   | { kind: 'hit'; code: string; product: OFFProduct };
 
 export function LogScreen() {
-  const { theme } = useTheme();
   const [sub, setSub] = useState('Capture');
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surfaces.bg }}>
+    <View style={{ flex: 1 }}>
       <SubNav items={['Capture', 'Recipes', 'Planner']} active={sub} onChange={setSub} />
       {sub === 'Capture' ? <CaptureTab /> : sub === 'Recipes' ? <RecipesTab /> : <PlannerTab />}
     </View>
@@ -64,7 +63,6 @@ export function LogScreen() {
 }
 
 function CaptureTab() {
-  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [mode, setMode] = useState<Mode>('barcode');
@@ -311,7 +309,7 @@ function CaptureTab() {
   };
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={styles.vf}>
         <View style={styles.modes}>

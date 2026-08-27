@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA,
-  color, mono, mmss, paceText, groupInt, useTheme,
+  color, mono, mmss, paceText, groupInt,
 } from '@basalt/ui';
 import {
   acceptFix, routeDistanceM, summarizeWalk, computeSplits, saveWalk, listRecentWalks,
@@ -36,7 +36,6 @@ type Mode =
   | { kind: 'error'; message: string };
 
 export function OutdoorTab() {
-  const { theme } = useTheme();
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [mode, setMode] = useState<Mode>({ kind: 'idle' });
   const [now, setNow] = useState(Date.now());
@@ -255,7 +254,7 @@ export function OutdoorTab() {
   const livePace = tracking && liveDistance > 50 ? liveSeconds / (liveDistance / 1000) : null;
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       {tracking ? <KeepAwakeWhileTracking /> : null}
 
       {/* ── Recorder ───────────────────────────────────────────────── */}
