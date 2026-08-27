@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useTheme, resolveTypeface } from '../theme';
+import { useTheme, useBlurTarget, resolveTypeface } from '../theme';
 import { useContainerStyle } from './base';
 
 // The Tiles Today layout (docs/basalt-layouts.md) — a grid of single-metric
@@ -47,6 +47,7 @@ export function Tile({
   onPress?: () => void;
 }) {
   const { theme } = useTheme();
+  const blurTarget = useBlurTarget();
   const containerStyle = useContainerStyle(theme);
   const displayFont = resolveTypeface(theme.typography.display, theme.typography.weight.bold);
   const displayWeight = String(theme.typography.weight.bold) as TextStyle['fontWeight'];
@@ -118,7 +119,15 @@ export function Tile({
       {/* Depth's glass tiles need a REAL backdrop blur — of the GroundGlow
           behind them (app/App.tsx) — full-bleed behind the padded content,
           since Card/Tile share the exact same blur treatment. */}
-      {isGlass ? <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, ...containerStyle]} /> : null}
+      {isGlass ? (
+        <BlurView
+          intensity={40}
+          tint="dark"
+          blurTarget={blurTarget ?? undefined}
+          blurMethod="dimezisBlurViewSdk31Plus"
+          style={[StyleSheet.absoluteFill, ...containerStyle]}
+        />
+      ) : null}
       <View style={styles.tileInner}>{content}</View>
     </Wrapper>
   );

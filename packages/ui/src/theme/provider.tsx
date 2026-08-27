@@ -1,4 +1,5 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode, type RefObject } from 'react';
+import type { View } from 'react-native';
 import type { Theme } from './contract';
 import { THEMES, DEFAULT_THEME } from './themes';
 
@@ -54,4 +55,23 @@ export function ThemeProvider({
 
 export function useTheme(): ThemeValue {
   return useContext(ThemeContext);
+}
+
+// expo-blur's Android blur (unlike iOS's UIVisualEffectView) can't sample
+// "whatever's behind this view" automatically — it needs an explicit ref to
+// a BlurTargetView wrapping the content to blur. app/App.tsx wraps
+// GroundGlow in one and provides the ref here; Card/Tile read it via
+// useBlurTarget() so they don't need to know where that view lives. null
+// (the default) means "no blur target available" — BlurView still renders,
+// just without anything real to blur on Android.
+const BlurTargetContext = createContext<RefObject<View | null> | null>(null);
+
+export function BlurTargetProvider({
+  target, children,
+}: { target: RefObject<View | null>; children: ReactNode }) {
+  return <BlurTargetContext.Provider value={target}>{children}</BlurTargetContext.Provider>;
+}
+
+export function useBlurTarget(): RefObject<View | null> | null {
+  return useContext(BlurTargetContext);
 }

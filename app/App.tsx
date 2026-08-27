@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { BlurTargetView } from 'expo-blur';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -24,7 +25,7 @@ import {
   CormorantGaramond_400Regular,
   CormorantGaramond_500Medium,
 } from '@expo-google-fonts/cormorant-garamond';
-import { ThemeProvider, useTheme, THEMES, DEFAULT_THEME, color, mono, GroundGlow } from '@basalt/ui';
+import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
@@ -68,6 +69,7 @@ const TITLES: Record<ViewKey, string> = {
 function MainShell() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const blurTargetRef = useRef<View>(null);
   const [tab, setTab] = useState<TabKey>('today');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [weightOpen, setWeightOpen] = useState(false);
@@ -118,29 +120,38 @@ function MainShell() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 8 }]}>
-      <GroundGlow />
-      <AppHeader
-        title={TITLES[view]}
-        context={context}
-        onPressGear={() => setSettingsOpen(!settingsOpen)}
-      />
-      <View style={{ flex: 1 }}>
-        <FadeIn viewKey={view}>{body[view]}</FadeIn>
-      </View>
-      <TabBar
-        active={tab}
-        onChange={(t) => {
-          setSettingsOpen(false);
-          setTab(t);
-        }}
-        onPlus={() => setQuickLogOpen(true)}
-      />
-      <QuickLogSheet
-        open={quickLogOpen}
-        onClose={() => setQuickLogOpen(false)}
-        onAction={onQuickAction}
-      />
-      <WeightSheet open={weightOpen} onClose={() => setWeightOpen(false)} onLogged={bumpToday} />
+      {/* expo-blur's Android blur needs an explicit target view to sample —
+          it can't read "whatever's behind this" the way iOS's blur can.
+          This wraps the one thing worth blurring (the ambient glow, over
+          the same flat background every other theme just sees directly)
+          and hands the ref to every Card/Tile via BlurTargetProvider. */}
+      <BlurTargetView ref={blurTargetRef} style={[StyleSheet.absoluteFill, { backgroundColor: theme.surfaces.bg }]}>
+        <GroundGlow />
+      </BlurTargetView>
+      <BlurTargetProvider target={blurTargetRef}>
+        <AppHeader
+          title={TITLES[view]}
+          context={context}
+          onPressGear={() => setSettingsOpen(!settingsOpen)}
+        />
+        <View style={{ flex: 1 }}>
+          <FadeIn viewKey={view}>{body[view]}</FadeIn>
+        </View>
+        <TabBar
+          active={tab}
+          onChange={(t) => {
+            setSettingsOpen(false);
+            setTab(t);
+          }}
+          onPlus={() => setQuickLogOpen(true)}
+        />
+        <QuickLogSheet
+          open={quickLogOpen}
+          onClose={() => setQuickLogOpen(false)}
+          onAction={onQuickAction}
+        />
+        <WeightSheet open={weightOpen} onClose={() => setWeightOpen(false)} onLogged={bumpToday} />
+      </BlurTargetProvider>
     </View>
   );
 }

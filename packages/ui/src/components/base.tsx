@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, type TextStyle, type ViewStyle, type StyleProp 
 import { BlurView } from 'expo-blur';
 import { space, type as typeScale } from '../tokens';
 import { monoTabular } from '../typography';
-import { useTheme, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER, type Theme } from '../theme';
+import { useTheme, useBlurTarget, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER, type Theme } from '../theme';
 
 // Base primitives: Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState.
 // Every component copies the prototype's exact metrics for Minimal — do not
@@ -57,6 +57,7 @@ export function useContainerStyle(theme: Theme): object[] {
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { theme, density } = useTheme();
+  const blurTarget = useBlurTarget();
   const containerStyle = useContainerStyle(theme);
   const cardStyle = [
     styles.card,
@@ -66,9 +67,18 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   ];
   // Depth's glass cards need a REAL backdrop blur — of the GroundGlow behind
   // them (app/App.tsx), not something a flat backgroundColor can fake.
+  // Android's blur (unlike iOS's) can't sample "whatever's behind this" on
+  // its own — blurTarget/blurMethod point it at the BlurTargetView App.tsx
+  // wraps around GroundGlow; see theme/provider.tsx's useBlurTarget().
   if (theme.shape.elevation === 'blur') {
     return (
-      <BlurView intensity={40} tint="dark" style={[{ overflow: 'hidden' }, cardStyle]}>
+      <BlurView
+        intensity={40}
+        tint="dark"
+        blurTarget={blurTarget ?? undefined}
+        blurMethod="dimezisBlurViewSdk31Plus"
+        style={[{ overflow: 'hidden' }, cardStyle]}
+      >
         {children}
       </BlurView>
     );
