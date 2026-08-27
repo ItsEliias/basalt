@@ -52,6 +52,7 @@ export function TrainScreen() {
 }
 
 function SessionTab() {
+  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
@@ -114,7 +115,7 @@ function SessionTab() {
   if (!session.sessionId) {
     return (
       <>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <Card>
           <ReceiptHeader label="Session" />
           <EmptyState>
@@ -209,7 +210,7 @@ function SessionTab() {
 
   return (
     <>
-      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
             <Text style={[styles.addSet, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>
