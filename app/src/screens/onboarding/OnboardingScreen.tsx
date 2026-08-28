@@ -43,7 +43,8 @@ export function OnboardingScreen() {
     const profile = skipped ? { useMetric: true } : buildProfile(state);
     const saved = await saveProfile(supabase, profile);
     if (!saved.ok) {
-      setError(saved.error);
+      console.error('saveProfile failed:', saved.error);
+      setError("Couldn't save your profile — check your connection and try again.");
       setBusy(false);
       return;
     }
@@ -58,7 +59,8 @@ export function OnboardingScreen() {
           reason: t.explanation,
         });
         if (!st.ok) {
-          setError(st.error);
+          console.error('saveTargets failed:', st.error);
+          setError("Couldn't save your targets — check your connection and try again.");
           setBusy(false);
           return;
         }
