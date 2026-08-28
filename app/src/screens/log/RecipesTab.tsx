@@ -26,6 +26,7 @@ export function RecipesTab() {
   const dietaryFlags = profile?.dietaryFlags ?? [];
 
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
+  const [recipesFailed, setRecipesFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
   const [detailPhotoUrl, setDetailPhotoUrl] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -39,7 +40,8 @@ export function RecipesTab() {
   const [groceryNote, setGroceryNote] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    void listRecipes(supabase).then((r) => r.ok && setRecipes(r.data));
+    setRecipesFailed(false);
+    void listRecipes(supabase).then((r) => (r.ok ? setRecipes(r.data) : setRecipesFailed(true)));
   }, []);
   useEffect(() => refresh(), [refresh]);
 
@@ -294,7 +296,11 @@ export function RecipesTab() {
 
       <Card>
         <ReceiptHeader label="Saved recipes" summary={filtered.length > 0 ? 'per serve · scalable' : undefined} />
-        {recipes === null ? (
+        {recipesFailed ? (
+          <Pressable onPress={refresh} hitSlop={8}>
+            <EmptyState>Couldn't load your recipes — tap to retry.</EmptyState>
+          </Pressable>
+        ) : recipes === null ? (
           <EmptyState>Loading…</EmptyState>
         ) : filtered.length > 0 ? (
           filtered.map((r, i) => {

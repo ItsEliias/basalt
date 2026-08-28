@@ -57,6 +57,7 @@ function VitalsTab() {
   const [recentFasts, setRecentFasts] = useState<Fast[]>([]);
   const [fastNow, setFastNow] = useState(Date.now());
   const fastingEnabled = profile?.fastingEnabled ?? false;
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (!fastingEnabled) return;
@@ -66,77 +67,84 @@ function VitalsTab() {
     return () => clearInterval(iv);
   }, [fastingEnabled]);
 
-  useEffect(() => {
+  const loadVitals = useCallback(() => {
+    setLoadFailed(false);
     void (async () => {
-      void runHealthSync();
-      const w = await listWeightEntries(supabase, 14);
-      if (w.ok) setWeights(w.data);
-      setReadiness(await loadReadiness(supabase, new Date()));
-      const c = await getCheckin(supabase, isoDay(new Date()));
-      if (c.ok && c.data) {
-        setCheckinFactors(c.data.factors);
-        setCheckinMood(c.data.mood);
-        setCheckinSaved(true);
-      }
+      try {
+        void runHealthSync();
+        const w = await listWeightEntries(supabase, 14);
+        if (w.ok) setWeights(w.data);
+        setReadiness(await loadReadiness(supabase, new Date()));
+        const c = await getCheckin(supabase, isoDay(new Date()));
+        if (c.ok && c.data) {
+          setCheckinFactors(c.data.factors);
+          setCheckinMood(c.data.mood);
+          setCheckinSaved(true);
+        }
 
-      const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
+        const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
 
-      // Persisted sleep first — the sync job writes sessions + stages into
-      // the ledger; a live HC read is only the fallback.
-      const persisted = await supabase
-        .from('basalt_sleep_sessions')
-        .select('id, bedtime, waketime, source, ext_id, date')
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (persisted.data?.bedtime && persisted.data?.waketime) {
-        const stagesQ = await supabase
-          .from('basalt_sleep_stages')
-          .select('stage, start_time, end_time')
-          .eq('session_id', persisted.data.id)
-          .order('start_time', { ascending: true });
-        const stages = (stagesQ.data ?? []).map((s: any) => ({
-          stage: s.stage,
-          startTime: s.start_time,
-          endTime: s.end_time,
-          minutes: (Date.parse(s.end_time) - Date.parse(s.start_time)) / 60000,
-        }));
-        out.sleep = {
-          id: persisted.data.ext_id ?? persisted.data.id,
-          startTime: persisted.data.bedtime,
-          endTime: persisted.data.waketime,
-          hours: (Date.parse(persisted.data.waketime) - Date.parse(persisted.data.bedtime)) / 3_600_000,
-          stages,
-          hasRealStages: stages.length > 0,
-          dataOrigin: String(persisted.data.source ?? '').replace(/^health_connect:?/, ''),
-        };
-      }
+        // Persisted sleep first — the sync job writes sessions + stages into
+        // the ledger; a live HC read is only the fallback.
+        const persisted = await supabase
+          .from('basalt_sleep_sessions')
+          .select('id, bedtime, waketime, source, ext_id, date')
+          .order('date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (persisted.data?.bedtime && persisted.data?.waketime) {
+          const stagesQ = await supabase
+            .from('basalt_sleep_stages')
+            .select('stage, start_time, end_time')
+            .eq('session_id', persisted.data.id)
+            .order('start_time', { ascending: true });
+          const stages = (stagesQ.data ?? []).map((s: any) => ({
+            stage: s.stage,
+            startTime: s.start_time,
+            endTime: s.end_time,
+            minutes: (Date.parse(s.end_time) - Date.parse(s.start_time)) / 60000,
+          }));
+          out.sleep = {
+            id: persisted.data.ext_id ?? persisted.data.id,
+            startTime: persisted.data.bedtime,
+            endTime: persisted.data.waketime,
+            hours: (Date.parse(persisted.data.waketime) - Date.parse(persisted.data.bedtime)) / 3_600_000,
+            stages,
+            hasRealStages: stages.length > 0,
+            dataOrigin: String(persisted.data.source ?? '').replace(/^health_connect:?/, ''),
+          };
+        }
 
-      const avail = await healthService.isAvailable();
-      if (avail.ok && avail.data === 'available') {
-        out.available = true;
-        const granted = await healthService.getGrantedPermissions();
-        out.granted = granted.ok ? granted.data : [];
-        if (!out.sleep && out.granted.includes('sleep')) {
-          const s = await healthService.getSleepSessionForNight();
-          if (s.ok) out.sleep = s.data;
+        const avail = await healthService.isAvailable();
+        if (avail.ok && avail.data === 'available') {
+          out.available = true;
+          const granted = await healthService.getGrantedPermissions();
+          out.granted = granted.ok ? granted.data : [];
+          if (!out.sleep && out.granted.includes('sleep')) {
+            const s = await healthService.getSleepSessionForNight();
+            if (s.ok) out.sleep = s.data;
+          }
+          if (out.granted.includes('hrv')) {
+            const h = await healthService.getHrvForDay();
+            if (h.ok && h.data.length > 0) out.hrv = Math.round(h.data.reduce((a, b) => a + b.ms, 0) / h.data.length);
+          }
+          if (out.granted.includes('restingHeartRate')) {
+            const r = await healthService.getRestingHeartRate();
+            if (r.ok) out.rhr = r.data;
+          }
+          if (out.granted.includes('spo2')) {
+            const s = await healthService.getSpO2ForDay();
+            if (s.ok && s.data.length > 0) out.spo2 = Math.round(s.data.reduce((a, b) => a + b, 0) / s.data.length);
+          }
         }
-        if (out.granted.includes('hrv')) {
-          const h = await healthService.getHrvForDay();
-          if (h.ok && h.data.length > 0) out.hrv = Math.round(h.data.reduce((a, b) => a + b.ms, 0) / h.data.length);
-        }
-        if (out.granted.includes('restingHeartRate')) {
-          const r = await healthService.getRestingHeartRate();
-          if (r.ok) out.rhr = r.data;
-        }
-        if (out.granted.includes('spo2')) {
-          const s = await healthService.getSpO2ForDay();
-          if (s.ok && s.data.length > 0) out.spo2 = Math.round(s.data.reduce((a, b) => a + b, 0) / s.data.length);
-        }
+        setVitals(out);
+      } catch (e) {
+        console.error('Recover vitals load failed:', e);
+        setLoadFailed(true);
       }
-      setVitals(out);
     })();
   }, []);
+  useEffect(() => loadVitals(), [loadVitals]);
 
   const rate = weeklyWeightRate(weights);
   const latest = weights.length > 0 ? weights[weights.length - 1] : null;
@@ -151,7 +159,11 @@ function VitalsTab() {
       {/* ── Readiness — published formula, math one tap away ───────── */}
       <Card>
         <ReceiptHeader label="Readiness" summary={ready?.score !== null && ready ? 'tap for the math' : undefined} />
-        {ready === null ? (
+        {loadFailed && ready === null ? (
+          <Pressable onPress={loadVitals} hitSlop={8}>
+            <EmptyState>Couldn't read your vitals — tap to retry.</EmptyState>
+          </Pressable>
+        ) : ready === null ? (
           <EmptyState>Reading your vitals…</EmptyState>
         ) : ready.score === null ? (
           <EmptyState>
@@ -317,13 +329,19 @@ function VitalsTab() {
         ) : (
           <>
             <KV label="Sleep" />
-            <EmptyState>
-              {vitals === null
-                ? 'Checking sources…'
-                : vitals.available
-                  ? 'No sleep recorded for last night. Synced sessions appear here with their measured stages.'
-                  : 'No sleep source connected. Connect Health Connect in Settings and last night appears here — measured, never fabricated.'}
-            </EmptyState>
+            {loadFailed && vitals === null ? (
+              <Pressable onPress={loadVitals} hitSlop={8}>
+                <EmptyState>Couldn't check your sources — tap to retry.</EmptyState>
+              </Pressable>
+            ) : (
+              <EmptyState>
+                {vitals === null
+                  ? 'Checking sources…'
+                  : vitals.available
+                    ? 'No sleep recorded for last night. Synced sessions appear here with their measured stages.'
+                    : 'No sleep source connected. Connect Health Connect in Settings and last night appears here — measured, never fabricated.'}
+              </EmptyState>
+            )}
           </>
         )}
       </Card>

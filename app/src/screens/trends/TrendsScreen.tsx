@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays,
@@ -33,51 +33,61 @@ export function TrendsScreen() {
   const [year, setYear] = useState<YearReview | null>(null);
   const [challenge, setChallenge] = useState<MonthlyChallenge>(null);
   const challengeEnabled = useAppStore((s) => s.profile?.challengeEnabled ?? false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoadFailed(false);
     void (async () => {
-      const [full, any, wr] = await Promise.all([
-        activeDaysFor(supabase, 'full'),
-        activeDaysFor(supabase, 'any'),
-        loadWeekReview(supabase, new Date()),
-      ]);
-      if (wr.ok) setReview(wr.data);
-      const series = await loadDailySeries(supabase, new Date());
-      if (series.ok) setCorrelations(computeCorrelations(series.data));
-      const yc = await loadYearAndChallenge(supabase, new Date());
-      if (yc.ok) {
-        setYear(yc.data.year);
-        setChallenge(yc.data.challenge);
-      }
-      setFullDays(full.ok ? full.data : new Set());
-      setAnyDays(any.ok ? any.data : new Set());
+      try {
+        const [full, any, wr] = await Promise.all([
+          activeDaysFor(supabase, 'full'),
+          activeDaysFor(supabase, 'any'),
+          loadWeekReview(supabase, new Date()),
+        ]);
+        if (wr.ok) setReview(wr.data);
+        else setLoadFailed(true);
+        const series = await loadDailySeries(supabase, new Date());
+        if (series.ok) setCorrelations(computeCorrelations(series.data));
+        else setLoadFailed(true);
+        const yc = await loadYearAndChallenge(supabase, new Date());
+        if (yc.ok) {
+          setYear(yc.data.year);
+          setChallenge(yc.data.challenge);
+        }
+        setFullDays(full.ok ? full.data : new Set());
+        setAnyDays(any.ok ? any.data : new Set());
 
-      // Records: best e1RM per exercise from real set history.
-      const { data: sets } = await supabase
-        .from('basalt_set_entries')
-        .select('weight_kg, reps, set_type, completed_at, session_exercise_id')
-        .not('weight_kg', 'is', null)
-        .limit(2000);
-      const { data: exs } = await supabase
-        .from('basalt_session_exercises')
-        .select('id, exercise_name')
-        .limit(1000);
-      const nameFor = new Map<string, string>((exs ?? []).map((r: any) => [r.id, r.exercise_name]));
-      const best = new Map<string, { e1rm: number; date: string }>();
-      for (const s of sets ?? []) {
-        if ((s as any).set_type === 'warmup') continue;
-        const v = e1rm(Number((s as any).weight_kg), (s as any).reps ?? null);
-        if (v === null) continue;
-        const name = nameFor.get((s as any).session_exercise_id);
-        if (!name) continue;
-        const cur = best.get(name);
-        if (!cur || v > cur.e1rm) best.set(name, { e1rm: v, date: (s as any).completed_at });
+        // Records: best e1RM per exercise from real set history.
+        const { data: sets } = await supabase
+          .from('basalt_set_entries')
+          .select('weight_kg, reps, set_type, completed_at, session_exercise_id')
+          .not('weight_kg', 'is', null)
+          .limit(2000);
+        const { data: exs } = await supabase
+          .from('basalt_session_exercises')
+          .select('id, exercise_name')
+          .limit(1000);
+        const nameFor = new Map<string, string>((exs ?? []).map((r: any) => [r.id, r.exercise_name]));
+        const best = new Map<string, { e1rm: number; date: string }>();
+        for (const s of sets ?? []) {
+          if ((s as any).set_type === 'warmup') continue;
+          const v = e1rm(Number((s as any).weight_kg), (s as any).reps ?? null);
+          if (v === null) continue;
+          const name = nameFor.get((s as any).session_exercise_id);
+          if (!name) continue;
+          const cur = best.get(name);
+          if (!cur || v > cur.e1rm) best.set(name, { e1rm: v, date: (s as any).completed_at });
+        }
+        const allRecords = Array.from(best.entries()).map(([name, v]) => ({ name, e1rm: v.e1rm, date: v.date }));
+        setRecords([...allRecords].sort((a, b) => b.e1rm - a.e1rm).slice(0, 5));
+        setBig3(bigThree(allRecords));
+      } catch (e) {
+        console.error('Trends load failed:', e);
+        setLoadFailed(true);
       }
-      const allRecords = Array.from(best.entries()).map(([name, v]) => ({ name, e1rm: v.e1rm, date: v.date }));
-      setRecords([...allRecords].sort((a, b) => b.e1rm - a.e1rm).slice(0, 5));
-      setBig3(bigThree(allRecords));
     })();
   }, []);
+  useEffect(() => load(), [load]);
 
   const today = new Date();
   const partial = new Set<string>();
@@ -97,7 +107,11 @@ export function TrendsScreen() {
       {/* ── Week in review — composed, never cheered ───────────────── */}
       <Card>
         <ReceiptHeader label="Week in review" summary={review?.rangeLabel} />
-        {review === null ? (
+        {loadFailed && review === null ? (
+          <Pressable onPress={load} hitSlop={8}>
+            <EmptyState>Couldn't read last week — tap to retry.</EmptyState>
+          </Pressable>
+        ) : review === null ? (
           <EmptyState>Reading last week…</EmptyState>
         ) : review.lede === null ? (
           <EmptyState>
@@ -200,7 +214,11 @@ export function TrendsScreen() {
       {/* ── Correlations — gated, disclaimed, checked-not-shown named ── */}
       <Card>
         <ReceiptHeader label="Correlations" summary={correlations ? `${correlations.shown.length} past the gates` : undefined} />
-        {correlations === null ? (
+        {loadFailed && correlations === null ? (
+          <Pressable onPress={load} hitSlop={8}>
+            <EmptyState>Couldn't read your daily series — tap to retry.</EmptyState>
+          </Pressable>
+        ) : correlations === null ? (
           <EmptyState>Reading your daily series…</EmptyState>
         ) : (
           <>
