@@ -71,5 +71,5 @@ export function BodyFigure({
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center' },
   labels: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 4 },
-  label: { fontFamily: mono, fontSize: 7.5, letterSpacing: 1, color: color.faint },
+  label: { fontFamily: mono, fontSize: 11, letterSpacing: 1, color: color.faint },
 });

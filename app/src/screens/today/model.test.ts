@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupEntriesByMeal, heroModel, sessionMeta, microTotals, entryMeta } from './model';
+import { groupEntriesByMeal, heroModel, sessionMeta, microTotals, entryMeta, todayTileSpecs } from './model';
 import type { FoodEntryRow } from '@basalt/nutrition';
 import type { TargetsRecord } from '@basalt/core-data';
 
@@ -96,5 +96,67 @@ describe('microTotals — only nutrients with source data', () => {
 
   it('yields [] with no source micros — the card hides, no estimates as fact', () => {
     expect(microTotals([entry({}), entry({ micros: {} })])).toEqual([]);
+  });
+});
+
+describe('todayTileSpecs — the Tiles layout fixed v1 content model', () => {
+  const totals = { calories: 1728, protein: 142, carbs: 203, fat: 48, fiber: 19, sugar: 41, sodiumMg: 1600 };
+  const hero = heroModel(targets, totals, null);
+  const base = {
+    hero, hideNumbers: false, targets, totals,
+    steps: 8412, sleepHours: 7.2, waterMl: 1750, waterTargetMl: 2850,
+    hydrationEnabled: true, trainingTitle: null,
+  };
+
+  it('always includes energy (full) and training (full) — six slots when fully populated', () => {
+    const tiles = todayTileSpecs(base);
+    expect(tiles.map((t) => t.key)).toEqual(['energy', 'protein', 'steps', 'sleep', 'water', 'training']);
+    expect(tiles.find((t) => t.key === 'energy')?.span).toBe('full');
+    expect(tiles.find((t) => t.key === 'training')?.span).toBe('full');
+    expect(tiles.filter((t) => t.span === 'half')).toHaveLength(4);
+  });
+
+  it('rest day is real information, not an empty state', () => {
+    const t = todayTileSpecs(base).find((x) => x.key === 'training')!;
+    expect(t.value).toBe('Rest day');
+    expect(t.empty).toBeUndefined();
+  });
+
+  it('a real session names itself instead of "Rest day"', () => {
+    const t = todayTileSpecs({ ...base, trainingTitle: 'Push day' }).find((x) => x.key === 'training')!;
+    expect(t.value).toBe('Push day');
+  });
+
+  it('protein is absent (not empty) with no targets — hide, not a placeholder', () => {
+    const tiles = todayTileSpecs({ ...base, targets: null, hero: null });
+    expect(tiles.find((t) => t.key === 'protein')).toBeUndefined();
+  });
+
+  it('water is absent (not empty) when hydration is disabled', () => {
+    const tiles = todayTileSpecs({ ...base, hydrationEnabled: false });
+    expect(tiles.find((t) => t.key === 'water')).toBeUndefined();
+  });
+
+  it('steps and sleep show an honest empty state with no source — never a zero', () => {
+    const tiles = todayTileSpecs({ ...base, steps: null, sleepHours: null });
+    const steps = tiles.find((t) => t.key === 'steps')!;
+    const sleep = tiles.find((t) => t.key === 'sleep')!;
+    expect(steps.empty).toBe(true);
+    expect(steps.value).toBeUndefined();
+    expect(sleep.empty).toBe(true);
+    expect(sleep.value).toBeUndefined();
+  });
+
+  it('energy tile states over-target plainly via unit + tone, matching the ledger hero', () => {
+    const overHero = heroModel(targets, { ...totals, calories: 2500 }, null);
+    const t = todayTileSpecs({ ...base, hero: overHero }).find((x) => x.key === 'energy')!;
+    expect(t.unit).toBe('kcal over');
+    expect(t.over).toBe(true);
+  });
+
+  it('hideNumbers empties the energy tile honestly instead of showing hidden numbers', () => {
+    const t = todayTileSpecs({ ...base, hideNumbers: true }).find((x) => x.key === 'energy')!;
+    expect(t.empty).toBe(true);
+    expect(t.value).toBeUndefined();
   });
 });

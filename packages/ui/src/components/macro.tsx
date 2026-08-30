@@ -1,23 +1,38 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { color } from '../tokens';
 import { mono, monoTabular } from '../typography';
-import { capState, fillPct } from '../format';
+import { capState, fillPct, overCapSuffix } from '../format';
+import { useTheme, resolveTypeface } from '../theme';
 
 // Macro rows, cap rows, hairline bars and the segmented macro stack —
 // prototype .macro / .bar / .stack, metrics copied exactly.
 
-/** 3px hairline progress bar. */
+/** Progress bar — track geometry/colour from the theme (reference/themes-
+ *  today.html's `.meter`), fill colour stays caller-supplied so macro/cap
+ *  rows keep their own semantic colours (protein/carbs/fat, or fat/faint
+ *  for cap state) rather than every bar collapsing to one accent. */
 export function Bar({ pct, fill }: { pct: number; fill: string }) {
+  const { theme } = useTheme();
   return (
-    <View style={styles.barTrack}>
-      <View style={[styles.barFill, { width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: fill }]} />
+    <View
+      style={[
+        styles.barTrack,
+        { height: theme.shape.meterHeight, borderRadius: theme.shape.meterRadius, backgroundColor: theme.surfaces.surface2 },
+      ]}
+    >
+      <View
+        style={[
+          styles.barFill,
+          { width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: fill, borderRadius: theme.shape.meterRadius },
+        ]}
+      />
     </View>
   );
 }
 
 function Ratio({ value, target, unit, over }: { value: string; target: string; unit: string; over?: boolean }) {
   return (
-    <Text style={[styles.ratio, over && { color: color.fat }]}>
+    <Text style={[styles.ratio, over && { color: color.fat }]} maxFontSizeMultiplier={1.3}>
       {value} <Text style={[styles.ratioOf, over && { color: color.fat }]}>/ {target} {unit}</Text>
       {over ? '' : null}
     </Text>
@@ -45,29 +60,55 @@ export function MacroRow({
 }
 
 /**
- * Cap row — under is the goal. Over-state: bar 100% in --fat, ratio text in
- * --fat with "· N over" stated plainly. Never hidden, never scolded.
+ * Cap row — under is the goal. First component migrated onto the theme
+ * contract (see packages/ui/src/theme/): text colour, fill colour, and
+ * `expression.overCap` together decide the over-state, so it renders
+ * correctly in any of the six themes, not just Minimal.
+ *
+ * Deliberately does NOT read `shape.align` — verified against
+ * reference/themes-today.html: every theme including Atelier keeps list
+ * rows left-aligned (`align: 'center'` only centres hero/tile content).
+ * Not a gap; a row component has nothing to center.
+ *
+ * `overCap` controls how the over-state is WORDED, never whether it's
+ * shown — the bar and dot always fill in `fill.fat` regardless:
+ *   'all'  -> numeric delta stated ("· 5 over")
+ *   'word' -> plain word, no delta ("— over")
+ *   'fill' -> the fill alone carries it, no extra text
+ * ('color' is contractually forbidden — colour alone fails WCAG 1.4.1 and
+ * the honesty rule that over-cap is stated plainly.)
  */
 export function CapRow({
   name, value, cap, unit = 'g', decimals = 0,
 }: {
   name: string; value: number; cap: number; unit?: string; decimals?: number;
 }) {
+  const { theme } = useTheme();
   const s = capState(value, cap);
   const fmt = (n: number) => n.toFixed(decimals);
+  const overSuffix = overCapSuffix(s.over, theme.expression.overCap, s.overBy, fmt);
+  const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
+  const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
+
   return (
     <View style={styles.macro}>
       <View style={styles.kv}>
-        <Text style={styles.name}>
-          <View style={[styles.dot, { backgroundColor: s.over ? color.fat : color.faint }]} />
+        <Text style={[styles.name, { color: theme.text.ink2 }]}>
+          <View style={[styles.dot, { backgroundColor: s.over ? theme.fill.fat : theme.fill.faint }]} />
           {'  '}{name}
         </Text>
-        <Text style={[styles.ratio, s.over && { color: color.fat }]}>
-          {fmt(value)} <Text style={[styles.ratioOf, s.over && { color: color.fat }]}>/ {fmt(cap)} {unit}</Text>
-          {s.over ? ` · ${fmt(s.overBy)} over` : ''}
+        <Text
+          style={[styles.ratio, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.ink2 }]}
+          maxFontSizeMultiplier={1.3}
+        >
+          {fmt(value)}{' '}
+          <Text style={[styles.ratioOf, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.faint }]}>
+            / {fmt(cap)} {unit}
+          </Text>
+          {overSuffix}
         </Text>
       </View>
-      <Bar pct={s.fillPct} fill={s.over ? color.fat : color.faint} />
+      <Bar pct={s.fillPct} fill={s.over ? theme.fill.fat : theme.fill.faint} />
     </View>
   );
 }
@@ -97,8 +138,8 @@ const styles = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 2 },
   ratio: { ...monoTabular, fontSize: 12, color: color.ink2 },
   ratioOf: { fontFamily: mono, color: color.faint },
-  barTrack: { height: 3, borderRadius: 2, backgroundColor: color.border, marginTop: 7, overflow: 'hidden' },
-  barFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2 },
+  barTrack: { marginTop: 7, overflow: 'hidden' },
+  barFill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
   stack: { height: 6, borderRadius: 3, marginTop: 14, flexDirection: 'row', gap: 2 },
   stackSeg: { borderRadius: 2 },
   stackRest: { backgroundColor: color.border },

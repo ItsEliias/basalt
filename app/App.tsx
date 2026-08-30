@@ -1,8 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { BlurTargetView } from 'expo-blur';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ThemeProvider, color, mono } from '@basalt/ui';
+import { useFonts } from 'expo-font';
+import { Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
+import { Barlow_400Regular, Barlow_600SemiBold, Barlow_700Bold } from '@expo-google-fonts/barlow';
+import {
+  BarlowCondensed_400Regular,
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+} from '@expo-google-fonts/barlow-condensed';
+import { Archivo_400Regular, Archivo_600SemiBold, Archivo_900Black } from '@expo-google-fonts/archivo';
+import { ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
+import { Manrope_400Regular, Manrope_600SemiBold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
+import { Jost_300Light, Jost_400Regular, Jost_500Medium } from '@expo-google-fonts/jost';
+import {
+  IBMPlexMono_300Light,
+  IBMPlexMono_400Regular,
+  IBMPlexMono_500Medium,
+} from '@expo-google-fonts/ibm-plex-mono';
+import {
+  CormorantGaramond_300Light,
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium,
+} from '@expo-google-fonts/cormorant-garamond';
+import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
@@ -45,6 +68,8 @@ const TITLES: Record<ViewKey, string> = {
 
 function MainShell() {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const blurTargetRef = useRef<View>(null);
   const [tab, setTab] = useState<TabKey>('today');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [weightOpen, setWeightOpen] = useState(false);
@@ -94,35 +119,46 @@ function MainShell() {
     : today.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
-      <AppHeader
-        title={TITLES[view]}
-        context={context}
-        onPressGear={() => setSettingsOpen(!settingsOpen)}
-      />
-      <View style={{ flex: 1 }}>
-        <FadeIn viewKey={view}>{body[view]}</FadeIn>
-      </View>
-      <TabBar
-        active={tab}
-        onChange={(t) => {
-          setSettingsOpen(false);
-          setTab(t);
-        }}
-        onPlus={() => setQuickLogOpen(true)}
-      />
-      <QuickLogSheet
-        open={quickLogOpen}
-        onClose={() => setQuickLogOpen(false)}
-        onAction={onQuickAction}
-      />
-      <WeightSheet open={weightOpen} onClose={() => setWeightOpen(false)} onLogged={bumpToday} />
+    <View style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 8 }]}>
+      {/* expo-blur's Android blur needs an explicit target view to sample —
+          it can't read "whatever's behind this" the way iOS's blur can.
+          This wraps the one thing worth blurring (the ambient glow, over
+          the same flat background every other theme just sees directly)
+          and hands the ref to every Card/Tile via BlurTargetProvider. */}
+      <BlurTargetView ref={blurTargetRef} style={[StyleSheet.absoluteFill, { backgroundColor: theme.surfaces.bg }]}>
+        <GroundGlow />
+      </BlurTargetView>
+      <BlurTargetProvider target={blurTargetRef}>
+        <AppHeader
+          title={TITLES[view]}
+          context={context}
+          onPressGear={() => setSettingsOpen(!settingsOpen)}
+        />
+        <View style={{ flex: 1 }}>
+          <FadeIn viewKey={view}>{body[view]}</FadeIn>
+        </View>
+        <TabBar
+          active={tab}
+          onChange={(t) => {
+            setSettingsOpen(false);
+            setTab(t);
+          }}
+          onPlus={() => setQuickLogOpen(true)}
+        />
+        <QuickLogSheet
+          open={quickLogOpen}
+          onClose={() => setQuickLogOpen(false)}
+          onAction={onQuickAction}
+        />
+        <WeightSheet open={weightOpen} onClose={() => setWeightOpen(false)} onLogged={bumpToday} />
+      </BlurTargetProvider>
     </View>
   );
 }
 
 function Gate() {
   const { session, sessionLoaded, profile, bootstrapped, init } = useAppStore();
+  const { theme } = useTheme();
 
   useEffect(() => {
     init();
@@ -132,8 +168,8 @@ function Gate() {
 
   if (!sessionLoaded || (session && !bootstrapped)) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.brand}>BASALT</Text>
+      <View style={[styles.loading, { backgroundColor: theme.surfaces.bg }]}>
+        <Text style={[styles.brand, { color: theme.text.faint }]}>BASALT</Text>
       </View>
     );
   }
@@ -143,9 +179,39 @@ function Gate() {
 }
 
 export default function App() {
+  // The five non-Minimal themes' typography (docs/THEME-SYSTEM-REPORT.md)
+  // needs these bundled — resolveTypeface can't return a family expo-font
+  // hasn't registered yet, so first paint waits on this the same way it
+  // already waits on session/profile below.
+  const [fontsLoaded] = useFonts({
+    Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold,
+    Barlow_400Regular, Barlow_600SemiBold, Barlow_700Bold,
+    BarlowCondensed_400Regular, BarlowCondensed_600SemiBold, BarlowCondensed_700Bold,
+    Archivo_400Regular, Archivo_600SemiBold, Archivo_900Black,
+    ArchivoBlack_400Regular,
+    Manrope_400Regular, Manrope_600SemiBold, Manrope_800ExtraBold,
+    Jost_300Light, Jost_400Regular, Jost_500Medium,
+    IBMPlexMono_300Light, IBMPlexMono_400Regular, IBMPlexMono_500Medium,
+    CormorantGaramond_300Light, CormorantGaramond_400Regular, CormorantGaramond_500Medium,
+  });
+
+  // Settings → Display. Falls back to the ThemeProvider's own defaults
+  // (Minimal/comfortable/system) before the profile has loaded — never
+  // blocks first paint on a network round trip.
+  const profile = useAppStore((s) => s.profile);
+  const theme = profile?.theme ? THEMES[profile.theme] : THEMES[DEFAULT_THEME];
+
+  if (!fontsLoaded) {
+    return (
+      <View style={[styles.loading, { backgroundColor: theme.surfaces.bg }]}>
+        <Text style={[styles.brand, { color: theme.text.faint }]}>BASALT</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
+      <ThemeProvider theme={theme} density={profile?.density} textScale={profile?.textScale}>
         <StatusBar style="light" />
         <Gate />
       </ThemeProvider>

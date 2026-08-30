@@ -12,7 +12,6 @@
     },
     "android": {
       "package": "com.itseliias.basalt",
-      "minSdkVersion": 26,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -48,7 +47,19 @@
       "react-native-health-connect",
       "@maplibre/maplibre-react-native",
       "expo-notifications",
-      "./plugins/withTimerFgs.js",
+      "./plugins/withForegroundServiceTypes.js",
+      "./plugins/withNotifeeMavenRepo.js",
+      "./plugins/withHealthConnectQueries.js",
+      "./plugins/withHealthConnectPermissionDelegate.js",
+      "./plugins/withDisableForceDark.js",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
       [
         "react-native-android-widget",
         {

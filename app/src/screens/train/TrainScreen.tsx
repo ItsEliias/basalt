@@ -6,7 +6,7 @@ import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, BodyFigure,
   ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav,
   GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput,
-  color, mono, mmss, groupInt,
+  color, mono, mmss, groupInt, useTheme,
 } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
@@ -14,8 +14,10 @@ import {
   emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree, recoveryIntensity,
   REGION_FOR_MUSCLE, type RegionRecovery, type BodyRegion,
   describe as describeGuided,
+  listTemplates, deleteTemplate, duplicateTemplate, type WorkoutTemplate,
   type Exercise, type WorkoutSession, type ConditionBias,
 } from '@basalt/training';
+import { TemplateBuilder } from './TemplateBuilder';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
@@ -25,6 +27,7 @@ import { AdaptSheet } from './AdaptSheet';
 import { timerServiceFailed } from '../../lib/timerService';
 import { loadRecovery, toggleRecoveryOverride } from '../../lib/recoveryData';
 import { PrShareCard, ShareSheet } from '../../components/ShareCards';
+import { SessionDetailSheet } from '../../components/SessionDetailSheet';
 
 // Train — the relational set logger. Prev values ghost as editable defaults,
 // completion is a typographic state change with a quiet PR mark, rest timers
@@ -34,14 +37,14 @@ export function TrainScreen() {
   const [sub, setSub] = useState('Session');
   if (sub === 'Outdoor') {
     return (
-      <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <View style={{ flex: 1 }}>
         <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
         <OutdoorTab />
       </View>
     );
   }
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
+    <View style={{ flex: 1 }}>
       <SubNav items={['Session', 'Outdoor']} active={sub} onChange={setSub} />
       <SessionTab />
     </View>
@@ -49,6 +52,7 @@ export function TrainScreen() {
 }
 
 function SessionTab() {
+  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
@@ -72,13 +76,18 @@ function SessionTab() {
     if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
   };
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
+  const [viewSessionId, setViewSessionId] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<RegionRecovery[] | null>(null);
   const refreshRecovery = () => void loadRecovery(Date.now()).then((r) => setRecovery(r.recovery));
   const [, forceClock] = useState(0);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const refreshTemplates = () => void listTemplates(supabase).then((r) => r.ok && setTemplates(r.data));
 
   useEffect(() => {
     if (!session.sessionId) {
       void listRecentSessions(supabase, 8).then((r) => r.ok && setRecent(r.data));
+      refreshTemplates();
     }
     refreshRecovery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,9 +100,22 @@ function SessionTab() {
     return () => clearInterval(iv);
   }, [session.sessionId]);
 
+  if (builderOpen) {
+    return (
+      <TemplateBuilder
+        onClose={() => setBuilderOpen(false)}
+        onSaved={() => {
+          setBuilderOpen(false);
+          refreshTemplates();
+        }}
+      />
+    );
+  }
+
   if (!session.sessionId) {
     return (
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <>
+      <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <Card>
           <ReceiptHeader label="Session" />
           <EmptyState>
@@ -101,6 +123,40 @@ function SessionTab() {
             ledger as its own row.
           </EmptyState>
           <CTA label={session.busy ? '…' : 'Start session'} disabled={session.busy} onPress={() => void session.start()} />
+        </Card>
+
+        <Card>
+          <ReceiptHeader label="Templates" summary="start with your own plan pre-filled" />
+          {templates.length > 0 ? (
+            templates.map((t, i) => (
+              <View key={t.id}>
+                <Pressable
+                  onPress={() => void session.startFromTemplate(t.id)}
+                  onLongPress={() => void deleteTemplate(supabase, t.id).then(refreshTemplates)}
+                  hitSlop={8}
+                >
+                  <ReceiptRow
+                    name={t.name}
+                    meta={`${t.location === 'gym' ? 'GYM' : 'HOME'} · hold to remove`}
+                    value="start"
+                    last={i === templates.length - 1}
+                  />
+                </Pressable>
+                <View style={styles.pickerLinks}>
+                  <Pressable
+                    onPress={() => void duplicateTemplate(supabase, t.id, `${t.name} copy`).then(refreshTemplates)}
+                  >
+                    <Text style={styles.timedLink}>DUPLICATE →</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))
+          ) : (
+            <EmptyState>No templates yet — build one below to start a session with your own targets pre-filled.</EmptyState>
+          )}
+          <Pressable onPress={() => setBuilderOpen(true)}>
+            <Text style={styles.addSet}>+ NEW TEMPLATE</Text>
+          </Pressable>
         </Card>
 
         {recovery && recovery.length > 0 ? (
@@ -113,6 +169,7 @@ function SessionTab() {
               <Pressable
                 key={r.region}
                 onPress={() => void toggleRecoveryOverride(r.region, Date.now()).then(refreshRecovery)}
+                hitSlop={8}
               >
                 <ReceiptRow
                   name={r.region[0]!.toUpperCase() + r.region.slice(1)}
@@ -131,26 +188,29 @@ function SessionTab() {
           <ReceiptHeader label="Recent sessions" />
           {recent.length > 0 ? (
             recent.map((s, i) => (
-              <ReceiptRow
-                key={s.id}
-                name={s.notes?.trim() || 'Training session'}
-                meta={new Date(s.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}
-                value={s.endedAt ? mmss((Date.parse(s.endedAt) - Date.parse(s.startedAt)) / 1000) : '—'}
-                unit={s.endedAt ? 'duration' : 'open'}
-                last={i === recent.length - 1}
-              />
+              <Pressable key={s.id} onPress={() => setViewSessionId(s.id)} hitSlop={8}>
+                <ReceiptRow
+                  name={s.notes?.trim() || 'Training session'}
+                  meta={`${new Date(s.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })} · tap for detail`}
+                  value={s.endedAt ? mmss((Date.parse(s.endedAt) - Date.parse(s.startedAt)) / 1000) : '—'}
+                  unit={s.endedAt ? 'duration' : 'open'}
+                  last={i === recent.length - 1}
+                />
+              </Pressable>
             ))
           ) : (
             <EmptyState>No sessions yet. The first one starts the history every Prev column draws from.</EmptyState>
           )}
         </Card>
       </ScrollView>
+      <SessionDetailSheet sessionId={viewSessionId} onClose={() => setViewSessionId(null)} />
+    </>
     );
   }
 
   return (
     <>
-      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
             <Text style={[styles.addSet, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>
@@ -321,6 +381,11 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           </Text>
         </Pressable>
       ) : null}
+      {ex.target ? (
+        <PrevNote>
+          {`Target · ${ex.target.sets} × ${ex.target.reps ?? '?'} reps${ex.target.weightKg ? ` @ ${ex.target.weightKg} kg` : ''} · from your template`}
+        </PrevNote>
+      ) : null}
       {ex.prevSets.length > 0 && ex.prevPerformedAt ? (
         <PrevNote>
           {`Last session · ${prevSummary(ex.prevSets) ?? '—'} · ${new Date(ex.prevPerformedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`}
@@ -456,6 +521,9 @@ function ExerciseDetailSheet({ exercise, onClose, onPick }: {
           </Text>
         ) : null}
         <CTA label="Add to session" onPress={() => { onClose(); onPick(exercise, false); }} />
+        <Pressable onPress={() => { onClose(); onPick(exercise, true); }}>
+          <Text style={styles.addAsTimed}>ADD AS TIMED (PLANK-STYLE) →</Text>
+        </Pressable>
         <SrcNote>Primary solid · secondary faded · muscle data from free-exercise-db</SrcNote>
       </View>
     </Modal>
@@ -571,7 +639,7 @@ function KeepAwakeWhileTraining() {
   return null;
 }
 
-function ExercisePicker({
+export function ExercisePicker({
   open, onClose, onPick, myEquipment, hasEquipmentProfile, loadedRegions,
 }: {
   open: boolean;
@@ -581,6 +649,7 @@ function ExercisePicker({
   hasEquipmentProfile: boolean;
   loadedRegions?: Set<BodyRegion>;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const conditions = useAppStore((s) => s.profile?.conditions ?? []);
   const [query, setQuery] = useState('');
@@ -608,7 +677,7 @@ function ExercisePicker({
 
   return (
     <Modal visible={open} animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.picker, { paddingTop: insets.top + 12, paddingBottom: insets.bottom }]}>
+      <View style={[styles.picker, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 12, paddingBottom: insets.bottom }]}>
         <View style={styles.pickerHead}>
           <Text style={styles.pickerTitle}>Library</Text>
           <Pressable onPress={onClose} hitSlop={10}>
@@ -628,29 +697,19 @@ function ExercisePicker({
         </ScrollView>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           {results.map((e, i) => (
-            <View key={e.id}>
-              <Pressable onPress={() => onPick(e, false)}>
-                <ReceiptRow
-                  name={e.name}
-                  meta={
-                    (loadedRegions && e.primaryMuscles.some((m) => loadedRegions.has(REGION_FOR_MUSCLE[m.toLowerCase()]!)) ? '· trained recently ' : '') +
-                    (e.bias.down
-                      ? `${[...e.primaryMuscles, e.equipment ?? ''].filter(Boolean).join(' · ')} · listed lower — ${e.bias.reason} (you noted ${e.bias.condition?.toLowerCase()})`
-                      : [...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · '))
-                  }
-                  value="add"
-                  last={i === results.length - 1}
-                />
-              </Pressable>
-              <View style={styles.pickerLinks}>
-                <Pressable onPress={() => onPick(e, true)}>
-                  <Text style={styles.timedLink}>ADD AS TIMED (PLANK-STYLE) →</Text>
-                </Pressable>
-                <Pressable onPress={() => setDetailFor(e)}>
-                  <Text style={styles.timedLink}>DETAILS →</Text>
-                </Pressable>
-              </View>
-            </View>
+            <Pressable key={e.id} onPress={() => setDetailFor(e)} hitSlop={8}>
+              <ReceiptRow
+                name={e.name}
+                meta={
+                  (loadedRegions && e.primaryMuscles.some((m) => loadedRegions.has(REGION_FOR_MUSCLE[m.toLowerCase()]!)) ? '· trained recently ' : '') +
+                  (e.bias.down
+                    ? `${[...e.primaryMuscles, e.equipment ?? ''].filter(Boolean).join(' · ')} · listed lower — ${e.bias.reason} (you noted ${e.bias.condition?.toLowerCase()})`
+                    : [...e.primaryMuscles, e.equipment ?? '', e.difficulty ?? ''].filter(Boolean).join(' · '))
+                }
+                value="→"
+                last={i === results.length - 1}
+              />
+            </Pressable>
           ))}
           {results.length === 0 ? (
             <EmptyState>No movements match those filters.</EmptyState>
@@ -670,32 +729,32 @@ function ExercisePicker({
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
-  elapsed: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'right', marginTop: 10 },
+  elapsed: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'right', marginTop: 10 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  addSet: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
+  addSet: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
   rowActions: { flexDirection: 'row', justifyContent: 'space-between' },
-  linkAction: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
-  suggestion: { fontFamily: mono, fontSize: 9.5, letterSpacing: 0.38, color: color.mute, lineHeight: 15, marginTop: 6 },
+  linkAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
+  suggestion: { fontFamily: mono, fontSize: 11, letterSpacing: 0.38, color: color.mute, lineHeight: 15, marginTop: 6 },
   fbRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  fbLabel: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint },
+  fbLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint },
   fbChip: {
-    fontFamily: mono, fontSize: 9, letterSpacing: 0.7, color: color.mute,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.7, color: color.mute,
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
     paddingHorizontal: 10, paddingVertical: 5, overflow: 'hidden',
   },
   fbChipOn: { color: color.ink, borderColor: color.ink2 },
-  warmupTitle: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, marginTop: 16 },
-  warmupLine: { fontFamily: mono, fontSize: 13, color: color.ink, marginTop: 6, fontVariant: ['tabular-nums'] },
-  warmupPct: { fontSize: 10, color: color.faint },
+  warmupTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, marginTop: 16 },
+  warmupLine: { fontFamily: mono, fontSize: 14, color: color.ink, marginTop: 6, fontVariant: ['tabular-nums'] },
+  warmupPct: { fontSize: 11, color: color.faint },
   pickerLinks: { flexDirection: 'row', justifyContent: 'space-between' },
   detailRow: { flexDirection: 'row', gap: 18, alignItems: 'flex-start', marginTop: 14 },
-  detailMeta: { fontFamily: mono, fontSize: 10, color: color.ink2, lineHeight: 17, letterSpacing: 0.3 },
+  detailMeta: { fontFamily: mono, fontSize: 11.5, color: color.ink2, lineHeight: 17, letterSpacing: 0.3 },
   detailInstructions: { fontSize: 12.5, color: color.mute, lineHeight: 18, marginTop: 12 },
   mediaSlot: {
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderStyle: 'dashed',
     borderRadius: 10, padding: 12, marginTop: 12, alignItems: 'center',
   },
-  mediaSlotText: { fontFamily: mono, fontSize: 8, letterSpacing: 0.8, color: color.faint },
+  mediaSlotText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.8, color: color.faint },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
     backgroundColor: color.surface,
@@ -706,16 +765,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
   },
-  sheetTitle: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute },
+  sheetTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
   platesLine: { fontFamily: mono, fontSize: 14, color: color.ink, marginTop: 14 },
-  platesResidual: { fontFamily: mono, fontSize: 10.5, color: color.fat, marginTop: 8 },
-  skipRpe: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 14 },
+  platesResidual: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 8 },
+  skipRpe: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 14 },
   error: { fontSize: 12.5, color: color.fat, marginTop: 10 },
   cfgRow: { flexDirection: 'row', gap: 10, marginTop: 12, justifyContent: 'center' },
   picker: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 0 },
   pickerHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16 },
   pickerTitle: { fontSize: 21, fontWeight: '650' as any, letterSpacing: -0.21, color: color.ink },
-  pickerClose: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.faint },
+  pickerClose: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint },
   chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  timedLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingBottom: 8, marginTop: -4 },
+  timedLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, paddingBottom: 8, marginTop: -4 },
+  addAsTimed: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, textAlign: 'center', paddingVertical: 12 },
 });

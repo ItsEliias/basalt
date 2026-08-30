@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA,
-  color, mono, mmss, paceText, groupInt,
+  color, mono, mmss, paceText, groupInt, useTheme,
 } from '@basalt/ui';
 import {
   acceptFix, routeDistanceM, summarizeWalk, computeSplits, saveWalk, listRecentWalks,
@@ -18,6 +18,7 @@ import * as Speech from 'expo-speech';
 import { Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usualLoop, type RouteCluster } from '@basalt/training';
+import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed } from '../../lib/walkTrackingService';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
 // the pieces the audit found missing built for real: Douglas-Peucker before
@@ -36,6 +37,7 @@ type Mode =
   | { kind: 'error'; message: string };
 
 export function OutdoorTab() {
+  const { theme } = useTheme();
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [mode, setMode] = useState<Mode>({ kind: 'idle' });
   const [now, setNow] = useState(Date.now());
@@ -49,6 +51,7 @@ export function OutdoorTab() {
   const lastAnnouncedKm = useRef(0);
   const [beacon, setBeacon] = useState<{ id: string; expiresAt: string } | null>(null);
   const beaconLastPush = useRef(0);
+  const notifLastUpdate = useRef(0);
 
   const startBeacon = async () => {
     const { data, error } = await supabase.functions.invoke('beacon', { body: { action: 'start' } });
@@ -176,13 +179,28 @@ export function OutdoorTab() {
           setMode((m) => {
             if (m.kind !== 'tracking') return m;
             const lastKept = m.points[m.points.length - 1] ?? null;
-            if (!acceptFix(lastKept, p)) return { ...m, last: p };
-            return { ...m, last: p, points: [...m.points, p] };
+            const next = !acceptFix(lastKept, p) ? { ...m, last: p } : { ...m, last: p, points: [...m.points, p] };
+            // Keep the ongoing notification's body current — throttled to
+            // once every 30s, matching timerService's own "no spam" rule;
+            // this is what actually keeps the walk logging with the screen
+            // locked, so it's worth a little live-ness, just not per-fix.
+            const nowMs = Date.now();
+            if (nowMs - notifLastUpdate.current >= 30_000) {
+              notifLastUpdate.current = nowMs;
+              const distM = routeDistanceM(next.points);
+              const secs = Math.max(1, Math.round((nowMs - next.started) / 1000));
+              void updateWalkTracking(
+                `${distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(2)} km`} · ${mmss(secs)}`,
+              );
+            }
+            return next;
           });
         },
       );
       tickerRef.current = setInterval(() => setNow(Date.now()), 500);
       lastAnnouncedKm.current = 0;
+      notifLastUpdate.current = 0;
+      void startWalkTracking('0 m · 0:00');
     } catch (e: any) {
       setMode({ kind: 'error', message: e?.message ?? 'Could not start tracking.' });
     }
@@ -198,6 +216,7 @@ export function OutdoorTab() {
     }
     const ended = Date.now();
     void stopBeacon();
+    void stopWalkTracking();
     const { points, started } = mode;
     setMode({ kind: 'saving' });
 
@@ -232,6 +251,7 @@ export function OutdoorTab() {
     () => () => {
       watcherRef.current?.remove();
       if (tickerRef.current) clearInterval(tickerRef.current);
+      void stopWalkTracking();
     },
     [],
   );
@@ -254,7 +274,7 @@ export function OutdoorTab() {
   const livePace = tracking && liveDistance > 50 ? liveSeconds / (liveDistance / 1000) : null;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {tracking ? <KeepAwakeWhileTracking /> : null}
 
       {/* ── Recorder ───────────────────────────────────────────────── */}
@@ -348,7 +368,11 @@ export function OutdoorTab() {
               </Pressable>
             )}
             <CTA label="Stop & save" onPress={() => void stop()} />
-            <SrcNote>Keeps recording while this screen is open · screen stays awake</SrcNote>
+            <SrcNote>
+              {Platform.OS === 'android' && !walkTrackingServiceFailed()
+                ? 'Keeps recording if your phone locks or you switch apps · leaving this tab still stops it'
+                : 'Keeps recording while this screen is open · screen stays awake'}
+            </SrcNote>
           </>
         ) : null}
 
@@ -461,11 +485,11 @@ function KeepAwakeWhileTracking() {
 }
 
 const styles = StyleSheet.create({
-  shareLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
+  shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
-  loopLabel: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.faint },
+  loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
   loopChip: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.7, color: color.ink2,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.7, color: color.ink2,
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
     paddingHorizontal: 12, paddingVertical: 6, overflow: 'hidden',
   },
@@ -476,19 +500,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 8,
   },
   beaconDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.recovery },
-  beaconText: { fontFamily: mono, fontSize: 8, letterSpacing: 0.6, color: color.recovery, flexShrink: 1, lineHeight: 12 },
+  beaconText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.recovery, flexShrink: 1, lineHeight: 12 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.carbs },
-  liveText: { fontFamily: mono, fontSize: 9, letterSpacing: 1.26, color: color.carbs },
+  liveText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.26, color: color.carbs },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  statK: { fontFamily: mono, fontSize: 9, letterSpacing: 1.08, color: color.faint },
+  statK: { fontFamily: mono, fontSize: 11, letterSpacing: 1.08, color: color.faint },
   statV: { fontFamily: mono, fontSize: 17, fontWeight: '500', color: color.ink, marginTop: 5, fontVariant: ['tabular-nums'] },
-  statU: { fontSize: 10, color: color.mute },
+  statU: { fontSize: 11, color: color.mute },
   split: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  splitKm: { fontFamily: mono, fontSize: 10, color: color.faint, width: 26 },
-  splitBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: color.border },
+  splitKm: { fontFamily: mono, fontSize: 11, color: color.faint, width: 26 },
+  splitBar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: color.border },
   splitFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: color.carbs },
   splitPace: { fontFamily: mono, fontSize: 12, color: color.ink, width: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
 });

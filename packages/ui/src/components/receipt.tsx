@@ -1,24 +1,57 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { color } from '../tokens';
-import { mono, monoTabular } from '../typography';
+import { StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { type as typeScale } from '../tokens';
+import { monoTabular } from '../typography';
 import { MicroLabel } from './base';
+import { useTheme, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER } from '../theme';
 
-// The receipt — Basalt's signature list. Name + mono meta line left,
-// right-aligned mono value + unit; 1px hairline separators; meal tags as
-// light typographic section headers, never containers.
+// The receipt — Basalt's signature list. Name + meta line left, right-
+// aligned value + unit; hairline separators; meal tags as light
+// typographic section headers, never containers. Name/mealTag read
+// typography.ui (chrome); meta/value/unit read typography.data (numerals,
+// timestamps, tables) per the contract's own split.
 
 export function ReceiptHeader({ label, summary }: { label: string; summary?: string }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.header}>
       <MicroLabel>{label}</MicroLabel>
-      {summary ? <Text style={styles.sum}>{summary}</Text> : null}
+      {summary ? (
+        <Text
+          style={[
+            styles.sum,
+            {
+              fontFamily: resolveTypeface(theme.typography.data, theme.typography.weight.regular),
+              fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+              color: theme.text.faint,
+            },
+          ]}
+        >
+          {summary}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 export function MealTag({ children }: { children: string }) {
-  return <Text style={styles.mealTag}>{children.toUpperCase()}</Text>;
+  const { theme } = useTheme();
+  const upper = theme.typography.labelCase === 'upper';
+  return (
+    <Text
+      style={[
+        styles.mealTag,
+        {
+          fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.medium),
+          fontWeight: String(theme.typography.weight.medium) as TextStyle['fontWeight'],
+          color: theme.text.mute,
+          letterSpacing: theme.typography.tracking.label,
+        },
+      ]}
+    >
+      {upper ? children.toUpperCase() : children}
+    </Text>
+  );
 }
 
 export function ReceiptRow({
@@ -35,19 +68,67 @@ export function ReceiptRow({
   /** Render `meta` in an accent (e.g. a dietary-conflict line in --fat). */
   metaAccent?: string;
 }) {
+  const { theme, density, textScale } = useTheme();
+  const nameSize = typeScale.rowName.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
+  const metaSize = typeScale.rowMeta.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
+  const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
+  const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
   return (
-    <View style={[styles.row, last && styles.rowLast]}>
+    <View
+      style={[
+        styles.row,
+        {
+          minHeight: theme.expression.rowMinHeight,
+          borderBottomColor: theme.surfaces.border,
+          paddingVertical: 10 + DENSITY_PAD[density],
+        },
+        last && styles.rowLast,
+      ]}
+    >
       <View style={styles.left}>
         {thumb}
         <View style={{ flexShrink: 1 }}>
-          <Text style={styles.name}>{name}</Text>
-          {meta ? <Text style={[styles.meta, metaAccent ? { color: metaAccent } : null]}>{meta}</Text> : null}
+          <Text
+            style={[
+              styles.name,
+              {
+                fontSize: nameSize,
+                fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.medium),
+                fontWeight: String(theme.typography.weight.medium) as TextStyle['fontWeight'],
+                color: theme.text.ink,
+              },
+            ]}
+            maxFontSizeMultiplier={1.3}
+          >
+            {name}
+          </Text>
+          {meta ? (
+            <Text
+              style={[
+                styles.meta,
+                { fontSize: metaSize, fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.faint },
+                metaAccent ? { color: metaAccent } : null,
+              ]}
+              maxFontSizeMultiplier={1.3}
+            >
+              {meta}
+            </Text>
+          ) : null}
         </View>
       </View>
       {value !== undefined ? (
         <View style={styles.right}>
-          <Text style={[styles.value, valueColor ? { color: valueColor } : null]}>{value}</Text>
-          {unit ? <Text style={styles.unit}>{unit}</Text> : null}
+          <Text
+            style={[styles.value, { fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.ink }, valueColor ? { color: valueColor } : null]}
+            maxFontSizeMultiplier={1.3}
+          >
+            {value}
+          </Text>
+          {unit ? (
+            <Text style={[styles.unit, { fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.faint }]} maxFontSizeMultiplier={1.3}>
+              {unit}
+            </Text>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -56,12 +137,9 @@ export function ReceiptRow({
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  sum: { fontFamily: mono, fontSize: 11, color: color.faint },
+  sum: { fontSize: 11, flexShrink: 1, marginLeft: 12, textAlign: 'right' },
   mealTag: {
-    fontFamily: mono,
-    fontSize: 9.5,
-    letterSpacing: 0.95,
-    color: color.mute,
+    fontSize: 11,
     paddingTop: 14,
     paddingBottom: 2,
   },
@@ -71,13 +149,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
   },
   rowLast: { borderBottomWidth: 0, paddingBottom: 2 },
   left: { flexDirection: 'row', alignItems: 'center', gap: 11, flexShrink: 1, paddingRight: 12 },
-  name: { fontSize: 13, fontWeight: '500', color: color.ink },
-  meta: { fontFamily: mono, fontSize: 10.5, color: color.faint, marginTop: 3 },
+  name: { fontSize: 14 },
+  meta: { fontSize: 11.5, marginTop: 3 },
   right: { alignItems: 'flex-end', flexShrink: 0 },
-  value: { ...monoTabular, fontSize: 13, color: color.ink },
-  unit: { fontFamily: mono, fontSize: 10, color: color.faint, marginTop: 3 },
+  value: { ...monoTabular, fontSize: 15 },
+  unit: { fontSize: 11.5, marginTop: 3 },
 });

@@ -37,6 +37,14 @@ export type ProfileRecord = {
   /** Monthly-challenge opt-in — private, optional, off by default. */
   challengeEnabled: boolean;
   useMetric: boolean;
+  /** Settings → Display. Layered on top of the OS accessibility text-size setting, not a replacement for it. */
+  textScale: 'system' | 'plus1' | 'plus2';
+  /** Settings → Display. Comfortable (+4dp row/card padding) is the default for new installs. */
+  density: 'comfortable' | 'compact';
+  /** Settings → Display. Six contrast-verified palettes (packages/ui/src/theme/themes) — 'minimal' for new and existing installs until changed. */
+  theme: 'minimal' | 'humanist' | 'athletic' | 'brutalist' | 'depth' | 'atelier';
+  /** Settings → Display. Today only in v1 (docs/basalt-layouts.md) — 'ledger' for new and existing installs until changed. */
+  todayLayout: 'ledger' | 'tiles';
 };
 
 function mapProfile(r: any): ProfileRecord {
@@ -67,6 +75,10 @@ function mapProfile(r: any): ProfileRecord {
     fastingEnabled: r.fasting_enabled ?? false,
     challengeEnabled: r.challenge_enabled ?? false,
     useMetric: r.use_metric ?? true,
+    textScale: r.text_scale ?? 'system',
+    density: r.density ?? 'comfortable',
+    theme: r.theme ?? 'minimal',
+    todayLayout: r.today_layout ?? 'ledger',
   };
 }
 
@@ -81,6 +93,8 @@ function profilePayload(p: Partial<ProfileRecord>): Record<string, unknown> {
     ['equipment', 'equipment'], ['jobActivity', 'job_activity'], ['exerciseFrequency', 'exercise_frequency'],
     ['typicalSleep', 'typical_sleep'], ['stressLevel', 'stress_level'], ['motivations', 'motivations'],
     ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'], ['challengeEnabled', 'challenge_enabled'],
+    ['textScale', 'text_scale'], ['density', 'density'],
+    ['theme', 'theme'], ['todayLayout', 'today_layout'],
   ];
   for (const [key, col] of map) {
     if (p[key] !== undefined) out[col] = p[key];

@@ -34,7 +34,13 @@ export function SetsHeader({ columns }: { columns: string[] }) {
   return (
     <View style={styles.headRow}>
       {columns.map((c, i) => (
-        <Text key={c} style={[styles.headCell, i === 0 ? styles.cellFirst : styles.cellRight]}>{c.toUpperCase()}</Text>
+        <Text
+          key={c}
+          style={[styles.headCell, i === 0 ? styles.cellFirst : styles.cellRight]}
+          maxFontSizeMultiplier={1.3}
+        >
+          {c.toUpperCase()}
+        </Text>
       ))}
     </View>
   );
@@ -66,12 +72,12 @@ export function SetRow({
   return (
     <View style={styles.row}>
       <Pressable onPress={onPressSet} style={styles.cellFirstWrap} hitSlop={6}>
-        <Text style={styles.cellSet}>
+        <Text style={styles.cellSet} maxFontSizeMultiplier={1.3}>
           {setNumber}
           {hasComment ? <Text style={styles.commentMark}> ✎</Text> : null}
         </Text>
       </Pressable>
-      <Text style={[styles.cellPrev, styles.cellRight]}>{prev}</Text>
+      <Text style={[styles.cellPrev, styles.cellRight]} maxFontSizeMultiplier={1.3}>{prev}</Text>
       <TextInput
         style={[...valueStyle, styles.cellRight, styles.cellInput]}
         value={kg}
@@ -80,6 +86,7 @@ export function SetRow({
         keyboardType="decimal-pad"
         placeholder="—"
         placeholderTextColor={color.faint}
+        maxFontSizeMultiplier={1.3}
       />
       <View style={[styles.cellRight, styles.repsWrap]}>
         <TextInput
@@ -90,6 +97,7 @@ export function SetRow({
           keyboardType="number-pad"
           placeholder="—"
           placeholderTextColor={color.faint}
+          maxFontSizeMultiplier={1.3}
         />
         {pr ? <Text style={styles.pr}> PR</Text> : null}
       </View>
@@ -101,6 +109,7 @@ export function SetRow({
         keyboardType="number-pad"
         placeholder="—"
         placeholderTextColor={color.faint}
+        maxFontSizeMultiplier={1.3}
       />
     </View>
   );
@@ -120,11 +129,11 @@ export function RestTimerBar({ time, onSkip }: { time: string; onSkip: () => voi
 const styles = StyleSheet.create({
   exHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
   exName: { fontSize: 15, fontWeight: '600', letterSpacing: -0.15, color: color.ink, flexShrink: 1 },
-  exMeta: { fontFamily: mono, fontSize: 10, color: color.faint, letterSpacing: 0.6, flexShrink: 0 },
+  exMeta: { fontFamily: mono, fontSize: 11.5, color: color.faint, letterSpacing: 0.6, flexShrink: 0 },
   ssLink: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   ssLine: { width: 2, height: 14, backgroundColor: color.protein, borderRadius: 1, marginLeft: 2 },
-  ssText: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.24, color: color.protein },
-  prevNote: { fontFamily: mono, fontSize: 10, color: color.faint, marginTop: 10 },
+  ssText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24, color: color.protein },
+  prevNote: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 10 },
   headRow: {
     flexDirection: 'row',
     paddingBottom: 8,
@@ -132,7 +141,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border,
   },
-  headCell: { fontFamily: mono, fontSize: 9.5, letterSpacing: 0.95, color: color.faint },
+  headCell: { fontFamily: mono, fontSize: 11, letterSpacing: 0.95, color: color.faint },
   cellFirst: { flex: 0.8, textAlign: 'left' },
   cellFirstWrap: { flex: 0.8 },
   cellRight: { flex: 1, textAlign: 'right' },
@@ -145,11 +154,11 @@ const styles = StyleSheet.create({
   },
   cellSet: { ...monoTabular, fontSize: 11, color: color.mute },
   cellPrev: { ...monoTabular, fontSize: 11, color: color.faint },
-  cellValue: { ...monoTabular, fontSize: 13, color: color.ink },
+  cellValue: { ...monoTabular, fontSize: 15, color: color.ink },
   cellInput: { paddingVertical: 4, paddingHorizontal: 0, textAlign: 'right' },
   repsWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  pr: { fontFamily: mono, color: color.carbs, fontSize: 9, letterSpacing: 0.72 },
-  commentMark: { fontFamily: mono, color: color.faint, fontSize: 9 },
+  pr: { fontFamily: mono, color: color.carbs, fontSize: 11, letterSpacing: 0.72 },
+  commentMark: { fontFamily: mono, color: color.faint, fontSize: 11 },
   rest: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -162,7 +171,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginTop: 12,
   },
-  restLabel: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.14, color: color.mute },
+  restLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, color: color.mute },
   restTime: { ...monoTabular, fontSize: 18, fontWeight: '500', color: color.ink },
-  restSkip: { fontFamily: mono, fontSize: 10, color: color.faint, letterSpacing: 0.8 },
+  restSkip: { fontFamily: mono, fontSize: 11, color: color.faint, letterSpacing: 0.8 },
 });

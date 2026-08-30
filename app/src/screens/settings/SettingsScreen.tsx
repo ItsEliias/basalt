@@ -6,7 +6,8 @@ import * as Sharing from 'expo-sharing';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel,
   ChipRow, ChipGroup, kgText, groupInt,
-  color, mono,
+  THEME_IDS, THEMES, type ThemeId,
+  color, mono, useTheme,
 } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
@@ -14,6 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
+import { logThemeLayoutEvent } from '../../lib/instrumentation';
 import { zipSync, strToU8 } from 'fflate';
 import {
   buildPerTableCsvs, buildExportReadme, u8ToBase64,
@@ -34,7 +36,26 @@ import {
 
 type EditKey = 'basics' | 'goals' | 'dietary' | 'training' | null;
 
+const TEXT_SCALE_OPTIONS = ['System', '+1', '+2'];
+function textScaleKey(label: string | null): 'system' | 'plus1' | 'plus2' {
+  if (label === '+1') return 'plus1';
+  if (label === '+2') return 'plus2';
+  return 'system';
+}
+
+// THEME_IDS order is the registry's own — Minimal first (the default).
+const THEME_OPTIONS = THEME_IDS.map((id) => THEMES[id].name);
+function themeIdForLabel(label: string): ThemeId {
+  return THEME_IDS.find((id) => THEMES[id].name === label) ?? 'minimal';
+}
+
+const LAYOUT_OPTIONS = ['Ledger', 'Tiles'];
+function layoutKey(label: string): 'ledger' | 'tiles' {
+  return label === 'Tiles' ? 'tiles' : 'ledger';
+}
+
 export function SettingsScreen() {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const profile = useAppStore((s) => s.profile);
   const targets = useAppStore((s) => s.targets);
@@ -154,11 +175,11 @@ export function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {/* ── Profile ────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Profile" summary="everything editable" />
-        <Pressable onPress={() => setEdit('basics')}>
+        <Pressable onPress={() => setEdit('basics')} hitSlop={8}>
           <ReceiptRow
             name={profile?.name?.trim() || 'Your details'}
             meta={[
@@ -170,7 +191,7 @@ export function SettingsScreen() {
             valueColor={color.faint}
           />
         </Pressable>
-        <Pressable onPress={() => setEdit('goals')}>
+        <Pressable onPress={() => setEdit('goals')} hitSlop={8}>
           <ReceiptRow
             name="Goals"
             meta={
@@ -192,7 +213,7 @@ export function SettingsScreen() {
           value={targets ? undefined : undefined}
         />
         {targets?.reason ? <SrcNote>{`Why: ${targets.reason}`}</SrcNote> : null}
-        <Pressable onPress={() => setEdit('dietary')}>
+        <Pressable onPress={() => setEdit('dietary')} hitSlop={8}>
           <ReceiptRow
             name="Dietary requirements"
             meta={
@@ -202,7 +223,7 @@ export function SettingsScreen() {
             valueColor={color.faint}
           />
         </Pressable>
-        <Pressable onPress={() => setEdit('training')}>
+        <Pressable onPress={() => setEdit('training')} hitSlop={8}>
           <ReceiptRow
             name="Training setup"
             meta={
@@ -232,7 +253,7 @@ export function SettingsScreen() {
           <SrcNote>Steps, sleep, vitals and more — read-only, every synced value shows its source</SrcNote>
         )}
         <ObChipLabel>Nutrition display</ObChipLabel>
-        <Pressable onPress={() => void save({ hideNumbers: !(profile?.hideNumbers ?? false) })} disabled={busy !== null}>
+        <Pressable onPress={() => void save({ hideNumbers: !(profile?.hideNumbers ?? false) })} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
             name="Hide the numbers"
             meta="log-only mode: everything is still recorded and exported — calories and macros just aren't shown. For anyone the numbers aren't kind to."
@@ -242,7 +263,7 @@ export function SettingsScreen() {
           />
         </Pressable>
         <ObChipLabel>Fasting module</ObChipLabel>
-        <Pressable onPress={() => void save({ fastingEnabled: !(profile?.fastingEnabled ?? false) })} disabled={busy !== null}>
+        <Pressable onPress={() => void save({ fastingEnabled: !(profile?.fastingEnabled ?? false) })} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
             name="Fasting timer"
             meta="a window timer with documented stages — information, not medical advice. Off unless you want it."
@@ -252,7 +273,7 @@ export function SettingsScreen() {
           />
         </Pressable>
         <ObChipLabel>Monthly challenge</ObChipLabel>
-        <Pressable onPress={() => void save({ challengeEnabled: !(profile?.challengeEnabled ?? false) })} disabled={busy !== null}>
+        <Pressable onPress={() => void save({ challengeEnabled: !(profile?.challengeEnabled ?? false) })} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
             name="Personal monthly challenge"
             meta="a private target computed from your own baseline — no leaderboards, no badges, off unless you want it"
@@ -262,7 +283,7 @@ export function SettingsScreen() {
           />
         </Pressable>
         <ObChipLabel>Week in review</ObChipLabel>
-        <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null}>
+        <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null} hitSlop={8}>
           <ReceiptRow
             name="Sunday 18:00 notification"
             meta={weekNotifNote ?? 'a fixed prompt — never data in the notification itself'}
@@ -274,10 +295,51 @@ export function SettingsScreen() {
         </Pressable>
       </Card>
 
+      {/* ── Display ────────────────────────────────────────────────── */}
+      <Card>
+        <ReceiptHeader label="Display" summary="legibility — applies everywhere" />
+        <ObChipLabel>Text size</ObChipLabel>
+        <ChipRow
+          options={TEXT_SCALE_OPTIONS}
+          value={TEXT_SCALE_OPTIONS.find((o) => textScaleKey(o) === (profile?.textScale ?? 'system'))}
+          onChange={(v) => void save({ textScale: textScaleKey(v) })}
+        />
+        <SrcNote>Layered on top of your phone's own text-size setting, not a replacement for it</SrcNote>
+        <ObChipLabel>Density</ObChipLabel>
+        <ChipRow
+          options={['Comfortable', 'Compact']}
+          value={profile?.density === 'compact' ? 'Compact' : 'Comfortable'}
+          onChange={(v) => void save({ density: v.toLowerCase() === 'compact' ? 'compact' : 'comfortable' })}
+        />
+        <SrcNote>Comfortable adds extra breathing room to every row and card — on by default</SrcNote>
+        <ObChipLabel>Theme</ObChipLabel>
+        <ChipRow
+          options={THEME_OPTIONS}
+          value={THEMES[profile?.theme ?? 'minimal'].name}
+          onChange={(v) => {
+            const next = themeIdForLabel(v);
+            logThemeLayoutEvent({ type: 'theme_selected', theme: next, previous: profile?.theme ?? 'minimal' });
+            void save({ theme: next });
+          }}
+        />
+        <SrcNote>{THEMES[profile?.theme ?? 'minimal'].description} · every colour contrast-verified</SrcNote>
+        <ObChipLabel>Today layout</ObChipLabel>
+        <ChipRow
+          options={LAYOUT_OPTIONS}
+          value={profile?.todayLayout === 'tiles' ? 'Tiles' : 'Ledger'}
+          onChange={(v) => {
+            const next = layoutKey(v);
+            logThemeLayoutEvent({ type: 'layout_selected', surface: 'today', layout: next, previous: profile?.todayLayout ?? 'ledger' });
+            void save({ todayLayout: next });
+          }}
+        />
+        <SrcNote>Tiles is Today only — Log, Train, Recover and Trends stay ledger for now</SrcNote>
+      </Card>
+
       {/* ── Your data ──────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Your data" summary="yours, fully" />
-        <Pressable onPress={() => void exportJson()} disabled={busy !== null}>
+        <Pressable onPress={() => void exportJson()} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
             name={busy === 'basalt-export.json' ? 'Exporting…' : 'Export everything — JSON'}
             meta="every table, one file, one tap"
@@ -285,7 +347,7 @@ export function SettingsScreen() {
             valueColor={color.faint}
           />
         </Pressable>
-        <Pressable onPress={() => void exportCsv()} disabled={busy !== null}>
+        <Pressable onPress={() => void exportCsv()} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
             name={busy === 'basalt-export.csv' ? 'Exporting…' : 'Export everything — CSV'}
             meta="sectioned per table, spreadsheet-ready"
@@ -304,6 +366,7 @@ export function SettingsScreen() {
             setBusy(null);
           }}
           disabled={busy !== null}
+          hitSlop={8}
         >
           <ReceiptRow
             name={busy === 'doctor' ? 'Building…' : 'Doctor report — PDF'}
@@ -312,7 +375,7 @@ export function SettingsScreen() {
             valueColor={color.faint}
           />
         </Pressable>
-        <Pressable onPress={() => setIncludePhotos(!includePhotos)}>
+        <Pressable onPress={() => setIncludePhotos(!includePhotos)} hitSlop={8}>
           <ReceiptRow
             name="Include progress-photo records"
             meta="off by default — the vault stays out of exports unless you say so (records only; the photos themselves stay in private storage)"
@@ -320,7 +383,7 @@ export function SettingsScreen() {
             valueColor={includePhotos ? color.carbs : color.faint}
           />
         </Pressable>
-        <Pressable onPress={() => void exportZip()} disabled={busy !== null}>
+        <Pressable onPress={() => void exportZip()} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
             name={busy === 'basalt-export.zip' ? 'Exporting…' : 'Export everything — CSV archive'}
             meta="one file per table, zipped · README lists every table incl. empty ones"
@@ -335,10 +398,10 @@ export function SettingsScreen() {
       <Card>
         <ReceiptHeader label="Account" />
         <ReceiptRow name={session?.user.email ?? '—'} meta="free plan" />
-        <Pressable onPress={() => void signOut()}>
+        <Pressable onPress={() => void signOut()} hitSlop={8}>
           <ReceiptRow name="Sign out" />
         </Pressable>
-        <Pressable onPress={() => setDeleteOpen(true)}>
+        <Pressable onPress={() => setDeleteOpen(true)} hitSlop={8}>
           <ReceiptRow
             name="Delete account & all data"
             meta="type-to-confirm · removes every table row, then the sign-in record"
