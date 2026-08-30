@@ -1,69 +1,104 @@
-# Basalt Theme Bundle
+# Basalt
 
-Drop-in scaffolding for the six-theme system plus the Tiles Today layout.
-Every colour value here is contrast-verified — see `docs/basalt-theme-contract.md`.
+A non-gamified, all-in-one honest health ledger — food, training, sleep, vitals. No rings,
+no streak-shaming, no fabricated data. Real numbers or a quiet empty state, always with a
+source.
 
-## Provenance
+Internal codename **LEDGER** appears in older docs and file names — same product.
 
-Produced in a working session with the Basalt maintainer, alongside the design reviews that
-selected these six themes. It contains **no executable code beyond TypeScript token objects
-and a Jest test**, and `IMPLEMENTATION-PROMPT.md` is a plan for a human to review, not an
-instruction to act on unread. Read it before running it.
+## The law of this repo
 
-## Manifest — 15 files
+1. **`docs/basalt-design-spec.md` is the binding UI contract.** Tokens, mono numerals,
+   hairlines, receipt rows, real-or-hidden empty states. Every screen must be composable
+   from the contract's components — no invented visual language.
+2. **`docs/basalt-app-prototype.html`** is the visual source of truth when the spec and the
+   prototype disagree.
+3. **Honesty rules are product law, not style preferences**: no fake data, no placeholder
+   zeros, `~` on unconfirmed AI values, over-caps stated plainly and never scolded, sources
+   shown on every synced datum, published formulas.
+4. **Forbidden, absolutely**: rings/gauges, glow-as-decoration, glassmorphism-as-decoration,
+   mascots, emoji in UI copy, confetti, XP/levels/badges, motivational cheerleading, bright
+   color without semantic meaning, upsells in onboarding, AI summaries that displace data.
+5. **Tests are required for every engine.** `pnpm test` from the repo root must stay green —
+   610 tests as of the six-theme rollout.
+6. **Legibility floors are binding**: 11px type minimum (10.5 for srcnotes/tab labels), 4.5:1
+   text contrast on every surface, 48dp tap targets. Pinned in
+   `packages/ui/src/tokens.test.ts`.
+
+## Architecture
+
+pnpm workspace:
 
 ```
-README.md
-IMPLEMENTATION-PROMPT.md               the plan; review before following
-docs/
-  basalt-theme-contract.md             token contract, invariants, testing strategy
-  basalt-layouts.md                    per-surface layout model
-packages/ui/src/theme/
-  contract.ts                          TypeScript types for the contract
-  contrast.ts                          WCAG luminance + ratio, no dependencies
-  themes/minimal.ts humanist.ts athletic.ts brutalist.ts depth.ts atelier.ts
-  themes/index.ts                      registry, THEME_IDS, DEFAULT_THEME
-  __tests__/themeConformance.test.ts   invariants asserted across all six
-reference/
-  themes-today.html                    visual reference: 6 themes x 2 layouts
+app/                  Expo ~56 / RN 0.85 / React Navigation 7 / Zustand 5 / Supabase
+packages/
+  core-data/           Result<T>, dates, Supabase client factory, sync contracts
+  health-connect/      28-record-type Android Health Connect provider
+  nutrition/           food CRUD, water, Open Food Facts, JSON-LD recipe import
+  training/            set_entry relational model (sessions → exercises → sets)
+  analytics/           streaks, rolling trends, correlations
+  ui/                  six-theme design system (token-provider pattern)
+docs/                  binding docs — read before building anything
+supabase/              migrations, seed data, edge functions
+reference/             gitignored quarry files kept for porting reference only
 ```
 
-If any file above is missing from your copy, the archive is incomplete — say so rather than
-working around it.
+Every write goes through the service layer (`Result<T>` from `packages/core-data`). There is
+exactly one food write path (`packages/nutrition`) and one target engine (`targetsService`).
 
-## Two defects this bundle fixes
+### Six-theme system
 
-**1. Over-cap text fails WCAG.** `--fat #BE5540` scores 4.11 / 3.86 / 3.63 against the three
-surfaces as **text**. It was validated at the 3:1 graphical threshold — correct for bars, not
-for the over-cap ratio, which is type. `--recovery #5E72E4` fails on two surfaces. The
-contract's `fill` / `text` split fixes both.
+Settings → Display lets a user pick from six fully independent visual themes (Minimal,
+Humanist, Athletic, Brutalist, Depth, Atelier), each defined entirely through the contract in
+`packages/ui/src/theme/contract.ts` — colour, typography, shape, meter geometry, container
+elevation. The rule: **if a theme needs a component override, the contract is missing a
+token — add the token, never branch the component.** Full rollout narrative, including every
+bug found and fixed while wiring it up, is in `docs/THEME-SYSTEM-REPORT.md`.
 
-**2. A filled control can render its label invisibly.** `fill.accent` pairs with
-`accentOn`, but a theme whose accent is a *ground* (Brutalist's yellow) needs a different
-colour for *marks*. Without a separate `fill.mark` / `fill.markOn` pair, a filled button took
-black on black — contrast ratio 1.0. The pair now exists and the test asserts every
-on-colour against its own fill.
+## Getting started
 
-## Integration note
+```bash
+pnpm install
+cp app/.env.example app/.env   # fill in Supabase URL + publishable key
+pnpm test                       # everything, from repo root
+```
 
-`packages/ui/src/theme.tsx` already exists as a file (the ThemeProvider from the density and
-text-scale work). This bundle adds `packages/ui/src/theme/` as a directory. Both can coexist
-on disk but it is confusing — decide deliberately. Recommended: the directory holds token
-definitions, and the existing provider is refactored to consume from it, then moved to
-`theme/provider.tsx`. `IMPLEMENTATION-PROMPT.md` covers this as step 0.
+Run the app:
 
-## Order of work
+```bash
+cd app
+pnpm start           # Metro only — pair with a running native build
+pnpm android          # full native build + install + launch (first run, or after native changes)
+pnpm ios
+```
 
-1. Resolve `theme.tsx` vs `theme/`, land the contract, port **Minimal** — zero visual change
-   except the two corrected colours above.
-2. Humanist and Athletic — these already fit.
-3. Brutalist and Depth — `elevation: hardShadow` / `blur`.
-4. Atelier last — `typography.data` + `align: center` carry most of it.
-5. Tiles layout.
-6. Settings picker. Onboarding **later**, once the themes are stable.
+`pnpm android`/`pnpm ios` are only needed after native-affecting changes (new native module,
+Android manifest/permissions change); plain `pnpm start` + Metro reload is enough for JS-only
+work once a native build is already installed.
 
-## What is deliberately not here
+## Backend (Supabase)
 
-- No component implementations — those belong against your own primitives.
-- No onboarding picker. Settings switcher first.
-- No user-configurable tile order. Fixed set in v1.
+- Every Basalt table is prefixed `basalt_`. RLS (`auth.uid() = user_id`) on every table. No
+  gamification columns anywhere.
+- **No secrets in the client bundle.** AI calls and privileged operations (account deletion)
+  go through Supabase Edge Functions (`supabase/functions/`); the client only gets the URL +
+  publishable key.
+- **Migration-safety rule: no destructive SQL that isn't scoped to `basalt_`-prefixed
+  objects, ever.** See `docs/DECOMMISSION.md` if this project's Supabase project is ever
+  shared with another app, as it currently is — no drop/delete/truncate/alter against
+  anything un-prefixed.
+- Account deletion cascades across every `basalt_` table + storage.
+
+## Workflow
+
+- Branch discipline: `m1-<topic>` branches, PR into `main`, never force-push `main`.
+- Commit after each coherent unit **with its tests passing**.
+- `pnpm test` from repo root before every commit.
+
+## Docs index
+
+Start with `docs/basalt-design-spec.md` and `docs/M1-REPORT.md` for the product/UI contract
+and current milestone status. `docs/THEME-SYSTEM-REPORT.md` documents the full six-theme
+rollout. `docs/DECOMMISSION.md` is the runbook for moving off the currently-shared Supabase
+project. The remaining `docs/*-REPORT.md` files are dated snapshots of prior work batches —
+useful for history, not necessarily current state.
