@@ -41,10 +41,27 @@ const BASALT_TABLES = [
   'basalt_recipe_steps',
   'basalt_recipes',
   'basalt_targets',
+  // V2/V3 additions — the wipe list is append-only and audited against the
+  // migrations directory; a table missing here is a compliance bug.
+  'basalt_workout_templates',
+  'basalt_template_exercises',
+  'basalt_programs',
+  'basalt_race_plans',
+  'basalt_shoes',
+  'basalt_cycle_entries',
+  'basalt_pair_days',
+];
+
+// Tables where the user can be EITHER party — keyed on their own columns,
+// wiped in both directions (a grant is dead without its grantee; a pair is
+// dead without its member; pair_days cascade from the pair for both sides).
+const TWO_SIDED: { table: string; columns: string[] }[] = [
+  { table: 'basalt_share_grants', columns: ['owner_id', 'grantee_id'] },
+  { table: 'basalt_pairs', columns: ['a_id', 'b_id'] },
 ];
 
 // Private storage buckets holding the user's files under a `${uid}/` prefix.
-const BASALT_BUCKETS = ['basalt-food-photos', 'basalt-progress-photos'];
+const BASALT_BUCKETS = ['basalt-food-photos', 'basalt-progress-photos', 'basalt-recipe-photos'];
 
 // Arise-app tables sharing this project's auth pool; user_profiles keys on id.
 const ARISE_TABLES: { table: string; column: string }[] = [
@@ -89,6 +106,17 @@ Deno.serve(async (req) => {
         status: 500,
         headers: { ...CORS, 'Content-Type': 'application/json' },
       });
+    }
+  }
+  for (const { table, columns } of TWO_SIDED) {
+    for (const column of columns) {
+      const { error } = await admin.from(table).delete().eq(column, uid);
+      if (error) {
+        return new Response(JSON.stringify({ error: `Wipe failed at ${table}.${column}: ${error.message}` }), {
+          status: 500,
+          headers: { ...CORS, 'Content-Type': 'application/json' },
+        });
+      }
     }
   }
   const { error: profileError } = await admin.from('basalt_profiles').delete().eq('id', uid);

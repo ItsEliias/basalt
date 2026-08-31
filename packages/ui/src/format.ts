@@ -1,9 +1,31 @@
 // Pure formatting helpers backing the honesty rules — every numeral the UI
 // prints goes through one of these so the rules live in exactly one place.
+//
+// Deliberately zero react-native dependency: this file needs to import
+// cleanly under plain Node/vitest. react-native's own package source uses
+// Flow syntax vitest's parser can't handle, so anything that pulls it in
+// transitively (any component file) can't be unit-tested directly — pure
+// logic used by a component belongs here, not co-located with the component.
+
+import type { OverCapStyle } from './theme/contract';
 
 /** Thousands-grouped integer, e.g. 2340 → "2,340". */
 export function groupInt(n: number): string {
   return Math.round(n).toLocaleString('en-US');
+}
+
+/**
+ * How an over-cap state is WORDED, never whether it's shown — the caller's
+ * bar/dot always fill in the over colour regardless of this. Exercised for
+ * every theme's `expression.overCap` value in format.test.ts.
+ */
+export function overCapSuffix(over: boolean, style: OverCapStyle, overBy: number, fmt: (n: number) => string): string {
+  if (!over) return '';
+  if (style === 'all') return ` · ${fmt(overBy)} over`;
+  if (style === 'word') return ' — over';
+  // 'fill' (and the contractually-forbidden 'color') state the over-cap
+  // through the fill alone — no extra text.
+  return '';
 }
 
 /**
@@ -65,4 +87,41 @@ export function approxValue(value: number, confirmed: boolean): string {
 export function kgText(kg: number): string {
   const rounded = Math.round(kg * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+const FONT_WEIGHT_NAMES: Record<number, string> = {
+  100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular',
+  500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black',
+};
+
+// Google-Fonts export prefix per bundled family name (theme.typography.ui/
+// data/display) — not always the family name with spaces stripped, so kept
+// explicit rather than derived.
+const FONT_FAMILY_PREFIXES: Record<string, string> = {
+  Nunito: 'Nunito',
+  Barlow: 'Barlow',
+  'Barlow Condensed': 'BarlowCondensed',
+  Archivo: 'Archivo',
+  Manrope: 'Manrope',
+  Jost: 'Jost',
+  'IBM Plex Mono': 'IBMPlexMono',
+  'Cormorant Garamond': 'CormorantGaramond',
+};
+
+/**
+ * A bundled family name + numeric weight (400/600/900...) → the exact
+ * fontFamily string expo-font registers for it, e.g. ('Nunito', 700) ->
+ * 'Nunito_700Bold'. Pure Google-Fonts-naming logic only — the 'System'/
+ * 'Mono' sentinels are theme/theme/typeface.ts's concern (they need the
+ * platform mono constant, which pulls in react-native and can't live in
+ * this RN-free file).
+ *
+ * 'Archivo Black' ships exactly one static weight (already visually black)
+ * — every role that names it gets that one file regardless of `weight`.
+ */
+export function resolveFontFamily(name: string, weight: number): string {
+  if (name === 'Archivo Black') return 'ArchivoBlack_400Regular';
+  const prefix = FONT_FAMILY_PREFIXES[name] ?? name.replace(/\s+/g, '');
+  const weightName = FONT_WEIGHT_NAMES[weight] ?? FONT_WEIGHT_NAMES[400];
+  return `${prefix}_${weight}${weightName}`;
 }

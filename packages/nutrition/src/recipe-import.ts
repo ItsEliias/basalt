@@ -1,3 +1,5 @@
+import { parseOgTags } from './social-import';
+
 export interface UrlRecipeImport {
   title: string;
   description: string;
@@ -9,6 +11,8 @@ export interface UrlRecipeImport {
   estimatedMacros: { calories: number; protein: number; fat: number; carbs: number };
   source: string;
   confidence: number;
+  /** Remote cover image URL — not yet downloaded; the caller decides if/when to fetch it into storage. */
+  imageUrl: string | null;
   error?: string;
 }
 
@@ -29,6 +33,7 @@ const EMPTY_RESULT: Omit<UrlRecipeImport, 'source'> = {
   servings: 1,
   estimatedMacros: { calories: 0, protein: 0, fat: 0, carbs: 0 },
   confidence: 0,
+  imageUrl: null,
 };
 
 function parseIsoDuration(iso?: string): number {
@@ -52,6 +57,25 @@ function extractNutrition(n: any): { calories: number; protein: number; fat: num
     fat: g(n?.fatContent),
     carbs: g(n?.carbohydrateContent),
   };
+}
+
+/**
+ * schema.org `image` is one of: a URL string, an array of URL strings, an
+ * ImageObject `{ url }`, or an array of ImageObjects — normalize to one URL.
+ */
+function extractImageUrl(image: unknown): string | null {
+  if (typeof image === 'string') return image || null;
+  if (Array.isArray(image)) return extractImageUrl(image[0]);
+  if (image && typeof image === 'object') {
+    const url = (image as any).url;
+    if (typeof url === 'string' && url) return url;
+  }
+  return null;
+}
+
+/** Fallback when the Recipe node itself has no `image` — most sites still carry og:image. */
+function extractOgImage(html: string): string | null {
+  return parseOgTags(html)['og:image'] ?? null;
 }
 
 function findRecipeNode(parsed: unknown): Record<string, unknown> | null {
@@ -103,6 +127,7 @@ export async function importRecipeFromUrl(
 
     const servings = parseInt(String(recipe.recipeYield ?? recipe.servings ?? '1')) || 1;
     const macros = extractNutrition(recipe.nutrition);
+    const imageUrl = extractImageUrl(recipe.image) ?? extractOgImage(html);
 
     const confidence =
       (ingredients.length > 0 ? 35 : 0) +
@@ -121,6 +146,7 @@ export async function importRecipeFromUrl(
       estimatedMacros: macros,
       source: url,
       confidence,
+      imageUrl,
     };
   }
 

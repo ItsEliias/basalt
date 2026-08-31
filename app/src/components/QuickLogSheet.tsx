@@ -1,6 +1,6 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono } from '@basalt/ui';
+import { color, mono, ScaledText as Text } from '@basalt/ui';
 
 // The quick-log (+) sheet — 3-wide mono-labeled grid. Every logging action
 // is ≤2 taps from here; Water +250 commits instantly with no screen.
@@ -79,6 +79,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   glyph: { fontSize: 16, color: color.ink2, fontFamily: mono },
-  label: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.mute, marginTop: 8 },
-  hint: { fontFamily: mono, fontSize: 9.5, color: color.faint, textAlign: 'center', marginTop: 14, letterSpacing: 0.57 },
+  label: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, marginTop: 8 },
+  hint: { fontFamily: mono, fontSize: 10.5, color: color.faint, textAlign: 'center', marginTop: 14, letterSpacing: 0.57 },
 });

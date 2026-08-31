@@ -5,9 +5,10 @@ import {
   setExerciseRest, setSupersetGroup, bestE1rm, isSetPr, e1rm,
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
   collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
-  removeSessionExercise,
+  removeSessionExercise, startSessionFromTemplate, getExerciseById,
+  getActiveProgram, periodize, phaseFor, weekIndexFor,
   type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange, type TimerMode,
-  type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
+  type SetEntry, type Exercise, type GuidedState, type GuidedEvent, type Program,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
 
@@ -47,6 +48,8 @@ export type SessionExerciseState = {
   repPrs: RepPr[];
   /** One-tap post-exercise feedback, feeding the next suggestion. */
   feedback: ExerciseFeedback | null;
+  /** The user's own stated plan for this exercise, from a template — a ghost hint, never invented. */
+  target: { sets: number; reps: number | null; weightKg: number | null } | null;
 };
 
 type RestState = { sessionExerciseId: string; remaining: number } | null;
@@ -58,10 +61,14 @@ type SessionState = {
   rest: RestState;
   busy: boolean;
   error: string | null;
+  /** Active periodization program, loaded at session start — null runs
+   *  suggestNext unlayered, exactly as before programs existed. */
+  program: Program | null;
 
   start: () => Promise<void>;
+  startFromTemplate: (templateId: string) => Promise<void>;
   finish: (rpe: number | null) => Promise<void>;
-  addExercise: (exercise: Exercise, timed: boolean) => Promise<void>;
+  addExercise: (exercise: Exercise, timed: boolean, target?: SessionExerciseState['target']) => Promise<void>;
   updateRow: (sessionExerciseId: string, index: number, patch: Partial<SetRowState>) => void;
   addRow: (sessionExerciseId: string) => void;
   commitRow: (sessionExerciseId: string, index: number) => Promise<void>;
@@ -203,6 +210,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
   rest: null,
   busy: false,
   error: null,
+  program: null,
 
   start: async () => {
     set({ busy: true, error: null });
@@ -211,7 +219,36 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
       set({ busy: false, error: r.error });
       return;
     }
-    set({ sessionId: r.data.id, startedAt: r.data.startedAt, exercises: [], rest: null, busy: false });
+    const prog = await getActiveProgram(supabase);
+    set({
+      sessionId: r.data.id, startedAt: r.data.startedAt, exercises: [], rest: null, busy: false,
+      program: prog.ok ? prog.data : null,
+    });
+  },
+
+  startFromTemplate: async (templateId) => {
+    set({ busy: true, error: null });
+    const r = await startSessionFromTemplate(supabase, templateId);
+    if (!r.ok) {
+      set({ busy: false, error: r.error });
+      return;
+    }
+    const prog = await getActiveProgram(supabase);
+    set({
+      sessionId: r.data.session.id, startedAt: r.data.session.startedAt, exercises: [], rest: null, busy: false,
+      program: prog.ok ? prog.data : null,
+    });
+    for (const te of r.data.exercises) {
+      const resolved = te.exerciseId ? await getExerciseById(supabase, te.exerciseId) : null;
+      const exercise: Exercise = resolved?.ok && resolved.data
+        ? resolved.data
+        : {
+            id: te.exerciseId ?? '', extId: '', source: 'template', name: te.exerciseName,
+            category: null, primaryMuscles: [], secondaryMuscles: [], equipment: null,
+            difficulty: null, instructions: [], imageUrls: [], videoUrl: null,
+          };
+      await get().addExercise(exercise, false, { sets: te.targetSets, reps: te.targetReps, weightKg: te.targetWeightKg });
+    }
   },
 
   finish: async (rpe) => {
@@ -222,7 +259,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     set({ sessionId: null, startedAt: null, exercises: [], rest: null, busy: false });
   },
 
-  addExercise: async (exercise, timed) => {
+  addExercise: async (exercise, timed, target) => {
     const state = get();
     if (!state.sessionId) return;
     set({ busy: true });
@@ -239,7 +276,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     const prev = await getPrevExerciseSets(supabase, exercise.id);
     const prevSets = prev.ok && prev.data ? prev.data.sets : [];
     const history = await historyFor(exercise.id);
-    const suggestion = timed
+    const baseSuggestion = timed
       ? null
       : suggestNext({
           prev:
@@ -254,11 +291,23 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
               : null,
           today: new Date(),
         });
+    // Mesocycle layer — only when a program is active; first_time passes
+    // through untouched (periodization never invents a starting number).
+    const program = get().program;
+    const suggestion =
+      baseSuggestion && program
+        ? periodize(baseSuggestion, phaseFor(weekIndexFor(program.startedOn, new Date())))
+        : baseSuggestion;
+    const setsDelta = suggestion && 'setsDelta' in suggestion ? (suggestion as { setsDelta: number }).setsDelta : 0;
+    const rowCount = Math.max(
+      1,
+      (target?.sets || prevSets.filter((s) => s.setType !== 'warmup').length || 3) + setsDelta,
+    );
     const rows = timed
       ? []
-      : Array.from({ length: Math.max(1, prevSets.filter((s) => s.setType !== 'warmup').length || 3) }, (_, i) => ({
+      : Array.from({ length: Math.max(1, rowCount) }, (_, i) => ({
           setNumber: i + 1,
-          kg: prevSets[i]?.weightKg != null ? String(prevSets[i]!.weightKg) : '',
+          kg: prevSets[i]?.weightKg != null ? String(prevSets[i]!.weightKg) : target?.weightKg != null ? String(target.weightKg) : '',
           reps: '',
           rir: '',
           comment: '',
@@ -280,11 +329,12 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           historyBestE1rm: history.bestE1rm,
           repPrs: history.repPrs,
           timed,
-          guided: timed ? createGuidedTimer({ leadInS: 5, workS: 50, restS: 20, sets: 4 }) : null,
+          guided: timed ? createGuidedTimer({ leadInS: 10, workS: 50, restS: 20, sets: 4 }) : null,
           suggestion,
           feedback: null,
           timerMode: 'custom',
           stations: 4,
+          target: target ?? null,
         },
       ],
     });

@@ -1,25 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav, ObInput,
-  color, mono, groupInt,
+  color, mono, groupInt, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
 import { RecipesTab } from './RecipesTab';
 import { PlannerTab } from './PlannerTab';
 import {
   validateGs1, searchByBarcode, searchByName, addFoodEntry, recordFoodUse,
-  getFoodEntriesForDay, listFavorites, frequentAtHour,
+  getFoodEntriesForDay, getDailyTotals, listFavorites, frequentAtHour,
+  macroGap, suggestFill, scarcestMacro, gapLine, OFF_FALLBACK_QUERY, GAP_MIN_KCAL, MAX_SUGGESTIONS,
   type OFFProduct, type FoodEntryInput, type FoodFavorite, type LoggedFood,
+  type MacroGap, type FillCandidate, type FillSuggestion,
   uploadFoodPhoto,
 } from '@basalt/nutrition';
-import { isoDay } from '@basalt/core-data';
+import { isoDay, getTargetsFor } from '@basalt/core-data';
 import type { MealType } from '@basalt/nutrition';
 
 type AiItem = {
   food_name: string;
   meal_guess: MealType;
   calories: number;
+  /** Graded uncertainty: the model's calibrated energy range. Older
+   *  deployed functions may omit them — display falls back to ~point. */
+  calories_low?: number;
+  calories_high?: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
@@ -28,15 +35,27 @@ type AiItem = {
   sodium_mg: number;
   portion_note: string;
 };
+
+/** "~520–780" when the model gave a range, "~640" when it didn't. */
+function aiKcalText(item: AiItem): string {
+  if (item.calories_low !== undefined && item.calories_high !== undefined && item.calories_high > item.calories_low) {
+    return `~${Math.round(item.calories_low)}–${Math.round(item.calories_high)}`;
+  }
+  return `~${Math.round(item.calories)}`;
+}
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import {
   barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts,
   conflictLine, mealForHour, yesterdayMeals, type YesterdayMeal,
   labelToDraftFields, type LabelScan,
+  trayTotals, trayLine, type TrayItem,
 } from './model';
+import { logLoggingEvent } from '../../lib/instrumentation';
+import { writeThroughOutbox } from '../../lib/outbox';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 import { capturePhoto, enqueuePhoto, dequeuePhoto, loadPhotoQueue, readQueuedPhotoB64 } from '../../lib/photoFood';
+import { voiceAvailable, startVoiceCapture } from '../../lib/voiceCapture';
 import { queuedLabel, type QueuedPhoto } from '../../lib/photoQueueModel';
 
 // Log / Capture — viewfinder with on-device GS1 verification, OFF lookup,
@@ -55,7 +74,7 @@ type ScanState =
 export function LogScreen() {
   const [sub, setSub] = useState('Capture');
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
+    <View style={{ flex: 1 }}>
       <SubNav items={['Capture', 'Recipes', 'Planner']} active={sub} onChange={setSub} />
       {sub === 'Capture' ? <CaptureTab /> : sub === 'Recipes' ? <RecipesTab /> : <PlannerTab />}
     </View>
@@ -63,6 +82,7 @@ export function LogScreen() {
 }
 
 function CaptureTab() {
+  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [mode, setMode] = useState<Mode>('barcode');
@@ -72,16 +92,22 @@ function CaptureTab() {
   const [results, setResults] = useState<OFFProduct[]>([]);
   const [searching, setSearching] = useState(false);
   const [draft, setDraft] = useState<DraftEntry | null>(null);
+  const [tray, setTray] = useState<TrayItem[]>([]);
+  const [trayBusy, setTrayBusy] = useState(false);
   const [favorites, setFavorites] = useState<FoodFavorite[]>([]);
   const [frequent, setFrequent] = useState<{ foodName: string; count: number; calories: number }[]>([]);
   const [yesterday, setYesterday] = useState<YesterdayMeal[]>([]);
+  const [fillGap, setFillGap] = useState<{ gap: MacroGap; suggestions: FillSuggestion[] } | null>(null);
   const [aiText, setAiText] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiItems, setAiItems] = useState<AiItem[] | null>(null);
+  const [aiOmissions, setAiOmissions] = useState<AiItem[]>([]);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState<string | null>(null);
   const [photoQueue, setPhotoQueue] = useState<QueuedPhoto[]>([]);
+  const [voiceState, setVoiceState] = useState<'idle' | 'listening'>('idle');
+  const voiceStopRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     void loadPhotoQueue().then(setPhotoQueue);
   }, []);
@@ -114,6 +140,35 @@ function CaptureTab() {
     yd.setDate(yd.getDate() - 1);
     const yEntries = await getFoodEntriesForDay(supabase, isoDay(yd));
     setYesterday(yesterdayMeals(yEntries.ok ? yEntries.data : []));
+
+    // Fill the gap — own foods first; OFF only takes slots they leave empty.
+    const [targets, totals] = await Promise.all([getTargetsFor(supabase), getDailyTotals(supabase)]);
+    if (targets.ok && targets.data && totals.ok) {
+      const t = targets.data;
+      const gap = macroGap(
+        { calories: t.calories, protein: t.proteinG, carbs: t.carbsG, fat: t.fatG },
+        totals.data,
+      );
+      const ownCands: FillCandidate[] = (favs.ok ? favs.data : []).map((f) => ({
+        foodName: f.foodName, brand: f.brand, calories: f.calories,
+        protein: f.protein, carbs: f.carbs, fat: f.fat, source: 'own' as const,
+      }));
+      let suggestions = suggestFill(gap, ownCands);
+      if (suggestions.length < MAX_SUGGESTIONS && gap.calories >= GAP_MIN_KCAL) {
+        const m = scarcestMacro(gap);
+        if (m) {
+          const products = await searchByName(OFF_FALLBACK_QUERY[m]);
+          const offCands: FillCandidate[] = products.slice(0, 10).map((p) => ({
+            foodName: p.name, brand: p.brand || null, calories: p.calories,
+            protein: p.protein, carbs: p.carbs, fat: p.fat, source: 'off' as const,
+          }));
+          suggestions = suggestFill(gap, ownCands, offCands);
+        }
+      }
+      setFillGap({ gap, suggestions });
+    } else {
+      setFillGap(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -155,6 +210,29 @@ function CaptureTab() {
     });
   };
 
+  // Voice lane — the OS transcribes into the same box, a final transcript
+  // runs the same estimate. Different input surface, identical gates.
+  const toggleVoice = async () => {
+    if (voiceState === 'listening') {
+      voiceStopRef.current?.();
+      return;
+    }
+    logLoggingEvent({ type: 'voice_capture' });
+    const h = await startVoiceCapture({
+      onPartial: (t) => setAiText(t),
+      onFinal: (t) => {
+        setAiText(t);
+        if (t.trim()) void runAiEstimate(t);
+      },
+      onError: (m) => setAiError(m),
+      onEnd: () => setVoiceState('idle'),
+    });
+    if (h.ok) {
+      voiceStopRef.current = h.stop;
+      setVoiceState('listening');
+    }
+  };
+
   const openManualDraft = () => {
     setDraft({
       mealType: mealForHour(new Date().getHours()),
@@ -164,13 +242,15 @@ function CaptureTab() {
     });
   };
 
-  const runAiEstimate = async () => {
-    if (!aiText.trim()) return;
+  const runAiEstimate = async (text?: string) => {
+    const description = (text ?? aiText).trim();
+    if (!description) return;
     setAiBusy(true);
     setAiError(null);
     setAiItems(null);
+    setAiOmissions([]);
     const { data, error } = await supabase.functions.invoke('ai-quick-add', {
-      body: { description: aiText.trim() },
+      body: { description },
     });
     setAiBusy(false);
     if (error) {
@@ -187,6 +267,7 @@ function CaptureTab() {
       return;
     }
     setAiItems((data?.items ?? []) as AiItem[]);
+    setAiOmissions((data?.omissions ?? []) as AiItem[]);
     setAiNote(data?.note ?? null);
   };
 
@@ -211,6 +292,7 @@ function CaptureTab() {
     afterOk?.();
     if (mode2 === 'meal') {
       setAiItems((data?.items ?? []) as AiItem[]);
+      setAiOmissions([]);
       setAiNote(data?.note ?? null);
       return;
     }
@@ -259,9 +341,13 @@ function CaptureTab() {
       const up = await uploadFoodPhoto(supabase, photoB64, Date.now(), Math.random().toString(36).slice(2, 8));
       if (up.ok) photoPath = up.data; // upload failure logs the entry photo-less, honestly
     }
-    const r = await addFoodEntry(supabase, { ...entry, photoPath });
+    const r = await writeThroughOutbox(
+      () => addFoodEntry(supabase, { ...entry, photoPath }),
+      { kind: 'food_entry', input: { ...entry, photoPath } },
+    );
     if (r.ok) {
-      void recordFoodUse(supabase, entry);
+      logLoggingEvent({ type: 'entry_saved', source: entry.source ?? 'manual', viaTray: false });
+      if (!('queued' in r)) void recordFoodUse(supabase, entry);
       setDraft(null);
       setScan({ kind: 'idle' });
       bumpToday();
@@ -269,17 +355,80 @@ function CaptureTab() {
     }
   };
 
+  const favoriteToEntry = (f: FoodFavorite): FoodEntryInput => ({
+    mealType: mealForHour(new Date().getHours()),
+    foodName: f.foodName,
+    brand: f.brand ?? undefined,
+    calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
+    fiber: f.fiber, sugar: f.sugar, sodiumMg: f.sodiumMg, saturatedFat: f.saturatedFat,
+    servingSize: f.servingSize, servingUnit: f.servingUnit, quantity: f.quantity,
+    barcode: f.barcode ?? undefined,
+    source: 'search',
+  });
+
+  // One tap logs the favorite at its stored default portion — same law as
+  // water +250. Long-press opens the editable form for a different portion.
   const relogFavorite = async (f: FoodFavorite) => {
-    await saveEntry({
-      mealType: mealForHour(new Date().getHours()),
-      foodName: f.foodName,
-      brand: f.brand ?? undefined,
-      calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
-      fiber: f.fiber, sugar: f.sugar, sodiumMg: f.sodiumMg, saturatedFat: f.saturatedFat,
-      servingSize: f.servingSize, servingUnit: f.servingUnit, quantity: f.quantity,
-      barcode: f.barcode ?? undefined,
-      source: 'search',
+    logLoggingEvent({ type: 'favorite_relog', via: 'tap' });
+    await saveEntry(favoriteToEntry(f));
+  };
+
+  const editFavorite = (f: FoodFavorite) => {
+    logLoggingEvent({ type: 'favorite_relog', via: 'longpress_edit' });
+    setDraft({
+      ...favoriteToEntry(f),
+      sourceNote: 'From your favourites · edit the portion, then log',
     });
+  };
+
+  // Fill-the-gap tap → Tray. Own suggestions reuse the favorite snapshot
+  // (full nutrition); OFF ones carry what the product data actually has.
+  const fillSuggestionToTray = (s: FillSuggestion) => {
+    logLoggingEvent({ type: 'fill_gap_add', source: s.source });
+    const fav = favorites.find((f) => f.foodName === s.foodName);
+    const entry: FoodEntryInput = fav
+      ? favoriteToEntry(fav)
+      : {
+          mealType: mealForHour(new Date().getHours()),
+          foodName: s.foodName,
+          brand: s.brand ?? undefined,
+          calories: s.calories, protein: s.protein, carbs: s.carbs, fat: s.fat,
+          fiber: 0,
+          source: 'search',
+        };
+    addToTray(entry, null);
+  };
+
+  // ── The Tray ──────────────────────────────────────────────────────────
+  const addToTray = (entry: FoodEntryInput, photoB64: string | null) => {
+    setTray((t) => [...t, { entry, photoB64 }]);
+    // The add clears the working surface so the next item starts clean.
+    setDraft(null);
+    setScan({ kind: 'idle' });
+    setQuery('');
+    setResults([]);
+  };
+
+  const commitTray = async () => {
+    if (tray.length === 0 || trayBusy) return;
+    setTrayBusy(true);
+    for (const { entry, photoB64 } of tray) {
+      let photoPath = entry.photoPath;
+      if (photoB64) {
+        const up = await uploadFoodPhoto(supabase, photoB64, Date.now(), Math.random().toString(36).slice(2, 8));
+        if (up.ok) photoPath = up.data;
+      }
+      const r = await writeThroughOutbox(
+        () => addFoodEntry(supabase, { ...entry, photoPath }),
+        { kind: 'food_entry', input: { ...entry, photoPath } },
+      );
+      if (r.ok && !('queued' in r)) void recordFoodUse(supabase, entry);
+    }
+    logLoggingEvent({ type: 'tray_commit', items: tray.length });
+    setTray([]);
+    setTrayBusy(false);
+    bumpToday();
+    void refreshLists();
   };
 
   const copyYesterdayMeal = async (meal: MealType) => {
@@ -287,7 +436,8 @@ function CaptureTab() {
     yd.setDate(yd.getDate() - 1);
     const yEntries = await getFoodEntriesForDay(supabase, isoDay(yd));
     if (!yEntries.ok) return;
-    for (const e of yEntries.data.filter((x) => x.mealType === meal)) {
+    const toCopy = yEntries.data.filter((x) => x.mealType === meal);
+    for (const e of toCopy) {
       await addFoodEntry(supabase, {
         mealType: e.mealType, foodName: e.foodName, brand: e.brand ?? undefined,
         calories: e.calories, protein: e.protein, carbs: e.carbs, fat: e.fat,
@@ -297,6 +447,7 @@ function CaptureTab() {
         micros: e.micros ?? undefined,
       });
     }
+    logLoggingEvent({ type: 'copy_yesterday', meal, entries: toCopy.length });
     bumpToday();
     void refreshLists();
   };
@@ -308,8 +459,25 @@ function CaptureTab() {
     setSearching(false);
   };
 
+  const totals = trayTotals(tray);
+
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1 }}>
+      {/* ── The Tray — sticky running total, commit once ───────────── */}
+      {tray.length > 0 ? (
+        <View style={[styles.trayBanner, { backgroundColor: theme.surfaces.surface2, borderBottomColor: theme.surfaces.border }]}>
+          <Text style={[styles.trayLine, { color: theme.text.ink2 }]}>{trayLine(totals)}</Text>
+          <View style={styles.trayActions}>
+            <Pressable onPress={() => void commitTray()} disabled={trayBusy} hitSlop={10}>
+              <Text style={[styles.trayCommit, { color: theme.text.carbs }]}>{trayBusy ? 'LOGGING…' : 'LOG ALL'}</Text>
+            </Pressable>
+            <Pressable onPress={() => setTray([])} disabled={trayBusy} hitSlop={10}>
+              <Text style={[styles.trayClear, { color: theme.text.faint }]}>CLEAR</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={styles.vf}>
         <View style={styles.modes}>
@@ -408,8 +576,15 @@ function CaptureTab() {
               onChangeText={setAiText}
               multiline
             />
+            {voiceAvailable() ? (
+              <Pressable onPress={() => void toggleVoice()} hitSlop={8}>
+                <Text style={[styles.voiceLink, voiceState === 'listening' && styles.voiceLive]}>
+                  {voiceState === 'listening' ? 'LISTENING — TAP WHEN DONE' : 'SPEAK IT INSTEAD'}
+                </Text>
+              </Pressable>
+            ) : null}
             <CTA label={aiBusy ? 'Estimating…' : 'Estimate with AI'} disabled={aiBusy || !aiText.trim()} onPress={() => void runAiEstimate()} />
-            <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app · your keyboard's mic dictates straight into the box</SrcNote>
+            <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app · speech is transcribed by your phone's OS, audio never reaches Basalt's servers</SrcNote>
           </View>
         ) : null}
       </View>
@@ -472,11 +647,11 @@ function CaptureTab() {
           ) : aiItems && aiItems.length > 0 ? (
             <>
               {aiItems.map((item, i) => (
-                <Pressable key={i} onPress={() => openDraftFromAi(item)}>
+                <Pressable key={i} onPress={() => openDraftFromAi(item)} hitSlop={8}>
                   <ReceiptRow
                     name={item.food_name}
                     meta={`~P ${Math.round(item.protein_g)} · ~C ${Math.round(item.carbs_g)} · ~F ${Math.round(item.fat_g)} · ${item.portion_note}`}
-                    value={`~${Math.round(item.calories)}`}
+                    value={aiKcalText(item)}
                     unit="kcal"
                     last={i === aiItems.length - 1}
                   />
@@ -491,12 +666,52 @@ function CaptureTab() {
         </Card>
       ) : null}
 
+      {/* ── Often forgotten — optional one-tap additions, never auto ── */}
+      {mode === 'ai' && aiOmissions.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Often forgotten" summary="optional — tap to add to tray" />
+          {aiOmissions.map((item, i) => (
+            <Pressable
+              key={`om-${i}`}
+              onPress={() => {
+                addToTray(
+                  {
+                    mealType: item.meal_guess,
+                    foodName: item.food_name,
+                    calories: Math.round(item.calories),
+                    protein: Math.round(item.protein_g * 10) / 10,
+                    carbs: Math.round(item.carbs_g * 10) / 10,
+                    fat: Math.round(item.fat_g * 10) / 10,
+                    fiber: Math.round(item.fiber_g * 10) / 10,
+                    sugar: Math.round(item.sugar_g * 10) / 10,
+                    sodiumMg: Math.round(item.sodium_mg),
+                    source: 'quick_add',
+                  },
+                  null,
+                );
+                setAiOmissions((o) => o.filter((_, idx) => idx !== i));
+              }}
+              hitSlop={8}
+            >
+              <ReceiptRow
+                name={`+ ${item.food_name}`}
+                meta={item.portion_note}
+                value={aiKcalText(item)}
+                unit="kcal"
+                last={i === aiOmissions.length - 1}
+              />
+            </Pressable>
+          ))}
+          <SrcNote>Commonly missed alongside what you described · nothing here is ever added by itself</SrcNote>
+        </Card>
+      ) : null}
+
       {/* ── Search results ─────────────────────────────────────────── */}
       {mode === 'search' && results.length > 0 ? (
         <Card>
           <ReceiptHeader label="Results" summary={`${results.length} from Open Food Facts`} />
           {results.slice(0, 10).map((p, i) => (
-            <Pressable key={p.id + i} onPress={() => openDraftFromProduct(p)}>
+            <Pressable key={p.id + i} onPress={() => openDraftFromProduct(p)} hitSlop={8}>
               <ReceiptRow
                 name={p.name}
                 meta={resultMeta(p)}
@@ -517,7 +732,7 @@ function CaptureTab() {
           {frequent.map((f, i) => {
             const fav = favorites.find((x) => x.foodName === f.foodName);
             return (
-              <Pressable key={f.foodName} onPress={() => fav && void relogFavorite(fav)} disabled={!fav}>
+              <Pressable key={f.foodName} onPress={() => fav && void relogFavorite(fav)} disabled={!fav} hitSlop={8}>
                 <ReceiptRow
                   name={f.foodName}
                   meta={`logged ${f.count}× around now${fav ? ' · tap to re-log' : ''}`}
@@ -536,7 +751,7 @@ function CaptureTab() {
         <Card>
           <ReceiptHeader label="Yesterday" summary="tap a meal to copy it to today" />
           {yesterday.map((m, i) => (
-            <Pressable key={m.meal} onPress={() => void copyYesterdayMeal(m.meal)}>
+            <Pressable key={m.meal} onPress={() => void copyYesterdayMeal(m.meal)} hitSlop={8}>
               <ReceiptRow
                 name={`Copy yesterday's ${m.label.toLowerCase()}`}
                 meta={`${m.count} ${m.count === 1 ? 'entry' : 'entries'}`}
@@ -549,15 +764,33 @@ function CaptureTab() {
         </Card>
       ) : null}
 
+      {/* ── Fill the gap — arithmetic against today's targets ──────── */}
+      {fillGap && fillGap.suggestions.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Fill the gap" summary={gapLine(fillGap.gap)} />
+          {fillGap.suggestions.map((s, i) => (
+            <Pressable key={`${s.source}:${s.foodName}`} onPress={() => fillSuggestionToTray(s)} hitSlop={8}>
+              <ReceiptRow
+                name={s.foodName}
+                meta={`${s.why}${s.source === 'off' ? ` · Open Food Facts${s.brand ? ` · ${s.brand}` : ''}` : ' · from your foods'} · tap for Tray`}
+                value={groupInt(s.calories)}
+                unit="kcal"
+                last={i === fillGap.suggestions.length - 1}
+              />
+            </Pressable>
+          ))}
+        </Card>
+      ) : null}
+
       {/* ── Favorites ──────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Favorites" summary={favorites.length > 0 ? '1-tap re-log' : undefined} />
         {favorites.length > 0 ? (
           favorites.map((f, i) => (
-            <Pressable key={f.id} onPress={() => void relogFavorite(f)}>
+            <Pressable key={f.id} onPress={() => void relogFavorite(f)} onLongPress={() => editFavorite(f)} hitSlop={8}>
               <ReceiptRow
                 name={f.foodName}
-                meta={`logged ${f.useCount}×${f.brand ? ` · ${f.brand}` : ''}`}
+                meta={`logged ${f.useCount}×${f.brand ? ` · ${f.brand}` : ''} · hold to edit portion`}
                 value={groupInt(f.calories)}
                 unit="kcal"
                 last={i === favorites.length - 1}
@@ -571,16 +804,39 @@ function CaptureTab() {
         )}
       </Card>
 
-      <AddEntryForm draft={draft} onCancel={() => setDraft(null)} onSave={saveEntry} />
+      <AddEntryForm
+        draft={draft}
+        onCancel={() => setDraft(null)}
+        onSave={saveEntry}
+        onAddToTray={addToTray}
+        trayCalories={totals.calories}
+        trayCount={totals.count}
+      />
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  trayBanner: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  trayLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, flexShrink: 1 },
+  trayActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  trayCommit: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, fontWeight: '600' },
+  trayClear: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9 },
   photoMinor: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
-  photoMinorLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
+  voiceLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, paddingVertical: 10, textAlign: 'center' },
+  voiceLive: { color: color.ink },
+  photoMinorLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
   queueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border, paddingVertical: 2 },
-  queueLabel: { fontFamily: mono, fontSize: 9.5, color: color.ink2, letterSpacing: 0.4 },
+  queueLabel: { fontFamily: mono, fontSize: 11.5, color: color.ink2, letterSpacing: 0.4 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   vf: {
@@ -593,7 +849,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   modes: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 12, paddingBottom: 8 },
-  mode: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.24, color: color.faint, paddingBottom: 3 },
+  mode: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24, color: color.faint, paddingBottom: 3 },
   modeOn: { color: color.ink, borderBottomWidth: 1, borderBottomColor: color.ink },
   cameraWrap: { height: 260, borderRadius: 10, overflow: 'hidden', marginBottom: 12, justifyContent: 'flex-end' },
   cameraDenied: { paddingBottom: 12 },
@@ -607,13 +863,13 @@ const styles = StyleSheet.create({
   cBL: { left: 0, bottom: 0, borderLeftWidth: 1.5, borderBottomWidth: 1.5 },
   cBR: { right: 0, bottom: 0, borderRightWidth: 1.5, borderBottomWidth: 1.5 },
   hint: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 1.33, color: color.mute,
+    fontFamily: mono, fontSize: 11, letterSpacing: 1.33, color: color.mute,
     textAlign: 'center', paddingBottom: 14,
   },
   resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, paddingVertical: 11 },
-  resultName: { fontSize: 13, fontWeight: '500', color: color.ink },
-  resultMeta: { fontFamily: mono, fontSize: 10.5, color: color.faint, marginTop: 3 },
-  conflict: { fontFamily: mono, fontSize: 9.5, color: color.fat, marginTop: 4, letterSpacing: 0.38 },
+  resultName: { fontSize: 14, fontWeight: '500', color: color.ink },
+  resultMeta: { fontFamily: mono, fontSize: 11.5, color: color.faint, marginTop: 3 },
+  conflict: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 4, letterSpacing: 0.38 },
   addBtn: {
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 8,
     paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0,
@@ -623,6 +879,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
     paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border,
   },
-  qualityLabel: { fontFamily: mono, fontSize: 10, fontWeight: '600', letterSpacing: 1.2, color: color.faint },
+  qualityLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2, color: color.faint },
   qualityText: { fontFamily: mono, fontSize: 12, color: color.ink2 },
 });

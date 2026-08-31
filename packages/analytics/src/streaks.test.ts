@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { currentAndLongest, monthCells } from './streaks';
+import { currentAndLongest, monthCells, restAwareDays, REST_ADVISED_BELOW } from './streaks';
 import { isoDay } from '@basalt/core-data';
 
 function daysAgoSet(today: Date, offsets: number[]): Set<string> {
@@ -59,5 +59,55 @@ describe('monthCells — the no-guilt calendar', () => {
     expect(day(20)).toBe('today');
     expect(day(21)).toBe('future');
     expect(cells.length % 7).toBe(0);
+  });
+});
+
+describe('restAwareDays — rest maintains a run, never fabricates one', () => {
+  it('a rest day between two trained days keeps the run contiguous', () => {
+    const trained = new Set(['2026-08-10', '2026-08-12']);
+    const rest = new Set(['2026-08-11']);
+    const out = restAwareDays(trained, rest);
+    expect(out).toEqual(new Set(['2026-08-10', '2026-08-11', '2026-08-12']));
+    expect(currentAndLongest(out, new Date(2026, 7, 12)).current).toBe(3);
+  });
+
+  it('a run made only of rest days is no run at all', () => {
+    const trained = new Set<string>();
+    const rest = new Set(['2026-08-10', '2026-08-11', '2026-08-12']);
+    expect(restAwareDays(trained, rest).size).toBe(0);
+  });
+
+  it('rest-only runs are dropped even when other runs contain training', () => {
+    const trained = new Set(['2026-08-01']);
+    const rest = new Set(['2026-08-10', '2026-08-11']); // detached from the trained run
+    const out = restAwareDays(trained, rest);
+    expect(out).toEqual(new Set(['2026-08-01']));
+  });
+
+  it('rest days extend a run at either end', () => {
+    const trained = new Set(['2026-08-11']);
+    const rest = new Set(['2026-08-10', '2026-08-12']);
+    expect(restAwareDays(trained, rest)).toEqual(
+      new Set(['2026-08-10', '2026-08-11', '2026-08-12']),
+    );
+  });
+
+  it('a real gap (no session, no rest) still breaks the run — honesty holds', () => {
+    const trained = new Set(['2026-08-10', '2026-08-13']);
+    const rest = new Set(['2026-08-11']); // the 12th is a true gap
+    const out = restAwareDays(trained, rest);
+    const r = currentAndLongest(out, new Date(2026, 7, 13));
+    expect(r.current).toBe(1);
+    expect(r.longest).toBe(2);
+  });
+
+  it('month boundaries do not fake a gap', () => {
+    const trained = new Set(['2026-07-31', '2026-08-02']);
+    const rest = new Set(['2026-08-01']);
+    expect(restAwareDays(trained, rest).size).toBe(3);
+  });
+
+  it('the rest-advised threshold is published and pinned', () => {
+    expect(REST_ADVISED_BELOW).toBe(40);
   });
 });

@@ -30,3 +30,12 @@ export function bigThree(records: { name: string; e1rm: number }[]): BigThree {
   }
   return out;
 }
+
+/** Which main lift a name is, per the same published matcher — or null.
+ *  Used by the periodization stall detector to group weekly bests. */
+export function mainLiftKey(name: string): 'squat' | 'bench' | 'deadlift' | null {
+  for (const rule of RULES) {
+    if (rule.match.test(name) && !rule.exclude.test(name)) return rule.key;
+  }
+  return null;
+}

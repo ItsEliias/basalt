@@ -180,3 +180,45 @@ export function labelToDraftFields(label: LabelScan, hour: number) {
     source: 'photo' as const,
   };
 }
+
+// ─── The Tray — accumulate a whole meal, commit once ─────────────────────────
+//
+// The fastest logging pattern in the category: add an item, the search
+// clears, the sticky banner keeps the running total, keep typing; one
+// action commits everything. Entries hold their macros as TOTALS as
+// entered (quantity is provenance metadata, not a multiplier — matching
+// how addFoodEntry stores and Today sums them), so tray math is plain
+// sums, honestly.
+
+export type TrayItem = {
+  entry: FoodEntryInput;
+  /** JPEG b64 pending upload with its entry at commit, or null. */
+  photoB64: string | null;
+};
+
+export type TrayTotals = {
+  count: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+export function trayTotals(items: TrayItem[]): TrayTotals {
+  return items.reduce<TrayTotals>(
+    (t, { entry }) => ({
+      count: t.count + 1,
+      calories: t.calories + entry.calories,
+      protein: t.protein + entry.protein,
+      carbs: t.carbs + entry.carbs,
+      fat: t.fat + entry.fat,
+    }),
+    { count: 0, calories: 0, protein: 0, carbs: 0, fat: 0 },
+  );
+}
+
+/** The sticky banner line: "3 ITEMS · 1,240 KCAL · P 82 · C 130 · F 41". */
+export function trayLine(totals: TrayTotals): string {
+  const int = (n: number) => Math.round(n).toLocaleString('en-US');
+  return `${totals.count} ${totals.count === 1 ? 'ITEM' : 'ITEMS'} · ${int(totals.calories)} KCAL · P ${int(totals.protein)} · C ${int(totals.carbs)} · F ${int(totals.fat)}`;
+}

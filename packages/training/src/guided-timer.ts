@@ -13,6 +13,27 @@ export type GuidedConfig = {
   sets: number;
 };
 
+/**
+ * Transition floor (V3 Phase 1, product law): any auto-advancing timed
+ * sequence gives at least this long to get into position before work
+ * starts. User-settable UPWARD per exercise; the engine refuses less —
+ * a too-short forced transition is the canonical failure this exists to
+ * prevent. Applies to the lead-in here and to any future mobility/guided
+ * content's side-switches.
+ */
+export const MIN_TRANSITION_S = 10;
+
+/** Clamp a config's transitions to the floor. createGuidedTimer applies
+ *  this itself — the floor is a guarantee, not a convention. An explicit
+ *  leadInS of 0 stays 0: "work starts on the GO tap" is user-initiated,
+ *  not an auto-advance, so the floor doesn't apply to it. Protocol-defined
+ *  work:rest cycles (Tabata's 20/10, EMOM's remainder) are the chosen
+ *  training structure, not positioning transitions — they stay verbatim. */
+export function withTransitionFloor(config: GuidedConfig): GuidedConfig {
+  const lead = config.leadInS <= 0 ? 0 : Math.max(MIN_TRANSITION_S, config.leadInS);
+  return { ...config, leadInS: lead };
+}
+
 export type GuidedPhase = 'idle' | 'lead' | 'work' | 'rest' | 'finished';
 
 export type GuidedState = {
@@ -33,7 +54,8 @@ export type GuidedEvent =
   | { type: 'logSet'; setNumber: number; durationS: number };
 
 export function createGuidedTimer(config: GuidedConfig): GuidedState {
-  return { config, phase: 'idle', remaining: config.workS, setIndex: 0, setsDone: 0 };
+  const floored = withTransitionFloor(config);
+  return { config: floored, phase: 'idle', remaining: floored.workS, setIndex: 0, setsDone: 0 };
 }
 
 export function startGuidedTimer(state: GuidedState): { state: GuidedState; events: GuidedEvent[] } {
@@ -186,16 +208,16 @@ export type TimerMode = 'custom' | 'emom' | 'tabata' | 'circuit';
 /** EMOM: work at the top of each minute, rest fills the remainder. */
 export function emomConfig(workS: number, minutes: number): GuidedConfig {
   const work = Math.min(55, Math.max(5, Math.round(workS)));
-  return { leadInS: 5, workS: work, restS: 60 - work, sets: Math.max(1, Math.round(minutes)) };
+  return { leadInS: MIN_TRANSITION_S, workS: work, restS: 60 - work, sets: Math.max(1, Math.round(minutes)) };
 }
 
 /** The published Tabata protocol: 20 s on / 10 s off × 8. */
-export const TABATA_CONFIG: GuidedConfig = { leadInS: 5, workS: 20, restS: 10, sets: 8 };
+export const TABATA_CONFIG: GuidedConfig = { leadInS: MIN_TRANSITION_S, workS: 20, restS: 10, sets: 8 };
 
 /** Circuits: stations × rounds; the engine sees sets = stations·rounds. */
 export function circuitConfig(stations: number, rounds: number, workS: number, restS: number): GuidedConfig {
   return {
-    leadInS: 5,
+    leadInS: MIN_TRANSITION_S,
     workS: Math.max(5, Math.round(workS)),
     restS: Math.max(0, Math.round(restS)),
     sets: Math.max(1, stations) * Math.max(1, rounds),

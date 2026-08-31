@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote } from '@basalt/ui';
+import { color, mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote, ScaledText as Text } from '@basalt/ui';
 import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { FoodEntryInput, MealType } from '@basalt/nutrition';
@@ -25,11 +25,15 @@ export type DraftEntry = FoodEntryInput & {
 };
 
 export function AddEntryForm({
-  draft, onCancel, onSave,
+  draft, onCancel, onSave, onAddToTray, trayCalories = 0, trayCount = 0,
 }: {
   draft: DraftEntry | null;
   onCancel: () => void;
   onSave: (entry: FoodEntryInput, photoB64: string | null) => Promise<void>;
+  /** The Tray lane: stash the entry, clear the search, keep logging. */
+  onAddToTray?: (entry: FoodEntryInput, photoB64: string | null) => void;
+  trayCalories?: number;
+  trayCount?: number;
 }) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<DraftEntry | null>(draft);
@@ -121,6 +125,12 @@ export function AddEntryForm({
             </View>
             {state.conflictNote ? <Text style={styles.conflict}>{state.conflictNote.toUpperCase()}</Text> : null}
             {state.sourceNote ? <SrcNote>{state.sourceNote}</SrcNote> : null}
+            {/* Live-total keypad: the tray total updates as you type. */}
+            {onAddToTray && trayCount > 0 ? (
+              <Text style={styles.trayLive}>
+                {`TRAY AFTER ADD · ${trayCount + 1} ITEMS · ${Math.round(trayCalories + (state.calories || 0)).toLocaleString('en-US')} KCAL`}
+              </Text>
+            ) : null}
           </ScrollView>
           <CTA
             label={busy ? '…' : 'Log it'}
@@ -132,6 +142,18 @@ export function AddEntryForm({
               setBusy(false);
             }}
           />
+          {onAddToTray ? (
+            <Pressable
+              disabled={busy || !state.foodName.trim()}
+              onPress={() => {
+                const { conflictNote: _c, sourceNote: _s, pendingPhotoB64, ...entry } = state;
+                onAddToTray(entry, pendingPhotoB64 ?? null);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.trayAction}>ADD TO TRAY · KEEP LOGGING</Text>
+            </Pressable>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -151,7 +173,7 @@ const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
   photoThumb: { width: 44, height: 44, borderRadius: 7, backgroundColor: color.surface2 },
-  photoAction: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.mute, paddingVertical: 8 },
+  photoAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, paddingVertical: 8 },
   sheet: {
     backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -164,10 +186,15 @@ const styles = StyleSheet.create({
   grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
   row: { flexDirection: 'row', gap: 10 },
   field: { flex: 1 },
-  fieldLabel: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
+  fieldLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
   fieldInput: { marginTop: 8 },
   conflict: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.38, color: color.fat,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.38, color: color.fat,
     lineHeight: 15, marginTop: 12,
+  },
+  trayLive: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, marginTop: 12 },
+  trayAction: {
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.ink2,
+    textAlign: 'center', paddingVertical: 12,
   },
 });

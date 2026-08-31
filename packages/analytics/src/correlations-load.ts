@@ -73,7 +73,11 @@ export async function loadDailySeries(
   for (const s of sets.data ?? []) {
     const r = s as any;
     if (r.set_type === 'warmup' || !r.reps) continue;
-    const date = String(r.completed_at).slice(0, 10);
+    // Local calendar day, not a UTC slice of the timestamp — completed_at
+    // is stored in UTC, so a naive slice(0,10) rolls evening sets into the
+    // next day for any timezone ahead of UTC, orphaning them from the same
+    // day's food/sleep rows (which key off a proper local `date` column).
+    const date = isoDay(new Date(r.completed_at));
     volumeKg.set(date, (volumeKg.get(date) ?? 0) + Number(r.weight_kg) * r.reps);
   }
 

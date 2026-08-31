@@ -98,6 +98,98 @@ export function sessionMeta(setCount: number, volumeKg: number, minutes: number 
   return parts.join(' · ');
 }
 
+export type TileSpec = {
+  key: string;
+  span: 'full' | 'half';
+  label: string;
+  value?: string;
+  unit?: string;
+  source?: string;
+  over?: boolean;
+  empty?: boolean;
+  emptyMessage?: string;
+};
+
+/**
+ * The Tiles Today layout's fixed v1 content model (docs/basalt-layouts.md
+ * §"Tiles content model (fixed in v1)"). Same rule everywhere: real-or-
+ * hidden — a metric with no data shows its own honest empty state, never
+ * a zero; a metric the user switched off is removed from the grid
+ * entirely, not shown empty. Pure so the fixed set can be tested without
+ * rendering — the screen only assembles the raw values.
+ */
+export function todayTileSpecs(input: {
+  hero: HeroModel | null;
+  hideNumbers: boolean;
+  targets: TargetsRecord | null;
+  totals: DailyTotals;
+  steps: number | null;
+  sleepHours: number | null;
+  waterMl: number;
+  waterTargetMl: number;
+  hydrationEnabled: boolean;
+  trainingTitle: string | null;
+}): TileSpec[] {
+  const tiles: TileSpec[] = [];
+
+  // 1 — Energy remaining, full, always present.
+  if (input.hero && !input.hideNumbers) {
+    tiles.push({
+      key: 'energy', span: 'full', label: 'Energy remaining',
+      value: Math.round(input.hero.remaining).toLocaleString('en-US'),
+      unit: input.hero.over ? 'kcal over' : 'kcal',
+      over: input.hero.over,
+    });
+  } else {
+    tiles.push({
+      key: 'energy', span: 'full', label: 'Energy', empty: true,
+      emptyMessage: input.hideNumbers
+        ? 'Numbers hidden at your request — still recorded, just not shown.'
+        : 'No daily targets yet — finish onboarding in Settings → Profile.',
+    });
+  }
+
+  // 2 — Protein, half, hide if no target set (not an empty state: absent).
+  if (input.targets && !input.hideNumbers) {
+    tiles.push({
+      key: 'protein', span: 'half', label: 'Protein',
+      value: String(Math.round(input.totals.protein)),
+      unit: `of ${Math.round(input.targets.proteinG)} g`,
+    });
+  }
+
+  // 3 — Steps, half, honest empty state if no source.
+  tiles.push(
+    input.steps !== null
+      ? { key: 'steps', span: 'half', label: 'Steps', value: input.steps.toLocaleString('en-US') }
+      : { key: 'steps', span: 'half', label: 'Steps', empty: true, emptyMessage: 'No step source connected.' },
+  );
+
+  // 4 — Sleep, half, honest empty state if no source.
+  if (input.sleepHours !== null) {
+    const h = Math.floor(input.sleepHours);
+    const m = Math.round((input.sleepHours - h) * 60);
+    tiles.push({ key: 'sleep', span: 'half', label: 'Sleep', value: `${h}:${String(m).padStart(2, '0')}` });
+  } else {
+    tiles.push({ key: 'sleep', span: 'half', label: 'Sleep', empty: true, emptyMessage: 'No sleep source connected.' });
+  }
+
+  // 5 — Water, half, hide if hydration disabled (not an empty state: absent).
+  if (input.hydrationEnabled) {
+    tiles.push({
+      key: 'water', span: 'half', label: 'Water',
+      value: Math.round(input.waterMl).toLocaleString('en-US'),
+      unit: `/ ${Math.round(input.waterTargetMl).toLocaleString('en-US')} ml`,
+    });
+  }
+
+  // 6 — Training, full, "Rest day" or the session name — never absent,
+  // never empty-state (a rest day is real information, not missing data).
+  tiles.push({ key: 'training', span: 'full', label: 'Training', value: input.trainingTitle ?? 'Rest day' });
+
+  return tiles;
+}
+
 export type MicroTotal = { name: string; pct: number };
 
 /**
@@ -119,4 +211,30 @@ export function microTotals(entries: FoodEntryRow[]): MicroTotal[] {
   return Array.from(sums.entries())
     .map(([name, pct]) => ({ name, pct: Math.round(pct) }))
     .sort((a, b) => b.pct - a.pct);
+}
+
+// ── Tile hide/show (V3 Phase 5) ─────────────────────────────────────
+// Hiding is OMISSION: a hidden section renders nothing at all — never a
+// ghost, never a locked placeholder. The energy hero is the day's anchor
+// and cannot be hidden; everything else is the user's call.
+
+export const HIDEABLE_SECTIONS = [
+  { key: 'macros', label: 'Macros & caps' },
+  { key: 'meals', label: 'Logged meals' },
+  { key: 'micros', label: 'Micronutrients' },
+  { key: 'steps', label: 'Steps' },
+  { key: 'sleep', label: 'Sleep tile' },
+  { key: 'water', label: 'Water' },
+  { key: 'training', label: 'Training tile' },
+] as const;
+
+export type HideableSection = (typeof HIDEABLE_SECTIONS)[number]['key'];
+
+/** Tiles-layout keys fold into the same registry (macros covers P/C/F). */
+export function sectionForTile(tileKey: string): string {
+  return tileKey === 'protein' || tileKey === 'carbs' || tileKey === 'fat' ? 'macros' : tileKey;
+}
+
+export function filterTiles(tiles: TileSpec[], hidden: ReadonlySet<string>): TileSpec[] {
+  return tiles.filter((t) => t.key === 'energy' || !hidden.has(sectionForTile(t.key)));
 }

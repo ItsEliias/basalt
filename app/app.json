@@ -12,7 +12,6 @@
     },
     "android": {
       "package": "com.itseliias.basalt",
-      "minSdkVersion": 26,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -48,7 +47,19 @@
       "react-native-health-connect",
       "@maplibre/maplibre-react-native",
       "expo-notifications",
-      "./plugins/withTimerFgs.js",
+      "./plugins/withForegroundServiceTypes.js",
+      "./plugins/withNotifeeMavenRepo.js",
+      "./plugins/withHealthConnectQueries.js",
+      "./plugins/withHealthConnectPermissionDelegate.js",
+      "./plugins/withDisableForceDark.js",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
       [
         "react-native-android-widget",
         {
@@ -74,6 +85,23 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Basalt records your walks with GPS so you can see your route, pace and splits."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Basalt uses the microphone so you can speak a meal instead of typing it.",
+          "speechRecognitionPermission": "Basalt uses speech recognition to turn what you say into a food description.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "bluetoothAlwaysPermission": "Basalt uses Bluetooth to read weigh-ins from your smart scale — only when you ask it to."
         }
       ]
     ]

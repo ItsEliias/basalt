@@ -22,6 +22,10 @@ export type WeekReviewInput = {
   volumeKg: number;
   calorieTarget: number | null;
   proteinTarget: number | null;
+  /** Hide-the-numbers mode: nutrition values go fully qualitative here in
+   *  the composer — not filtered downstream — so no consumer (screen, share
+   *  card, anything later) can leak them. Pinned by test. */
+  hideNumbers?: boolean;
 };
 
 export type WeekReview = {
@@ -64,7 +68,9 @@ export function pickGap(input: WeekReviewInput): string | null {
     if (under > 0) {
       candidates.push({
         severity: (under / Math.max(1, loggedDays)) * 0.9,
-        text: `protein landed under target on ${under} of ${loggedDays} logged days`,
+        text: input.hideNumbers
+          ? 'protein came in under target on several days'
+          : `protein landed under target on ${under} of ${loggedDays} logged days`,
       });
     }
   }
@@ -80,7 +86,9 @@ export function pickGap(input: WeekReviewInput): string | null {
     if (over >= 2) {
       candidates.push({
         severity: (over / Math.max(1, loggedDays)) * 0.7,
-        text: `${over} logged days ran more than 10% over the energy target`,
+        text: input.hideNumbers
+          ? 'several logged days ran well over the energy target'
+          : `${over} logged days ran more than 10% over the energy target`,
       });
     }
   }
@@ -111,7 +119,7 @@ export function composeWeekReview(input: WeekReviewInput): WeekReview {
   }
   const calMeans = input.days.filter((d) => d.loggedFood && d.calories !== null).map((d) => d.calories!);
   const calMean = mean(calMeans);
-  if (calMean !== null && input.calorieTarget !== null) {
+  if (calMean !== null && input.calorieTarget !== null && !input.hideNumbers) {
     const delta = Math.round(calMean - input.calorieTarget);
     stats.push({ k: delta <= 0 ? 'Deficit' : 'Surplus', v: `${delta > 0 ? '+' : '−'}${fmt(Math.abs(delta))}/d` });
   }
@@ -136,7 +144,13 @@ export function composeWeekReview(input: WeekReviewInput): WeekReview {
     const onTarget = input.days.filter(
       (d) => d.loggedFood && d.proteinG !== null && d.proteinG >= input.proteinTarget! * 0.9,
     ).length;
-    clauses.push(`protein on target ${onTarget} of ${loggedDays}`);
+    clauses.push(
+      input.hideNumbers
+        ? onTarget / loggedDays >= 0.5
+          ? 'protein mostly on target'
+          : 'protein often under target'
+        : `protein on target ${onTarget} of ${loggedDays}`,
+    );
   }
 
   const gap = pickGap(input);

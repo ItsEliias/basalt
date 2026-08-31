@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, color, mono } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, color, mono, ScaledText as Text } from '@basalt/ui';
 import {
   addProgressPhoto, listProgressPhotos, signedProgressUrls, type ProgressPhoto, type ProgressPose,
 } from '@basalt/core-data';
@@ -176,21 +176,21 @@ const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   previewRow: { flexDirection: 'row', gap: 14, alignItems: 'center', marginTop: 10 },
   preview: { width: 72, height: 96, borderRadius: 10, backgroundColor: color.surface2 },
-  previewMeta: { fontFamily: mono, fontSize: 10, color: color.ink2, lineHeight: 16, letterSpacing: 0.3 },
-  link: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
-  sheetTitle: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute },
+  previewMeta: { fontFamily: mono, fontSize: 11.5, color: color.ink2, lineHeight: 16, letterSpacing: 0.3 },
+  link: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
+  sheetTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
   compareSheet: {
     backgroundColor: color.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border2,
     borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 34,
   },
   compareRow: { flexDirection: 'row', gap: 12, marginTop: 14 },
   compareImg: { width: '100%', aspectRatio: 3 / 4, borderRadius: 10, backgroundColor: color.surface2 },
-  compareDate: { fontFamily: mono, fontSize: 9.5, color: color.mute, textAlign: 'center', marginTop: 6 },
+  compareDate: { fontFamily: mono, fontSize: 11, color: color.mute, textAlign: 'center', marginTop: 6 },
   captureRoot: { flex: 1, backgroundColor: '#000' },
   vGuide: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(244,245,246,0.5)' },
   hGuide: { position: 'absolute', left: '12%', right: '12%', height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(244,245,246,0.5)' },
   captureHud: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  hudText: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.ink, backgroundColor: 'rgba(15,17,21,0.55)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, overflow: 'hidden' },
+  hudText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.ink, backgroundColor: 'rgba(15,17,21,0.55)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, overflow: 'hidden' },
   captureBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingTop: 14,

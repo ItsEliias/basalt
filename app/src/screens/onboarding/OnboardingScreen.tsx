@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   color, mono, CTA, ObDots, ObQuestion, ObSub, ObOption, ObInput, ObInRow,
-  ObChipLabel, ObNote, ChipRow, ChipGroup,
+  ObChipLabel, ObNote, ChipRow, ChipGroup, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
 import { saveProfile, saveTargets, addWeightEntry } from '@basalt/core-data';
 import { computeTargets } from '@basalt/nutrition';
@@ -22,6 +23,7 @@ import {
 // its reachability contract lives in layout.ts and is regression-tested.
 
 export function OnboardingScreen() {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const refreshCore = useAppStore((s) => s.refreshCore);
   const [step, setStep] = useState(1);
@@ -42,7 +44,8 @@ export function OnboardingScreen() {
     const profile = skipped ? { useMetric: true } : buildProfile(state);
     const saved = await saveProfile(supabase, profile);
     if (!saved.ok) {
-      setError(saved.error);
+      console.error('saveProfile failed:', saved.error);
+      setError("Couldn't save your profile — check your connection and try again.");
       setBusy(false);
       return;
     }
@@ -57,7 +60,8 @@ export function OnboardingScreen() {
           reason: t.explanation,
         });
         if (!st.ok) {
-          setError(st.error);
+          console.error('saveTargets failed:', st.error);
+          setError("Couldn't save your targets — check your connection and try again.");
           setBusy(false);
           return;
         }
@@ -215,7 +219,7 @@ export function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.root, { paddingTop: insets.top + 22 }]}
+      style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 22 }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.topRow}>
@@ -246,7 +250,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 22 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   brand: { fontFamily: mono, fontSize: 11, letterSpacing: 2.42, color: color.ink },
-  skip: { fontFamily: mono, fontSize: 10, letterSpacing: 1, color: color.faint },
+  skip: { fontFamily: mono, fontSize: 11, letterSpacing: 1, color: color.faint },
   step: { flex: 1, minHeight: 0 },
   scroll: { flex: 1, marginTop: 16, marginBottom: 10 },
   error: { fontSize: 12.5, color: color.fat, lineHeight: 18 },

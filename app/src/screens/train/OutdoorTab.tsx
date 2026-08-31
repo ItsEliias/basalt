@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Location from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA,
-  color, mono, mmss, paceText, groupInt,
+  color, mono, mmss, paceText, groupInt, useTheme,
+  ScaledText as Text, ObInput,
 } from '@basalt/ui';
 import {
   acceptFix, routeDistanceM, summarizeWalk, computeSplits, saveWalk, listRecentWalks,
@@ -17,7 +18,15 @@ import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
 import * as Speech from 'expo-speech';
 import { Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { usualLoop, type RouteCluster } from '@basalt/training';
+import {
+  usualLoop, INTERVAL_WALKS, phaseAt, walkTotalSeconds, WALK_DONE_CUE,
+  listShoesWithKm, addShoe, setShoeThreshold, retireShoe, shoeStatusLine, SHOE_GUIDANCE,
+  distanceToRouteM, stepDeviation, DEVIATION_ALERT_M,
+  type RouteCluster, type IntervalWalk, type ShoeWithKm, type DeviationState,
+} from '@basalt/training';
+import * as Haptics from 'expo-haptics';
+import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed, WALK_STOP_ACTION_ID } from '../../lib/walkTrackingService';
+import notifee, { EventType } from '@notifee/react-native';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
 // the pieces the audit found missing built for real: Douglas-Peucker before
@@ -36,6 +45,7 @@ type Mode =
   | { kind: 'error'; message: string };
 
 export function OutdoorTab() {
+  const { theme } = useTheme();
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [mode, setMode] = useState<Mode>({ kind: 'idle' });
   const [now, setNow] = useState(Date.now());
@@ -46,9 +56,19 @@ export function OutdoorTab() {
   const [loopBusy, setLoopBusy] = useState(false);
   const [loopError, setLoopError] = useState<string | null>(null);
   const [voiceSplits, setVoiceSplits] = useState(false);
+  const [glance, setGlance] = useState(false);
+  const [routeNudge, setRouteNudge] = useState(false);
+  const deviationRef = useRef<DeviationState>({ off: false });
   const lastAnnouncedKm = useRef(0);
+  const [guided, setGuided] = useState<IntervalWalk | null>(null);
+  const [shoes, setShoes] = useState<ShoeWithKm[]>([]);
+  const [activeShoeId, setActiveShoeId] = useState<string | null>(null);
+  const [newShoe, setNewShoe] = useState('');
+  const guidedLastIndex = useRef(-1);
+  const guidedDone = useRef(false);
   const [beacon, setBeacon] = useState<{ id: string; expiresAt: string } | null>(null);
   const beaconLastPush = useRef(0);
+  const notifLastUpdate = useRef(0);
 
   const startBeacon = async () => {
     const { data, error } = await supabase.functions.invoke('beacon', { body: { action: 'start' } });
@@ -87,6 +107,7 @@ export function OutdoorTab() {
 
   useEffect(() => {
     void AsyncStorage.getItem('basalt.voiceSplits').then((v) => setVoiceSplits(v === 'on'));
+    void AsyncStorage.getItem('basalt.walkGlance').then((v) => setGlance(v === 'on'));
   }, []);
 
   const generateLoop = async (km: number) => {
@@ -122,6 +143,12 @@ export function OutdoorTab() {
     void listRecentWalks(supabase, 8).then((r) => r.ok && setRecent(r.data));
   }, []);
   useEffect(() => loadRecent(), [loadRecent]);
+
+  const loadShoes = useCallback(() => {
+    void listShoesWithKm(supabase).then((r) => r.ok && setShoes(r.data));
+    void AsyncStorage.getItem('basalt.activeShoe').then((v) => setActiveShoeId(v || null));
+  }, []);
+  useEffect(() => loadShoes(), [loadShoes]);
 
   const boot = useCallback(async () => {
     setMode({ kind: 'checking' });
@@ -176,13 +203,28 @@ export function OutdoorTab() {
           setMode((m) => {
             if (m.kind !== 'tracking') return m;
             const lastKept = m.points[m.points.length - 1] ?? null;
-            if (!acceptFix(lastKept, p)) return { ...m, last: p };
-            return { ...m, last: p, points: [...m.points, p] };
+            const next = !acceptFix(lastKept, p) ? { ...m, last: p } : { ...m, last: p, points: [...m.points, p] };
+            // Keep the ongoing notification's body current — throttled to
+            // once every 30s, matching timerService's own "no spam" rule;
+            // this is what actually keeps the walk logging with the screen
+            // locked, so it's worth a little live-ness, just not per-fix.
+            const nowMs = Date.now();
+            if (nowMs - notifLastUpdate.current >= 30_000) {
+              notifLastUpdate.current = nowMs;
+              const distM = routeDistanceM(next.points);
+              const secs = Math.max(1, Math.round((nowMs - next.started) / 1000));
+              void updateWalkTracking(
+                `${distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(2)} km`} · ${mmss(secs)}`,
+              );
+            }
+            return next;
           });
         },
       );
       tickerRef.current = setInterval(() => setNow(Date.now()), 500);
       lastAnnouncedKm.current = 0;
+      notifLastUpdate.current = 0;
+      void startWalkTracking('0 m · 0:00');
     } catch (e: any) {
       setMode({ kind: 'error', message: e?.message ?? 'Could not start tracking.' });
     }
@@ -198,6 +240,7 @@ export function OutdoorTab() {
     }
     const ended = Date.now();
     void stopBeacon();
+    void stopWalkTracking();
     const { points, started } = mode;
     setMode({ kind: 'saving' });
 
@@ -210,7 +253,9 @@ export function OutdoorTab() {
       elevationGainM: s.elevationGainM,
       avgPaceSecPerKm: s.avgPaceSecPerKm,
       route: s.simplified,
+      shoeId: activeShoeId,
     });
+    loadShoes();
 
     setMode({
       kind: 'summary',
@@ -232,11 +277,31 @@ export function OutdoorTab() {
     () => () => {
       watcherRef.current?.remove();
       if (tickerRef.current) clearInterval(tickerRef.current);
+      void stopWalkTracking();
     },
     [],
   );
 
   const tracking = mode.kind === 'tracking';
+  useEffect(() => {
+    if (tracking) {
+      guidedLastIndex.current = -1;
+      guidedDone.current = false;
+    }
+  }, [tracking]);
+
+  // Notification "Stop & save" (and its mirror on a paired watch) runs the
+  // SAME stop path as the on-screen button — the app foregrounds first, so
+  // nothing ever saves from a headless context.
+  useEffect(() => {
+    if (!tracking) return;
+    return notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.ACTION_PRESS && detail.pressAction?.id === WALK_STOP_ACTION_ID) {
+        void stop();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracking]);
   const liveDistance = tracking ? routeDistanceM(mode.points) : 0;
 
   // Voice split announcements — OS text-to-speech, opt-in, on whole kms.
@@ -253,8 +318,46 @@ export function OutdoorTab() {
   const liveSeconds = tracking ? Math.max(1, Math.round((now - mode.started) / 1000)) : 0;
   const livePace = tracking && liveDistance > 50 ? liveSeconds / (liveDistance / 1000) : null;
 
+  // Guided interval script — haptics are the PRIMARY signal (pocket, no
+  // earbuds), speech the detail layer. Phase changes fire once each.
+  const guidedPos = tracking && guided ? phaseAt(guided, liveSeconds) : null;
+  useEffect(() => {
+    if (!tracking || !guided) return;
+    if (guidedPos === null) {
+      if (!guidedDone.current) {
+        guidedDone.current = true;
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        Speech.speak(WALK_DONE_CUE);
+      }
+      return;
+    }
+    if (guidedPos.index !== guidedLastIndex.current) {
+      guidedLastIndex.current = guidedPos.index;
+      const up = guidedPos.phase.effort === 'brisk';
+      void (up
+        ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+            .then(() => new Promise((r) => setTimeout(r, 250)))
+            .then(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy))
+        : Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      ).catch(() => {});
+      Speech.speak(guidedPos.phase.cue);
+    }
+  }, [tracking, guided, guidedPos]);
+
+  // Haptic route nudge — off by default, only meaningful with a generated
+  // loop on screen. One buzz per excursion (published 50 m / 25 m
+  // hysteresis in the engine); GPS keeps recording either way.
+  useEffect(() => {
+    if (!tracking || !routeNudge || !loop || mode.kind !== 'tracking') return;
+    const d = distanceToRouteM({ lat: mode.last.lat, lng: mode.last.lng }, loop.points);
+    if (stepDeviation(deviationRef.current, d)) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracking, routeNudge, loop, mode]);
+
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {tracking ? <KeepAwakeWhileTracking /> : null}
 
       {/* ── Recorder ───────────────────────────────────────────────── */}
@@ -274,6 +377,37 @@ export function OutdoorTab() {
             }}>
               <Text style={styles.shareLink}>{voiceSplits ? 'VOICE SPLITS ON — EVERY KM · TAP TO TURN OFF' : 'VOICE SPLITS OFF · TAP TO ANNOUNCE EVERY KM'}</Text>
             </Pressable>
+            {/* Guided interval scripts — a fixed set, not a library */}
+            <View style={styles.loopRow}>
+              <Text style={styles.loopLabel}>GUIDED…</Text>
+              {INTERVAL_WALKS.map((w) => (
+                <Pressable key={w.key} onPress={() => { setGuided(guided?.key === w.key ? null : w); }}>
+                  <Text style={[styles.loopChip, guided?.key === w.key && styles.loopChipOn]}>
+                    {w.name.replace(' · ', ' ').toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {guided ? (
+              <SrcNote>{`${guided.structure} — cues by vibration first, then voice · talk-test effort, never pace targets · deselect to walk unscripted`}</SrcNote>
+            ) : null}
+            {shoes.length > 0 ? (
+              <View style={styles.loopRow}>
+                <Text style={styles.loopLabel}>SHOE…</Text>
+                {shoes.map((sh) => (
+                  <Pressable
+                    key={sh.id}
+                    onPress={() => {
+                      const next = activeShoeId === sh.id ? null : sh.id;
+                      setActiveShoeId(next);
+                      void AsyncStorage.setItem('basalt.activeShoe', next ?? '');
+                    }}
+                  >
+                    <Text style={[styles.loopChip, activeShoeId === sh.id && styles.loopChipOn]}>{sh.name.toUpperCase()}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
             <View style={styles.loopRow}>
               <Text style={styles.loopLabel}>LOOP OF…</Text>
               {[2, 3, 5, 8].map((km) => (
@@ -290,7 +424,19 @@ export function OutdoorTab() {
                   {`${(loop.lengthM / 1000).toFixed(2)} km loop — you asked for ${(loop.requestedM / 1000).toFixed(0)} km`}
                 </Text>
                 <SrcNote>{loop.note}</SrcNote>
-                <Pressable onPress={() => setLoop(null)}>
+                <Pressable
+                  onPress={() => {
+                    deviationRef.current = { off: false };
+                    setRouteNudge(!routeNudge);
+                  }}
+                >
+                  <Text style={styles.shareLink}>
+                    {routeNudge
+                      ? `ROUTE NUDGE ON — ONE BUZZ WHEN >${DEVIATION_ALERT_M} M OFF THIS LOOP · TAP TO TURN OFF`
+                      : `ROUTE NUDGE OFF · TAP TO BUZZ WHEN >${DEVIATION_ALERT_M} M OFF THIS LOOP`}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => { setLoop(null); setRouteNudge(false); }}>
                   <Text style={styles.shareLink}>DISMISS</Text>
                 </Pressable>
               </>
@@ -327,12 +473,44 @@ export function OutdoorTab() {
               <View style={styles.liveDot} />
               <Text style={styles.liveText}>RECORDING · GPS ±{Math.round(mode.last.accuracy)} M</Text>
             </View>
-            <View style={styles.statRow}>
-              <Stat k="Distance" v={liveDistance < 1000 ? `${Math.round(liveDistance)}` : (liveDistance / 1000).toFixed(2)} u={liveDistance < 1000 ? 'm' : 'km'} />
-              <Stat k="Time" v={mmss(liveSeconds)} />
-              <Stat k="Pace" v={livePace ? paceText(livePace) : '—'} u={livePace ? '/km' : undefined} />
-              <Stat k="Points" v={String(mode.points.length)} />
-            </View>
+            {glance ? (
+              // Glance mode — the FIXED stat set (distance, time, pace) in
+              // large type, readable at arm's length mid-walk. No config.
+              <View style={styles.glanceBlock}>
+                <Text style={styles.glanceValue}>
+                  {liveDistance < 1000 ? `${Math.round(liveDistance)} m` : `${(liveDistance / 1000).toFixed(2)} km`}
+                </Text>
+                <Text style={styles.glanceValue}>{mmss(liveSeconds)}</Text>
+                <Text style={styles.glanceValue}>{livePace ? `${paceText(livePace)} /km` : '— /km'}</Text>
+              </View>
+            ) : (
+              <View style={styles.statRow}>
+                <Stat k="Distance" v={liveDistance < 1000 ? `${Math.round(liveDistance)}` : (liveDistance / 1000).toFixed(2)} u={liveDistance < 1000 ? 'm' : 'km'} />
+                <Stat k="Time" v={mmss(liveSeconds)} />
+                <Stat k="Pace" v={livePace ? paceText(livePace) : '—'} u={livePace ? '/km' : undefined} />
+                <Stat k="Points" v={String(mode.points.length)} />
+              </View>
+            )}
+            <Pressable
+              onPress={() => {
+                const next = !glance;
+                setGlance(next);
+                void AsyncStorage.setItem('basalt.walkGlance', next ? 'on' : 'off');
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.shareLink}>{glance ? 'GLANCE TYPE ON · TAP FOR DETAIL' : 'LARGE GLANCE TYPE · TAP TO ENLARGE'}</Text>
+            </Pressable>
+            {guided ? (
+              guidedPos ? (
+                <View style={styles.guidedRow}>
+                  <Text style={styles.guidedEffort}>{guidedPos.phase.effort.toUpperCase()}</Text>
+                  <Text style={styles.guidedRemain}>{mmss(guidedPos.phaseRemainS)} LEFT · {mmss(Math.max(0, walkTotalSeconds(guided) - liveSeconds))} IN SCRIPT</Text>
+                </View>
+              ) : (
+                <Text style={styles.shareLink}>SCRIPT FINISHED — RECORDING CONTINUES UNTIL YOU STOP</Text>
+              )
+            ) : null}
             {beacon ? (
               <Pressable onPress={() => void stopBeacon()}>
                 <View style={styles.beaconRow}>
@@ -348,7 +526,11 @@ export function OutdoorTab() {
               </Pressable>
             )}
             <CTA label="Stop & save" onPress={() => void stop()} />
-            <SrcNote>Keeps recording while this screen is open · screen stays awake</SrcNote>
+            <SrcNote>
+              {Platform.OS === 'android' && !walkTrackingServiceFailed()
+                ? 'Keeps recording if your phone locks or you switch apps · leaving this tab still stops it'
+                : 'Keeps recording while this screen is open · screen stays awake'}
+            </SrcNote>
           </>
         ) : null}
 
@@ -376,6 +558,44 @@ export function OutdoorTab() {
             <CTA label="Try again" onPress={() => void boot()} />
           </>
         ) : null}
+      </Card>
+
+      {/* ── Shoes — mileage attribution, your threshold, no nagging ── */}
+      <Card>
+        <ReceiptHeader label="Shoes" summary={shoes.length > 0 ? 'walks wear down the picked shoe' : undefined} />
+        {shoes.map((sh, i) => (
+          <Pressable
+            key={sh.id}
+            onPress={() => {
+              const t = sh.thresholdKm === null ? 500 : sh.thresholdKm >= 800 ? null : sh.thresholdKm + 100;
+              void setShoeThreshold(supabase, sh.id, t).then(loadShoes);
+            }}
+            onLongPress={() => void retireShoe(supabase, sh.id).then(loadShoes)}
+            hitSlop={8}
+          >
+            <ReceiptRow
+              name={sh.name}
+              meta={`${shoeStatusLine(sh.km, sh.thresholdKm)} · tap cycles threshold (500–800 or none) · hold to retire`}
+              value={String(Math.round(sh.km))}
+              unit="km"
+              last={i === shoes.length - 1}
+            />
+          </Pressable>
+        ))}
+        {shoes.length === 0 ? (
+          <EmptyState>Name a shoe and pick it before a walk — its lifetime distance accumulates here.</EmptyState>
+        ) : null}
+        <View style={styles.shoeAddRow}>
+          <ObInput placeholder="Add a shoe — e.g. Pegasus 41" value={newShoe} onChangeText={setNewShoe} style={{ flex: 1 }} />
+          <Pressable
+            onPress={() => void addShoe(supabase, newShoe).then(() => { setNewShoe(''); loadShoes(); })}
+            hitSlop={10}
+            disabled={!newShoe.trim()}
+          >
+            <Text style={styles.shareLink}>ADD</Text>
+          </Pressable>
+        </View>
+        <SrcNote>{SHOE_GUIDANCE}</SrcNote>
       </Card>
 
       {/* ── Recent walks ───────────────────────────────────────────── */}
@@ -461,11 +681,18 @@ function KeepAwakeWhileTracking() {
 }
 
 const styles = StyleSheet.create({
-  shareLink: { fontFamily: mono, fontSize: 8.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
+  shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
+  loopChipOn: { color: color.ink, borderBottomWidth: 1, borderBottomColor: color.ink },
+  guidedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border },
+  guidedEffort: { fontFamily: mono, fontSize: 13, letterSpacing: 1.2, color: color.ink, fontWeight: '600' },
+  guidedRemain: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.mute },
+  shoeAddRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  glanceBlock: { paddingVertical: 10, gap: 6 },
+  glanceValue: { fontFamily: mono, fontSize: 40, letterSpacing: 0.5, color: color.ink, fontVariant: ['tabular-nums'] },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
-  loopLabel: { fontFamily: mono, fontSize: 9, letterSpacing: 0.9, color: color.faint },
+  loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
   loopChip: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.7, color: color.ink2,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.7, color: color.ink2,
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
     paddingHorizontal: 12, paddingVertical: 6, overflow: 'hidden',
   },
@@ -476,19 +703,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 8,
   },
   beaconDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.recovery },
-  beaconText: { fontFamily: mono, fontSize: 8, letterSpacing: 0.6, color: color.recovery, flexShrink: 1, lineHeight: 12 },
+  beaconText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.recovery, flexShrink: 1, lineHeight: 12 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.carbs },
-  liveText: { fontFamily: mono, fontSize: 9, letterSpacing: 1.26, color: color.carbs },
+  liveText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.26, color: color.carbs },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  statK: { fontFamily: mono, fontSize: 9, letterSpacing: 1.08, color: color.faint },
+  statK: { fontFamily: mono, fontSize: 11, letterSpacing: 1.08, color: color.faint },
   statV: { fontFamily: mono, fontSize: 17, fontWeight: '500', color: color.ink, marginTop: 5, fontVariant: ['tabular-nums'] },
-  statU: { fontSize: 10, color: color.mute },
+  statU: { fontSize: 11, color: color.mute },
   split: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  splitKm: { fontFamily: mono, fontSize: 10, color: color.faint, width: 26 },
-  splitBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: color.border },
+  splitKm: { fontFamily: mono, fontSize: 11, color: color.faint, width: 26 },
+  splitBar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: color.border },
   splitFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: color.carbs },
   splitPace: { fontFamily: mono, fontSize: 12, color: color.ink, width: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
 });

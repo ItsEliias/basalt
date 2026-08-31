@@ -110,6 +110,21 @@ describe('logSet', () => {
     expect(calls[0].duration_s).toBe(50);
     expect(result.ok && result.data.durationS).toBe(50);
   });
+
+  it('backdates completed_at when given — without it the DB default (now()) would apply', async () => {
+    const calls: any[] = [];
+    const client = {
+      from: () => ({
+        upsert: (payload: any) => { calls.push(payload); return { select: () => ({ single: async () => ({ data: setRow, error: null }) }) }; },
+      }),
+    } as unknown as SupabaseClient;
+
+    await logSet(client, 'se-1', { setNumber: 1, reps: 8, weightKg: 75, completedAt: '2026-05-26T21:15:00Z' });
+    expect(calls[0].completed_at).toBe('2026-05-26T21:15:00Z');
+
+    await logSet(client, 'se-1', { setNumber: 1, reps: 8, weightKg: 75 });
+    expect(calls[1].completed_at).toBeUndefined();
+  });
 });
 
 describe('setExerciseFeedback', () => {

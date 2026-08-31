@@ -44,22 +44,30 @@ function mapRow(r: any): HydrationLogRow {
  * Log a drink of `ml` for the authed user (positive integers only — there is
  * no "negative water"; use undoLastWater to correct a mis-tap). Returns the
  * day's new total.
+ *
+ * `ts` backdates the row's own event timestamp; without it the DB default
+ * (`now()`) applies even when `date` is in the past — fine for the app
+ * (always today), wrong for backdated writes (seed scripts).
  */
 export async function addWater(
   client: SupabaseClient,
   ml: number,
   date: string = todayISO(),
+  ts?: string,
 ): Promise<Result<number>> {
   if (!isFinite(ml) || Math.round(ml) <= 0) return err('Invalid amount.');
   const u = await currentUserId(client);
   if (!u.ok) return u;
 
-  const { error } = await client.from('basalt_hydration_logs').insert({
+  const payload: Record<string, unknown> = {
     user_id: u.data,
     date,
     ml: Math.round(ml),
     source: 'manual',
-  });
+  };
+  if (ts) payload.ts = ts;
+
+  const { error } = await client.from('basalt_hydration_logs').insert(payload);
   if (error) return err(error.message);
   return getWaterForDay(client, date);
 }

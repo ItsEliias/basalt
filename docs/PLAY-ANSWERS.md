@@ -74,6 +74,22 @@ them, and is fully deletable in-app.
   the current phase, and stops when no timer is running.
 - Permission backing the `health` type: `ACTIVITY_RECOGNITION`, requested at runtime; the
   feature degrades honestly if declined (timer runs only while the app is open).
+- Second type: `location` — GPS walk recording continues with the screen off during a
+  user-started walk, behind a visible ongoing notification with an explicit Stop action.
+  Only while-in-use location permission is used (a foreground service is not "background"
+  for Android's background-location permission); the service stops with the walk.
+
+## 3b · V3 additions (2026-09-01) — new answers the batch introduces
+
+| Surface | Data-safety impact |
+|---|---|
+| **Voice logging** (`RECORD_AUDIO`, OS speech recognition) | **Audio is NOT collected**: the operating system's own speech service transcribes on the device's account; only the resulting TEXT goes to the existing AI quick-add flow (same Anthropic service-provider declaration as typed text). Declare the microphone permission's purpose as app functionality; no "Audio" data type is collected or shared. If Play asks about the Google speech service, transcription is performed by the OS speech provider under the user's own device settings |
+| **Bluetooth scale** (`BLUETOOTH_SCAN/CONNECT`) | No new data type — a weigh-in the user explicitly requests, stored like a manual one with a source tag. Declare "scan/connect for a user-initiated device pairing-free reading"; neverForLocation flag applies to BLUETOOTH_SCAN |
+| **Sharing (coach/caregiver grants)** | This is USER-TO-USER sharing inside the app, not third-party sharing under Play's definition (data stays in the developer's backend; the user explicitly grants another account read access and can revoke). State it in the privacy policy; the data-safety "shared" answer stays No-except-Anthropic-service-provider |
+| **Cycle tracking** | Falls under the existing Health info row (optional, app functionality). Explicitly excluded from every sharing preset; own opt-in domain |
+| **1-v-1 co-op** | The only cross-account datum is a per-day boolean ("logged anything that day") published by the user's own device after explicit pairing. Covered by the user-to-user sharing note; no new data type |
+| **Background work** (`expo-background-task`) | Periodic OS-scheduled sync of the user's own pending writes + the opt-in vitals notification. No new collection; mention under "data collected in the background" only if the form asks — answer: same data types, same purposes, user-initiated writes being retried |
+| **Speech/BLE permissions strings** | Microphone: "so you can speak a meal instead of typing it" · Bluetooth: "to read weigh-ins from your smart scale — only when you ask it to" (verbatim from the manifest config) |
 
 ## 4 · Revisit-if
 

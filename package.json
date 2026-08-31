@@ -3,6 +3,21 @@
   "private": true,
   "packageManager": "pnpm@10.34.5",
   "scripts": {
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "seed:test-account": "tsx scripts/seedTestAccount.ts",
+    "eval:quick-add": "tsx scripts/eval/quickAddEval.ts",
+    "eval:recipe-ideas": "tsx scripts/eval/recipeIdeasEval.ts",
+    "eval:sharing-rls": "tsx scripts/eval/sharingRlsProbe.ts"
+  },
+  "dependencies": {
+    "@basalt/core-data": "workspace:*",
+    "@basalt/health-connect": "workspace:*",
+    "@basalt/nutrition": "workspace:*",
+    "@basalt/training": "workspace:*",
+    "@supabase/supabase-js": "^2.106.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2"
   }
 }

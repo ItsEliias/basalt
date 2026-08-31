@@ -16,7 +16,7 @@ export function MicroRow({ name, pct }: { name: string; pct: number }) {
       <View style={styles.microTrack}>
         <View style={[styles.microFill, { width: `${Math.min(100, pct)}%`, backgroundColor: fill }]} />
       </View>
-      <Text style={[styles.microVal, full && { color: color.carbs }]}>{Math.round(pct)}%</Text>
+      <Text style={[styles.microVal, full && { color: color.carbs }]} maxFontSizeMultiplier={1.3}>{Math.round(pct)}%</Text>
     </View>
   );
 }
@@ -112,12 +112,12 @@ const styles = StyleSheet.create({
   stageKey: { flexDirection: 'row', gap: 14, marginTop: 12, flexWrap: 'wrap' },
   stageKeyItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stageKeyDot: { width: 8, height: 8, borderRadius: 2 },
-  stageKeyText: { fontFamily: mono, fontSize: 10, color: color.mute },
+  stageKeyText: { fontFamily: mono, fontSize: 11, color: color.mute },
   timeScale: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  timeScaleText: { fontFamily: mono, fontSize: 9.5, color: color.faint },
+  timeScaleText: { fontFamily: mono, fontSize: 11, color: color.faint },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 14, rowGap: 8 },
   calCell: { flexBasis: `${100 / 7}%`, alignItems: 'center' },
   calDot: { width: 9, height: 9, borderRadius: 3, backgroundColor: color.border },
   calDays: { flexDirection: 'row', marginTop: 12 },
-  calDay: { fontFamily: mono, fontSize: 8.5, color: color.faint, letterSpacing: 0.51, flex: 1, textAlign: 'center' },
+  calDay: { fontFamily: mono, fontSize: 11, color: color.faint, letterSpacing: 0.51, flex: 1, textAlign: 'center' },
 });

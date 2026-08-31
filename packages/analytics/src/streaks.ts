@@ -1,9 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ok, err, isoDay, currentUserId, type Result } from '@basalt/core-data';
+import { ok, err, isoDay, currentUserId, getTargetsFor, type Result } from '@basalt/core-data';
+import { computeReadiness } from './readiness';
 
 // Consistency — streaks are COMPUTED, never stored (ported from the quarry's
 // streakService, retargeted at the Basalt tables). Gaps stay gray: no
 // flames, no broken-streak shaming; dual milestones (current + longest).
+//
+// Rest-day rule (published in the streak card's srcnote): a rest day does
+// not break a training run. A day counts as active for training streaks
+// when it has a logged session, a PLANNED rest day, or a READINESS-ADVISED
+// rest — readiness below REST_ADVISED_BELOW on a day a readiness number
+// actually existed. Rest days maintain a run, they never start one: a run
+// made only of rest days is no run at all (restAwareDays drops it).
 
 export type StreakType =
   | 'meal'        // any basalt_food_entries row that day
@@ -17,6 +25,41 @@ export type StreakType =
 export type StreakResult = { current: number; longest: number };
 
 export const WINDOW_DAYS = 180;
+
+/** Readiness below this advises rest; such a day maintains a training run.
+ *  Published — the streak card's srcnote states this number. */
+export const REST_ADVISED_BELOW = 40;
+
+/**
+ * Rest-aware training days. Union of trained + rest days, then any
+ * contiguous run containing NO trained day is dropped — rest maintains a
+ * streak, it never fabricates one. Pure; feeds currentAndLongest unchanged.
+ */
+export function restAwareDays(trained: Set<string>, rest: Set<string>): Set<string> {
+  const union = new Set<string>([...trained, ...rest]);
+  const sorted = Array.from(union).sort();
+  const out = new Set<string>();
+  let run: string[] = [];
+  let runHasTraining = false;
+  let prev: Date | null = null;
+
+  const flush = () => {
+    if (runHasTraining) run.forEach((d) => out.add(d));
+    run = [];
+    runHasTraining = false;
+  };
+
+  for (const iso of sorted) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const cur = new Date(y!, m! - 1, d!);
+    if (prev && Math.round((cur.getTime() - prev.getTime()) / 86_400_000) !== 1) flush();
+    run.push(iso);
+    if (trained.has(iso)) runHasTraining = true;
+    prev = cur;
+  }
+  flush();
+  return out;
+}
 
 // ─── Pure core ───────────────────────────────────────────────────────────────
 
@@ -106,10 +149,104 @@ async function timestampDays(
   return ok(new Set((data ?? []).map((r: any) => isoDay(new Date(r[column])))));
 }
 
+/**
+ * Days in the streak window on which readiness EXISTED and advised rest
+ * (score < REST_ADVISED_BELOW). Recomputes historical per-day readiness
+ * from persisted vitals/sleep/volume with rolling 30-day baselines — the
+ * same published components loadReadiness uses for today, day by day.
+ * Days with no computable number are simply absent (real-or-hidden).
+ */
+export async function restAdvisedDaysFor(
+  client: SupabaseClient,
+  today: Date = new Date(),
+): Promise<Result<Set<string>>> {
+  const u = await currentUserId(client);
+  if (!u.ok) return u;
+  const userId = u.data;
+  const windowStart = new Date(today);
+  windowStart.setDate(windowStart.getDate() - (WINDOW_DAYS - 1));
+  const baselineStart = new Date(windowStart);
+  baselineStart.setDate(baselineStart.getDate() - 30);
+  const fromIso = isoDay(baselineStart);
+
+  const [vitals, sleep, sets, targets] = await Promise.all([
+    client.from('basalt_vitals').select('date, kind, value').eq('user_id', userId).gte('date', fromIso),
+    client.from('basalt_sleep_sessions').select('date, bedtime, waketime').eq('user_id', userId).gte('date', fromIso),
+    client
+      .from('basalt_set_entries')
+      .select('weight_kg, reps, set_type, completed_at')
+      .eq('user_id', userId)
+      .not('weight_kg', 'is', null)
+      .gte('completed_at', fromIso),
+    getTargetsFor(client, isoDay(today)),
+  ]);
+  if (vitals.error) return err(vitals.error.message);
+  if (sleep.error) return err(sleep.error.message);
+  if (sets.error) return err(sets.error.message);
+  const sleepTargetMin = (targets.ok && targets.data?.sleepMin) || 480;
+
+  const byKind = new Map<string, Map<string, number>>();
+  for (const v of vitals.data ?? []) {
+    const r = v as any;
+    if (!byKind.has(r.kind)) byKind.set(r.kind, new Map());
+    byKind.get(r.kind)!.set(r.date, Number(r.value));
+  }
+  const sleepByDay = new Map<string, number>();
+  for (const s of sleep.data ?? []) {
+    const r = s as any;
+    if (!r.bedtime || !r.waketime) continue;
+    const min = (Date.parse(r.waketime) - Date.parse(r.bedtime)) / 60000;
+    if (min > 0) sleepByDay.set(r.date, (sleepByDay.get(r.date) ?? 0) + min);
+  }
+  const volumeByDay = new Map<string, number>();
+  for (const s of sets.data ?? []) {
+    const r = s as any;
+    if (r.set_type === 'warmup' || !r.reps) continue;
+    const d = String(r.completed_at).slice(0, 10);
+    volumeByDay.set(d, (volumeByDay.get(d) ?? 0) + Number(r.weight_kg) * r.reps);
+  }
+
+  const advised = new Set<string>();
+  const cursor = new Date(windowStart);
+  while (cursor <= today) {
+    const dayIso = isoDay(cursor);
+    const baseFrom = new Date(cursor);
+    baseFrom.setDate(baseFrom.getDate() - 30);
+    const baseFromIso = isoDay(baseFrom);
+    const baseline = (kind: string) => {
+      const m = byKind.get(kind);
+      if (!m) return [] as number[];
+      return Array.from(m.entries())
+        .filter(([d]) => d >= baseFromIso && d < dayIso)
+        .map(([, v]) => v);
+    };
+    const prior = new Date(cursor);
+    prior.setDate(prior.getDate() - 1);
+    const priorIso = isoDay(prior);
+    const volumeBaseline = Array.from(volumeByDay.entries())
+      .filter(([d]) => d >= baseFromIso && d < dayIso)
+      .map(([, v]) => v);
+
+    const r = computeReadiness({
+      todayHrv: byKind.get('hrv_rmssd')?.get(dayIso) ?? null,
+      hrvBaseline: baseline('hrv_rmssd'),
+      todayRhr: byKind.get('resting_hr')?.get(dayIso) ?? null,
+      rhrBaseline: baseline('resting_hr'),
+      lastNightSleepMin: sleepByDay.get(dayIso) ?? null,
+      sleepTargetMin,
+      priorDayVolumeKg: volumeByDay.get(priorIso) ?? 0,
+      volumeBaseline,
+    });
+    if (r.score !== null && r.score < REST_ADVISED_BELOW) advised.add(dayIso);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return ok(advised);
+}
+
 export async function activeDaysFor(
   client: SupabaseClient,
   type: StreakType,
-  options: { hydrationThresholdMl?: number } = {},
+  options: { hydrationThresholdMl?: number; restAware?: boolean } = {},
 ): Promise<Result<Set<string>>> {
   const u = await currentUserId(client);
   if (!u.ok) return u;
@@ -122,8 +259,33 @@ export async function activeDaysFor(
   switch (type) {
     case 'meal':
       return timestampDays(client, userId, 'basalt_food_entries', 'created_at', sinceISO);
-    case 'workout':
-      return timestampDays(client, userId, 'basalt_workout_sessions', 'started_at', sinceISO);
+    case 'workout': {
+      const trained = await timestampDays(client, userId, 'basalt_workout_sessions', 'started_at', sinceISO);
+      if (!trained.ok || !options.restAware) return trained;
+      const advised = await restAdvisedDaysFor(client);
+      if (!advised.ok) return advised;
+      // Planned rest: the active program's non-training weekdays
+      // (basalt_programs — the periodization engine's week structure).
+      const rest = new Set(advised.data);
+      const prog = await client
+        .from('basalt_programs')
+        .select('started_on, training_days')
+        .eq('user_id', userId)
+        .eq('active', true)
+        .limit(1)
+        .maybeSingle();
+      if (!prog.error && prog.data) {
+        const trainingDays = (prog.data.training_days ?? []).map((d: any) => Number(d));
+        const startProg = new Date(`${prog.data.started_on}T00:00:00`);
+        const cursor = new Date(since);
+        const today = new Date();
+        while (cursor <= today) {
+          if (cursor >= startProg && !trainingDays.includes(cursor.getDay())) rest.add(isoDay(cursor));
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
+      return ok(restAwareDays(trained.data, rest));
+    }
     case 'weight':
       return timestampDays(client, userId, 'basalt_weight_entries', 'measured_at', sinceISO);
     case 'mindfulness':
@@ -146,7 +308,7 @@ export async function activeDaysFor(
     case 'full': {
       const parts = await Promise.all([
         activeDaysFor(client, 'meal'),
-        activeDaysFor(client, 'workout'),
+        activeDaysFor(client, 'workout', options), // carries restAware through
         activeDaysFor(client, 'hydration', options),
         activeDaysFor(client, 'weight'),
         activeDaysFor(client, 'mindfulness'),

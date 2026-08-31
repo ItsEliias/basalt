@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tick, tickMany, collapseSensory, describe as describeState,
-  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel,
+  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, withTransitionFloor, MIN_TRANSITION_S,
   type GuidedEvent, type GuidedState,
 } from './guided-timer';
 
-// The prototype's plank demo: 5 s lead-in → 50 s work → 20 s rest × 4 sets.
-const CONFIG = { leadInS: 5, workS: 50, restS: 20, sets: 4 };
+// The prototype's plank demo, lead raised to the V3 transition floor:
+// 10 s lead-in → 50 s work → 20 s rest × 4 sets.
+const CONFIG = { leadInS: 10, workS: 50, restS: 20, sets: 4 };
 
 function runSeconds(state: GuidedState, seconds: number): { state: GuidedState; events: GuidedEvent[] } {
   const events: GuidedEvent[] = [];
@@ -24,8 +25,8 @@ describe('guided set timer — full sequence', () => {
     let { state } = startGuidedTimer(createGuidedTimer(CONFIG));
     expect(state.phase).toBe('lead');
 
-    // Total run time: 5 lead + 4×50 work + 3×20 rest = 265 s.
-    const r = runSeconds(state, 265);
+    // Total run time: 10 lead + 4×50 work + 3×20 rest = 270 s.
+    const r = runSeconds(state, 270);
     expect(r.state.phase).toBe('finished');
     expect(r.state.setsDone).toBe(4);
 
@@ -37,21 +38,21 @@ describe('guided set timer — full sequence', () => {
 
   it('one second short of the end it is still working', () => {
     const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
-    const r = runSeconds(state, 264);
+    const r = runSeconds(state, 269);
     expect(r.state.phase).toBe('work');
     expect(r.state.remaining).toBe(1);
   });
 
   it('emits the last-5 warning exactly once per rest, 5 s before work', () => {
     const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
-    const r = runSeconds(state, 265);
+    const r = runSeconds(state, 270);
     const warns = r.events.filter((e) => e.type === 'beep' && e.kind === 'last-5');
     expect(warns).toHaveLength(3); // one per rest period
   });
 
   it('beeps work-start at every work phase and finished at the end', () => {
     const { state, events: startEvents } = startGuidedTimer(createGuidedTimer(CONFIG));
-    const r = runSeconds(state, 265);
+    const r = runSeconds(state, 270);
     const all = [...startEvents, ...r.events];
     expect(all.filter((e) => e.type === 'beep' && e.kind === 'work-start')).toHaveLength(4);
     expect(all.filter((e) => e.type === 'beep' && e.kind === 'finished')).toHaveLength(1);
@@ -59,7 +60,7 @@ describe('guided set timer — full sequence', () => {
 
   it('haptics fire on every phase change — haptics are primary, sound optional', () => {
     const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
-    const r = runSeconds(state, 265);
+    const r = runSeconds(state, 270);
     const haptics = r.events.filter((e) => e.type === 'haptic');
     // lead→work ×4? lead→work once, work→rest ×4 (each work end), rest→work ×3, warnings ×3.
     expect(haptics.filter((h) => h.type === 'haptic' && h.kind === 'phase-change')).toHaveLength(8);
@@ -107,7 +108,7 @@ describe('describe() — display contract', () => {
     const { state: lead } = startGuidedTimer(idle);
     expect(describeState(lead).label).toBe('Get set — set 1 of 4');
 
-    const work = runSeconds(lead, 5).state;
+    const work = runSeconds(lead, 10).state;
     expect(describeState(work)).toMatchObject({ label: 'WORK — set 1 of 4', tone: 'work' });
 
     const rest = runSeconds(work, 50).state;
@@ -126,10 +127,10 @@ describe('describe() — display contract', () => {
 
 describe('tickMany + collapseSensory — the screen-off catch-up path', () => {
   it('replaying a long gap lands exactly where wall time says', () => {
-    // 5s lead + (50 work + 20 rest) ×: after 130 s → set 1 (55) + rest (75)
-    // + 50 work (125) + 5 s into rest 2.
+    // 10s lead + (50 work + 20 rest) ×: after 135 s → set 1 (60) + rest (80)
+    // + 50 work (130) + 5 s into rest 2.
     const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
-    const caught = tickMany(state, 130);
+    const caught = tickMany(state, 135);
     expect(caught.state.phase).toBe('rest');
     expect(caught.state.setsDone).toBe(2);
     expect(caught.state.remaining).toBe(CONFIG.restS - 5);
@@ -137,7 +138,7 @@ describe('tickMany + collapseSensory — the screen-off catch-up path', () => {
 
   it('every set completed during the gap is still logged', () => {
     const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
-    const caught = tickMany(state, 130);
+    const caught = tickMany(state, 135);
     const logs = caught.events.filter((e) => e.type === 'logSet');
     expect(logs).toEqual([
       { type: 'logSet', setNumber: 1, durationS: 50 },
@@ -160,7 +161,7 @@ describe('tickMany + collapseSensory — the screen-off catch-up path', () => {
 
   it('collapseSensory keeps data events, fires the motor once', () => {
     const { state } = startGuidedTimer(createGuidedTimer(CONFIG));
-    const caught = tickMany(state, 130);
+    const caught = tickMany(state, 135);
     const collapsed = collapseSensory(caught.events);
     expect(collapsed.filter((e) => e.type === 'beep')).toHaveLength(1);
     expect(collapsed.filter((e) => e.type === 'haptic')).toHaveLength(1);
@@ -183,7 +184,7 @@ describe('interval presets — same engine, same honesty', () => {
   });
 
   it('Tabata is the published 20/10 × 8, pinned', () => {
-    expect(TABATA_CONFIG).toEqual({ leadInS: 5, workS: 20, restS: 10, sets: 8 });
+    expect(TABATA_CONFIG).toEqual({ leadInS: MIN_TRANSITION_S, workS: 20, restS: 10, sets: 8 });
   });
 
   it('circuit sets = stations × rounds; labels walk stations then rounds', () => {
@@ -192,7 +193,7 @@ describe('interval presets — same engine, same honesty', () => {
     let state = startGuidedTimer(createGuidedTimer(c)).state;
     expect(circuitLabel(state, 4)).toBe('Station 1 of 4 · round 1 of 3');
     // run through lead + 4 full stations to reach round 2
-    state = runSeconds(state, 5 + 4 * 60).state;
+    state = runSeconds(state, 10 + 4 * 60).state;
     expect(circuitLabel(state, 4)).toBe('Station 1 of 4 · round 2 of 3');
   });
 
@@ -200,5 +201,31 @@ describe('interval presets — same engine, same honesty', () => {
     const c = circuitConfig(2, 2, 10, 5);
     const done = tickMany(startGuidedTimer(createGuidedTimer(c)).state, 10000).state;
     expect(circuitLabel(done, 2)).toBe('Station 2 of 2 · round 2 of 2');
+  });
+});
+
+describe('transition floor — V3 product law, pinned', () => {
+  it('the floor is 10 seconds, published', () => {
+    expect(MIN_TRANSITION_S).toBe(10);
+  });
+
+  it('createGuidedTimer refuses a shorter lead-in', () => {
+    const state = createGuidedTimer({ leadInS: 5, workS: 30, restS: 15, sets: 3 });
+    expect(state.config.leadInS).toBe(MIN_TRANSITION_S);
+  });
+
+  it('longer lead-ins pass through untouched — settable upward', () => {
+    const state = createGuidedTimer({ leadInS: 20, workS: 30, restS: 15, sets: 3 });
+    expect(state.config.leadInS).toBe(20);
+  });
+
+  it('an explicit 0 stays 0 — work-on-tap is user-initiated, not auto-advance', () => {
+    expect(withTransitionFloor({ leadInS: 0, workS: 30, restS: 15, sets: 3 }).leadInS).toBe(0);
+  });
+
+  it('the presets all carry the floor', () => {
+    expect(emomConfig(40, 10).leadInS).toBe(MIN_TRANSITION_S);
+    expect(TABATA_CONFIG.leadInS).toBe(MIN_TRANSITION_S);
+    expect(circuitConfig(4, 3, 45, 15).leadInS).toBe(MIN_TRANSITION_S);
   });
 });

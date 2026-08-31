@@ -1,24 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav,
   TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow,
-  color, mono, kgText, hoursMinutes, groupInt,
-  ChipGroup,
+  color, mono, kgText, hoursMinutes, groupInt, mmss,
+  ChipGroup, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
 import { healthService, labelForPackage, type SleepSessionSummary } from '@basalt/health-connect';
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS } from '@basalt/analytics';
+import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
 import { ProgressPhotosCard } from './ProgressPhotos';
+import { CycleCard } from './CycleCard';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
   FASTING_DISCLAIMER, type Fast,
 } from '@basalt/nutrition';
 import { isoDay } from '@basalt/core-data';
 import { useAppStore } from '../../state/appStore';
+import { writeThroughOutbox } from '../../lib/outbox';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
 
 // Recover — Vitals (real-or-hidden, sources named) and Mind (breathing
@@ -36,7 +39,7 @@ type Vitals = {
 export function RecoverScreen() {
   const [sub, setSub] = useState('Vitals');
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
+    <View style={{ flex: 1 }}>
       <SubNav items={['Vitals', 'Mind']} active={sub} onChange={setSub} />
       {sub === 'Vitals' ? <VitalsTab /> : <MindTab />}
     </View>
@@ -44,6 +47,7 @@ export function RecoverScreen() {
 }
 
 function VitalsTab() {
+  const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
   const [vitals, setVitals] = useState<Vitals | null>(null);
   const [weights, setWeights] = useState<WeightEntry[]>([]);
@@ -56,6 +60,10 @@ function VitalsTab() {
   const [recentFasts, setRecentFasts] = useState<Fast[]>([]);
   const [fastNow, setFastNow] = useState(Date.now());
   const fastingEnabled = profile?.fastingEnabled ?? false;
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [sleepNeed, setSleepNeed] = useState<SleepNeedReport | null>(null);
+  const [needMathOpen, setNeedMathOpen] = useState(false);
+  const [deviation, setDeviation] = useState<DeviationReport | null>(null);
 
   useEffect(() => {
     if (!fastingEnabled) return;
@@ -65,77 +73,86 @@ function VitalsTab() {
     return () => clearInterval(iv);
   }, [fastingEnabled]);
 
-  useEffect(() => {
+  const loadVitals = useCallback(() => {
+    setLoadFailed(false);
     void (async () => {
-      void runHealthSync();
-      const w = await listWeightEntries(supabase, 14);
-      if (w.ok) setWeights(w.data);
-      setReadiness(await loadReadiness(supabase, new Date()));
-      const c = await getCheckin(supabase, isoDay(new Date()));
-      if (c.ok && c.data) {
-        setCheckinFactors(c.data.factors);
-        setCheckinMood(c.data.mood);
-        setCheckinSaved(true);
-      }
+      try {
+        void runHealthSync();
+        const w = await listWeightEntries(supabase, 14);
+        if (w.ok) setWeights(w.data);
+        setReadiness(await loadReadiness(supabase, new Date()));
+        void loadSleepNeed(supabase).then((r) => r.ok && setSleepNeed(r.data));
+        void loadDeviation(supabase).then((r) => r.ok && setDeviation(r.data));
+        const c = await getCheckin(supabase, isoDay(new Date()));
+        if (c.ok && c.data) {
+          setCheckinFactors(c.data.factors);
+          setCheckinMood(c.data.mood);
+          setCheckinSaved(true);
+        }
 
-      const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
+        const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
 
-      // Persisted sleep first — the sync job writes sessions + stages into
-      // the ledger; a live HC read is only the fallback.
-      const persisted = await supabase
-        .from('basalt_sleep_sessions')
-        .select('id, bedtime, waketime, source, ext_id, date')
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (persisted.data?.bedtime && persisted.data?.waketime) {
-        const stagesQ = await supabase
-          .from('basalt_sleep_stages')
-          .select('stage, start_time, end_time')
-          .eq('session_id', persisted.data.id)
-          .order('start_time', { ascending: true });
-        const stages = (stagesQ.data ?? []).map((s: any) => ({
-          stage: s.stage,
-          startTime: s.start_time,
-          endTime: s.end_time,
-          minutes: (Date.parse(s.end_time) - Date.parse(s.start_time)) / 60000,
-        }));
-        out.sleep = {
-          id: persisted.data.ext_id ?? persisted.data.id,
-          startTime: persisted.data.bedtime,
-          endTime: persisted.data.waketime,
-          hours: (Date.parse(persisted.data.waketime) - Date.parse(persisted.data.bedtime)) / 3_600_000,
-          stages,
-          hasRealStages: stages.length > 0,
-          dataOrigin: String(persisted.data.source ?? '').replace(/^health_connect:?/, ''),
-        };
-      }
+        // Persisted sleep first — the sync job writes sessions + stages into
+        // the ledger; a live HC read is only the fallback.
+        const persisted = await supabase
+          .from('basalt_sleep_sessions')
+          .select('id, bedtime, waketime, source, ext_id, date')
+          .order('date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (persisted.data?.bedtime && persisted.data?.waketime) {
+          const stagesQ = await supabase
+            .from('basalt_sleep_stages')
+            .select('stage, start_time, end_time')
+            .eq('session_id', persisted.data.id)
+            .order('start_time', { ascending: true });
+          const stages = (stagesQ.data ?? []).map((s: any) => ({
+            stage: s.stage,
+            startTime: s.start_time,
+            endTime: s.end_time,
+            minutes: (Date.parse(s.end_time) - Date.parse(s.start_time)) / 60000,
+          }));
+          out.sleep = {
+            id: persisted.data.ext_id ?? persisted.data.id,
+            startTime: persisted.data.bedtime,
+            endTime: persisted.data.waketime,
+            hours: (Date.parse(persisted.data.waketime) - Date.parse(persisted.data.bedtime)) / 3_600_000,
+            stages,
+            hasRealStages: stages.length > 0,
+            dataOrigin: String(persisted.data.source ?? '').replace(/^health_connect:?/, ''),
+          };
+        }
 
-      const avail = await healthService.isAvailable();
-      if (avail.ok && avail.data === 'available') {
-        out.available = true;
-        const granted = await healthService.getGrantedPermissions();
-        out.granted = granted.ok ? granted.data : [];
-        if (!out.sleep && out.granted.includes('sleep')) {
-          const s = await healthService.getSleepSessionForNight();
-          if (s.ok) out.sleep = s.data;
+        const avail = await healthService.isAvailable();
+        if (avail.ok && avail.data === 'available') {
+          out.available = true;
+          const granted = await healthService.getGrantedPermissions();
+          out.granted = granted.ok ? granted.data : [];
+          if (!out.sleep && out.granted.includes('sleep')) {
+            const s = await healthService.getSleepSessionForNight();
+            if (s.ok) out.sleep = s.data;
+          }
+          if (out.granted.includes('hrv')) {
+            const h = await healthService.getHrvForDay();
+            if (h.ok && h.data.length > 0) out.hrv = Math.round(h.data.reduce((a, b) => a + b.ms, 0) / h.data.length);
+          }
+          if (out.granted.includes('restingHeartRate')) {
+            const r = await healthService.getRestingHeartRate();
+            if (r.ok) out.rhr = r.data;
+          }
+          if (out.granted.includes('spo2')) {
+            const s = await healthService.getSpO2ForDay();
+            if (s.ok && s.data.length > 0) out.spo2 = Math.round(s.data.reduce((a, b) => a + b, 0) / s.data.length);
+          }
         }
-        if (out.granted.includes('hrv')) {
-          const h = await healthService.getHrvForDay();
-          if (h.ok && h.data.length > 0) out.hrv = Math.round(h.data.reduce((a, b) => a + b.ms, 0) / h.data.length);
-        }
-        if (out.granted.includes('restingHeartRate')) {
-          const r = await healthService.getRestingHeartRate();
-          if (r.ok) out.rhr = r.data;
-        }
-        if (out.granted.includes('spo2')) {
-          const s = await healthService.getSpO2ForDay();
-          if (s.ok && s.data.length > 0) out.spo2 = Math.round(s.data.reduce((a, b) => a + b, 0) / s.data.length);
-        }
+        setVitals(out);
+      } catch (e) {
+        console.error('Recover vitals load failed:', e);
+        setLoadFailed(true);
       }
-      setVitals(out);
     })();
   }, []);
+  useEffect(() => loadVitals(), [loadVitals]);
 
   const rate = weeklyWeightRate(weights);
   const latest = weights.length > 0 ? weights[weights.length - 1] : null;
@@ -146,11 +163,15 @@ function VitalsTab() {
   const bands = readiness?.ok ? readiness.data.bands : null;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {/* ── Readiness — published formula, math one tap away ───────── */}
       <Card>
         <ReceiptHeader label="Readiness" summary={ready?.score !== null && ready ? 'tap for the math' : undefined} />
-        {ready === null ? (
+        {loadFailed && ready === null ? (
+          <Pressable onPress={loadVitals} hitSlop={8}>
+            <EmptyState>Couldn't read your vitals — tap to retry.</EmptyState>
+          </Pressable>
+        ) : ready === null ? (
           <EmptyState>Reading your vitals…</EmptyState>
         ) : ready.score === null ? (
           <EmptyState>
@@ -266,7 +287,10 @@ function VitalsTab() {
               : [...checkinFactors, key];
             setCheckinFactors(next);
             setCheckinSaved(true);
-            void saveCheckin(supabase, { date: isoDay(new Date()), factors: next, mood: checkinMood });
+            void writeThroughOutbox(
+              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: next, mood: checkinMood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
+              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: next, mood: checkinMood } },
+            );
           }}
         />
         <ChipRow
@@ -276,7 +300,10 @@ function VitalsTab() {
             const mood = parseInt(v, 10);
             setCheckinMood(mood);
             setCheckinSaved(true);
-            void saveCheckin(supabase, { date: isoDay(new Date()), factors: checkinFactors, mood });
+            void writeThroughOutbox(
+              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: checkinFactors, mood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
+              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: checkinFactors, mood } },
+            );
           }}
         />
         <SrcNote>Facts about today, one row per day · they feed Trends' correlations through the same gates (|r| ≥ 0.45, 30+ days) · never scored, never judged · mood 1–5 optional</SrcNote>
@@ -312,20 +339,82 @@ function VitalsTab() {
               </>
             ) : null}
             <SrcNote>{`Source · ${labelForPackage(vitals.sleep.dataOrigin)} via Health Connect${vitals.sleep.hasRealStages ? ' — measured stages' : ' — session only, no stage data'}`}</SrcNote>
+            {vitals.sleep.hasRealStages ? (
+              <SrcNote>
+                Stages are display-only — consumer staging runs well below lab accuracy, so nothing here ever feeds a score or suggestion
+              </SrcNote>
+            ) : null}
           </>
         ) : (
           <>
             <KV label="Sleep" />
-            <EmptyState>
-              {vitals === null
-                ? 'Checking sources…'
-                : vitals.available
-                  ? 'No sleep recorded for last night. Synced sessions appear here with their measured stages.'
-                  : 'No sleep source connected. Connect Health Connect in Settings and last night appears here — measured, never fabricated.'}
-            </EmptyState>
+            {loadFailed && vitals === null ? (
+              <Pressable onPress={loadVitals} hitSlop={8}>
+                <EmptyState>Couldn't check your sources — tap to retry.</EmptyState>
+              </Pressable>
+            ) : (
+              <EmptyState>
+                {vitals === null
+                  ? 'Checking sources…'
+                  : vitals.available
+                    ? 'No sleep recorded for last night. Synced sessions appear here with their measured stages.'
+                    : 'No sleep source connected. Connect Health Connect in Settings and last night appears here — measured, never fabricated.'}
+              </EmptyState>
+            )}
           </>
         )}
       </Card>
+
+      {/* ── Vitals deviation — outlier-only, your own baselines ────── */}
+      {deviation?.headline ? (
+        <Card>
+          <ReceiptHeader label="Out of your range" summary="today vs your last 30 days" />
+          <Text style={styles.needLine}>{deviation.headline}</Text>
+          {deviation.lines.map((line) => (
+            <SrcNote key={line}>{line}</SrcNote>
+          ))}
+          <SrcNote>{deviation.srcnote}</SrcNote>
+        </Card>
+      ) : null}
+
+      {/* ── Sleep need + debt — need/debt words, never a score ─────── */}
+      {sleepNeed && sleepNeed.debt.nightsSeen > 0 ? (
+        <Card>
+          <ReceiptHeader label="Sleep need" summary="tap for the math" />
+          <Pressable onPress={() => setNeedMathOpen(!needMathOpen)} hitSlop={8}>
+            {sleepNeed.lastNight ? (
+              <Text style={styles.needLine}>{sleepNeed.lastNight.line}</Text>
+            ) : null}
+            <Text style={styles.debtLine}>{sleepNeed.debtText}</Text>
+          </Pressable>
+          {needMathOpen ? (
+            <>
+              <ReceiptRow
+                name="Nightly need"
+                meta={sleepNeed.need.basis}
+                value={`${Math.floor(sleepNeed.need.needMin / 60)}:${String(sleepNeed.need.needMin % 60).padStart(2, '0')}`}
+                unit=""
+              />
+              {sleepNeed.nights.slice(-7).map((n, i, arr) => (
+                <ReceiptRow
+                  key={n.date}
+                  name={n.date.slice(5)}
+                  meta={n.strained ? 'heavy prior day · +30 min need' : 'need per your median'}
+                  value={`${Math.floor(n.sleptMin / 60)}:${String(n.sleptMin % 60).padStart(2, '0')} / ${Math.floor(n.needMin / 60)}:${String(n.needMin % 60).padStart(2, '0')}`}
+                  unit=""
+                  last={i === arr.length - 1}
+                />
+              ))}
+            </>
+          ) : null}
+          <SrcNote>
+            Need = median of your own recent nights (published default until 14 exist) · a P75-heavy training day adds 30 min · debt sums the last 14 nights, surplus repays · absent nights are absent, never zeros
+          </SrcNote>
+        </Card>
+      ) : null}
+
+      {/* ── Cycle — opt-in, facts vs labelled estimates ────────────── */}
+      <CycleCard />
 
       {/* ── Vitals tiles — real-or-hidden ──────────────────────────── */}
       <TileGrid>
@@ -389,6 +478,7 @@ function hhmm(iso: string): string {
 // ─── Mind ───────────────────────────────────────────────────────────────────
 
 function MindTab() {
+  const { theme } = useTheme();
   const bumpToday = useAppStore((s) => s.bumpToday);
   const [protocol, setProtocol] = useState<BreathProtocol>(PROTOCOLS[0]!);
   const [minutes, setMinutes] = useState(5);
@@ -459,21 +549,28 @@ function MindTab() {
     setClock(0);
     // Log only real practice — under 30 seconds is a false start, not a session.
     if (startedAt && (completed || clock >= 30)) {
-      await supabase.from('basalt_mindfulness_sessions').insert({
+      const row = {
         user_id: (await supabase.auth.getUser()).data.user?.id,
         started_at: startedAt,
         ended_at: new Date().toISOString(),
         minutes: completed ? minutes : elapsedMin,
         kind: protocol.key,
         source: 'manual',
-      });
+      };
+      await writeThroughOutbox(
+        async () => {
+          const { error } = await supabase.from('basalt_mindfulness_sessions').insert(row);
+          return error ? { ok: false as const, error: error.message } : { ok: true as const, data: undefined };
+        },
+        { kind: 'mindfulness', row },
+      );
       bumpToday();
       void loadRecent();
     }
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       <Card>
         <KV label={protocol.name} right={protocol.phases.filter((p) => p > 0).join(' · ')} />
         <View style={styles.pacer}>
@@ -484,6 +581,11 @@ function MindTab() {
           <Text style={styles.pacerCount}>
             {running ? `${phase.remaining} · FOLLOW THE RING` : `${cycleSeconds(protocol)} S CYCLE`}
           </Text>
+          {/* Running-state invariant: a glance must show the session is
+              progressing, not just which phase it's in. */}
+          {running ? (
+            <Text style={styles.pacerCount}>{`${mmss(clock)} OF ${minutes}:00`}</Text>
+          ) : null}
         </View>
         <ChipRow
           options={['5 min', '10 min', '15 min', '20 min']}
@@ -514,6 +616,9 @@ function MindTab() {
             onChange={(name) => !running && setProtocol(PROTOCOLS.find((p) => p.name === name)!)}
           />
         </View>
+        {protocol.phases[1] > 0 || protocol.phases[3] > 0 ? (
+          <SrcNote>This protocol holds the breath — not while driving, standing, or in water; stop if dizzy</SrcNote>
+        ) : null}
       </Card>
 
       <Card>
@@ -556,14 +661,14 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 30,
   },
-  mathTitle: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute },
+  mathTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   weightRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 },
   weightValue: { ...({ fontFamily: mono } as object), fontSize: 23, fontWeight: '600', color: color.ink },
   weightUnit: { fontSize: 12, color: color.mute, fontWeight: '400' },
   weightRate: { fontFamily: mono, fontSize: 12, color: color.ink2 },
-  weightRateFaint: { fontFamily: mono, fontSize: 10.5, color: color.faint },
+  weightRateFaint: { fontFamily: mono, fontSize: 11, color: color.faint },
   pacer: { alignItems: 'center', paddingVertical: 26 },
   pacerRing: {
     width: 150, height: 150, borderRadius: 75,
@@ -576,6 +681,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: color.recovery,
   },
   pacerLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.98, color: color.ink2 },
-  pacerCount: { fontFamily: mono, fontSize: 10, color: color.faint, marginTop: 18, letterSpacing: 1 },
+  pacerCount: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 18, letterSpacing: 1 },
+  needLine: { fontSize: 14, color: color.ink, lineHeight: 21, marginTop: 4 },
+  debtLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, color: color.mute, marginTop: 6 },
   protocolTap: { marginTop: 4 },
 });

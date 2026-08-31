@@ -6,6 +6,10 @@
 **Positioning:** food, training, sleep and vitals in one ledger, so the numbers can actually talk to each other. No gamification, no fake data, no guilt. The serious counterpart to Arise.
 **Portfolio:** Arise = live, maintenance mode. Oathbound = frozen (organs harvested: `set_entry` schema). Basalt = the build.
 
+> **Status (2026-08-31):** V3 batch delivered on `v3-full-batch` — see `docs/V3-REPORT.md`
+> for the roll-up, deviation ledger and needs-you list. 1,031 tests green; sharing,
+> programs, race plans, cycle, co-op, voice/BLE lanes and the offline outbox all landed.
+
 ---
 
 ## 0. Architecture & repo

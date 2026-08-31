@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import {
   Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule,
   MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag,
   TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow,
-  color, mono, groupInt,
+  TileGridThemed, Tile,
+  color, mono, groupInt, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
-import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
+import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
 import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
-import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, type SessionRow } from './model';
+import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles,
+} from './model';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +36,9 @@ type TodayData = {
   sessions: (SessionRow & { setCount: number; volumeKg: number })[];
   steps: number | null;
   activeKcal: number | null;
+  /** Fractional hours, e.g. 7.2 = 7:12. null when the sync job hasn't
+   *  written a session for today (see basalt_sleep_sessions.date). */
+  sleepHours: number | null;
 };
 
 const EMPTY_TOTALS: DailyTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodiumMg: 0 };
@@ -86,10 +92,25 @@ async function loadToday(): Promise<TodayData> {
     }
   }
 
+  // Sleep — persisted only (the Tiles layout's Sleep tile; matches the
+  // same source-of-truth pattern as steps above). No live HC fallback: a
+  // single night's sleep is already the sync job's job, not this screen's.
+  let sleepHours: number | null = null;
+  const sleepRow = await supabase
+    .from('basalt_sleep_sessions')
+    .select('bedtime, waketime')
+    .eq('date', today)
+    .maybeSingle();
+  if (sleepRow.data?.bedtime && sleepRow.data?.waketime) {
+    const hours = (Date.parse(sleepRow.data.waketime) - Date.parse(sleepRow.data.bedtime)) / 3600000;
+    if (hours > 0) sleepHours = hours;
+  }
+
   return {
     entries: entriesR.ok ? entriesR.data : [],
     totals: totalsR.ok ? totalsR.data : EMPTY_TOTALS,
     waterMl: waterR.ok ? waterR.data : 0,
+    sleepHours,
     sessions,
     steps,
     activeKcal,
@@ -97,15 +118,26 @@ async function loadToday(): Promise<TodayData> {
 }
 
 export function TodayScreen() {
+  const { theme } = useTheme();
   const targets = useAppStore((s) => s.targets);
   const profile = useAppStore((s) => s.profile);
   const todayVersion = useAppStore((s) => s.todayVersion);
   const [data, setData] = useState<TodayData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
+  const layout = profile?.todayLayout ?? 'ledger';
 
   const refresh = useCallback(async () => {
     setData(await loadToday());
+    // Tile hide/show — hiding is omission; re-read so Settings changes land.
+    const raw = await AsyncStorage.getItem('basalt.hiddenToday');
+    try {
+      setHidden(new Set(raw ? (JSON.parse(raw) as string[]) : []));
+    } catch {
+      setHidden(new Set());
+    }
   }, []);
 
   useEffect(() => {
@@ -152,6 +184,19 @@ export function TodayScreen() {
   const hero = targets && data ? heroModel(targets, data.totals, data.activeKcal) : null;
   const hideNumbers = profile?.hideNumbers ?? false;
 
+  // hydrationEnabled has no backing setting in the app yet (the spec
+  // assumes one) — treated as always-on, matching Ledger's current
+  // unconditional Water tile, until that setting exists.
+  const tileSpecs = data
+    ? todayTileSpecs({
+        hero, hideNumbers, targets: targets ?? null, totals: data.totals,
+        steps: data.steps, sleepHours: data.sleepHours,
+        waterMl: data.waterMl, waterTargetMl: waterTarget,
+        hydrationEnabled: true,
+        trainingTitle: data.sessions[0]?.title ?? null,
+      })
+    : [];
+
   const eatBack = targets && data ? trainingDayTarget(targets.calories, data.activeKcal ?? 0) : null;
   const budgets =
     targets && data && !hideNumbers
@@ -187,9 +232,34 @@ export function TodayScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, hideNumbers]);
 
+  if (layout === 'tiles') {
+    return (
+      <ScrollView
+        style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
+      >
+        <TileGridThemed>
+          {filterTiles(tileSpecs, hidden).map((t) => (
+            <Tile
+              key={t.key}
+              span={t.span}
+              label={t.label}
+              value={t.value}
+              unit={t.unit}
+              over={t.over}
+              empty={t.empty}
+              emptyMessage={t.emptyMessage}
+            />
+          ))}
+        </TileGridThemed>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView
-      style={styles.scroll}
+      style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
     >
@@ -230,7 +300,7 @@ export function TodayScreen() {
       </Card>
 
       {/* ── Macros + caps ──────────────────────────────────────────── */}
-      {targets && data && !hideNumbers ? (
+      {targets && data && !hideNumbers && !hidden.has('macros') ? (
         <Card>
           <MacroRow name="Protein" dot={color.protein} value={data.totals.protein} target={targets.proteinG} />
           <MacroRow name="Carbohydrate" dot={color.carbs} value={data.totals.carbs} target={targets.carbsG} />
@@ -281,6 +351,7 @@ export function TodayScreen() {
       ) : null}
 
       {/* ── Logged receipt ─────────────────────────────────────────── */}
+      {hidden.has('meals') ? null : (
       <Card>
         <ReceiptHeader
           label="Logged"
@@ -298,20 +369,21 @@ export function TodayScreen() {
               <View key={s.meal}>
                 <MealTag>{`${s.label}${s.time ? ` — ${s.time}` : ''}`}</MealTag>
                 {s.entries.map((e, i) => (
-                  <ReceiptRow
-                    key={e.id}
-                    name={e.foodName}
-                    thumb={
-                      e.photoPath && photoUrls.get(e.photoPath) ? (
-                        <Image source={{ uri: photoUrls.get(e.photoPath)! }} style={styles.entryThumb} />
-                      ) : undefined
-                    }
-                    meta={hideNumbers ? undefined : entryMeta(e)}
-                    value={hideNumbers ? '✓' : groupInt(e.calories)}
-                    unit={hideNumbers ? undefined : 'kcal'}
-                    valueColor={hideNumbers ? color.faint : undefined}
-                    last={i === s.entries.length - 1}
-                  />
+                  <Pressable key={e.id} onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)} hitSlop={8}>
+                    <ReceiptRow
+                      name={e.foodName}
+                      thumb={
+                        e.photoPath && photoUrls.get(e.photoPath) ? (
+                          <Image source={{ uri: photoUrls.get(e.photoPath)! }} style={styles.entryThumb} />
+                        ) : undefined
+                      }
+                      meta={hideNumbers ? 'hold to remove' : `${entryMeta(e)} · hold to remove`}
+                      value={hideNumbers ? '✓' : groupInt(e.calories)}
+                      unit={hideNumbers ? undefined : 'kcal'}
+                      valueColor={hideNumbers ? color.faint : undefined}
+                      last={i === s.entries.length - 1}
+                    />
+                  </Pressable>
                 ))}
               </View>
             ))}
@@ -321,7 +393,7 @@ export function TodayScreen() {
                 <ReceiptRow name={s.title} meta={s.meta} last />
               </View>
             ))}
-            <SrcNote>Tap any entry to edit · every value from your own log</SrcNote>
+            <SrcNote>Hold any food entry to remove it · every value from your own log</SrcNote>
           </>
         ) : (
           <EmptyState>
@@ -329,9 +401,10 @@ export function TodayScreen() {
           </EmptyState>
         )}
       </Card>
+      )}
 
       {/* ── Micronutrients — only with source data ─────────────────── */}
-      {micros.length > 0 ? (
+      {micros.length > 0 && !hidden.has('micros') ? (
         <Card>
           <ReceiptHeader label="Micronutrients" summary="from logged foods" />
           <View style={{ marginTop: 8 }}>
@@ -345,7 +418,7 @@ export function TodayScreen() {
 
       {/* ── Tiles: steps + water ───────────────────────────────────── */}
       <TileGrid>
-        {data?.steps != null ? (
+        {hidden.has('steps') ? null : data?.steps != null ? (
           <StatTile label="Steps" source="Health Connect" value={groupInt(data.steps)} />
         ) : (
           <EmptyTile
@@ -353,6 +426,7 @@ export function TodayScreen() {
             message="No step source connected. Connect Health Connect in Recover to see movement here."
           />
         )}
+        {hidden.has('water') ? null : (
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
           <StatTile
             label="Water"
@@ -372,8 +446,11 @@ export function TodayScreen() {
             </SrcNote>
           </StatTile>
         </View>
+        )}
       </TileGrid>
-      <Text onPress={onUndoWater} style={styles.undo}>UNDO LAST WATER</Text>
+      {hidden.has('water') ? null : (
+        <Text onPress={onUndoWater} style={styles.undo}>UNDO LAST WATER</Text>
+      )}
     </ScrollView>
   );
 }
@@ -386,7 +463,7 @@ const styles = StyleSheet.create({
   heroSub: { fontFamily: mono, fontSize: 11.5, color: color.mute, marginTop: 10 },
   entryThumb: { width: 30, height: 30, borderRadius: 7, backgroundColor: color.surface2 },
   undo: {
-    fontFamily: mono, fontSize: 9.5, letterSpacing: 0.95, color: color.faint,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.95, color: color.faint,
     textAlign: 'center', marginTop: 14, paddingVertical: 4,
   },
 });

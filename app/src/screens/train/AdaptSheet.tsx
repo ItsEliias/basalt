@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CTA, ChipRow, ReceiptRow, SrcNote, color, mono } from '@basalt/ui';
+import { CTA, ChipRow, ReceiptRow, SrcNote, color, mono, ScaledText as Text } from '@basalt/ui';
 import {
   adaptSession, adaptSummary, getExercises,
   type AdaptChange, type AdaptMode, type Exercise,
@@ -71,6 +71,7 @@ export function AdaptSheet({ open, onClose }: { open: boolean; onClose: () => vo
               <Pressable
                 key={m.label}
                 disabled={busy}
+                hitSlop={8}
                 onPress={() => {
                   if (m.mode === 'exclude') setPicking('muscle');
                   else void propose(m.mode);
@@ -136,6 +137,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
   },
-  title: { fontFamily: mono, fontSize: 10, letterSpacing: 1.2, color: color.mute },
-  label: { fontFamily: mono, fontSize: 9.5, letterSpacing: 1.14, color: color.mute, marginTop: 14 },
+  title: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
+  label: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, color: color.mute, marginTop: 14 },
 });

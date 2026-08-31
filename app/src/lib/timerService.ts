@@ -1,6 +1,7 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { setTimerServiceHooks } from '../state/sessionStore';
+import { acquireForegroundService, releaseForegroundService } from './foregroundServiceCoordinator';
 
 // Android foreground service for the session timers. Its ONE job is process
 // priority: while it runs, the OS keeps the app's JS alive with the screen
@@ -16,7 +17,7 @@ import { setTimerServiceHooks } from '../state/sessionStore';
 const CHANNEL_ID = 'session-timer';
 const NOTIF_ID = 'session-timer';
 
-let registered = false;
+let hooked = false;
 let running = false;
 let failed = false;
 
@@ -27,12 +28,8 @@ export function timerServiceFailed(): boolean {
 
 /** Call once at app start, before any notification is displayed. */
 export function registerTimerService(): void {
-  if (registered || Platform.OS !== 'android') return;
-  registered = true;
-  // The runner promise never resolves; the service lives until
-  // stopForegroundService(). Ticking stays in the session store.
-  notifee.registerForegroundService(() => new Promise(() => {}));
-
+  if (hooked || Platform.OS !== 'android') return;
+  hooked = true;
   setTimerServiceHooks({
     onActive: (label) => void showOrUpdate(label),
     onInactive: () => void stop(),
@@ -60,6 +57,7 @@ async function showOrUpdate(label: string): Promise<void> {
         importance: AndroidImportance.LOW, // silent — haptics are the signal
       });
       await notifee.requestPermission();
+      acquireForegroundService();
     }
     await notifee.displayNotification({
       id: NOTIF_ID,
@@ -85,10 +83,9 @@ async function stop(): Promise<void> {
   if (!running) return;
   running = false;
   try {
-    await notifee.stopForegroundService();
     await notifee.cancelNotification(NOTIF_ID);
   } catch {
-    // Nothing to do — the service either wasn't running or the OS already
-    // tore it down.
+    // Nothing to do — the OS already tore the notification down.
   }
+  await releaseForegroundService();
 }

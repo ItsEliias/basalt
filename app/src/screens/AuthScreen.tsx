@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, SrcNote } from '@basalt/ui';
+import { color, mono, CTA, ObInput, ObChipLabel, SrcNote, useTheme, ScaledText as Text } from '@basalt/ui';
 import { supabase } from '../lib/supabase';
 
 // Sign in / create account — email + password, nothing else. No quiz, no
@@ -9,12 +9,14 @@ import { supabase } from '../lib/supabase';
 // skippable.
 
 export function AuthScreen() {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = async () => {
     setBusy(true);
@@ -30,7 +32,7 @@ export function AuthScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.root, { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}
+      style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text style={styles.brand}>BASALT</Text>
@@ -39,18 +41,28 @@ export function AuthScreen() {
       </Text>
 
       <View style={{ marginTop: 18 }}>
+        <ObChipLabel>Email</ObChipLabel>
         <ObInput
-          placeholder="Email"
+          placeholder="you@example.com"
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(t) => { setEmail(t); setError(null); }}
         />
+        <View style={styles.pwRow}>
+          <ObChipLabel>Password</ObChipLabel>
+          <Pressable onPress={() => setShowPassword((s) => !s)} hitSlop={10}>
+            <Text style={styles.pwToggle}>{showPassword ? 'HIDE' : 'SHOW'}</Text>
+          </Pressable>
+        </View>
         <ObInput
-          placeholder="Password"
-          secureTextEntry
+          placeholder="At least 6 characters"
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(t) => { setPassword(t); setError(null); }}
         />
       </View>
 
@@ -63,7 +75,7 @@ export function AuthScreen() {
       />
       <Text
         style={styles.switch}
-        onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+        onPress={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); }}
       >
         {mode === 'signin' ? 'NEW HERE — CREATE AN ACCOUNT' : 'ALREADY HAVE AN ACCOUNT — SIGN IN'}
       </Text>
@@ -81,9 +93,11 @@ const styles = StyleSheet.create({
   brand: { fontFamily: mono, fontSize: 11, letterSpacing: 2.42, color: color.ink },
   lede: { fontSize: 24, fontWeight: '650' as any, letterSpacing: -0.36, color: color.ink, marginTop: 34 },
   error: { fontSize: 12.5, color: color.fat, marginTop: 12, lineHeight: 18 },
+  pwRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
+  pwToggle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, paddingVertical: 4 },
   switch: {
     fontFamily: mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.2,
     color: color.mute,
     textAlign: 'center',
