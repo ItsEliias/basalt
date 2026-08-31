@@ -6,7 +6,8 @@
     "test": "pnpm -r test",
     "seed:test-account": "tsx scripts/seedTestAccount.ts",
     "eval:quick-add": "tsx scripts/eval/quickAddEval.ts",
-    "eval:recipe-ideas": "tsx scripts/eval/recipeIdeasEval.ts"
+    "eval:recipe-ideas": "tsx scripts/eval/recipeIdeasEval.ts",
+    "eval:sharing-rls": "tsx scripts/eval/sharingRlsProbe.ts"
   },
   "dependencies": {
     "@basalt/core-data": "workspace:*",

@@ -26,3 +26,14 @@ export type LoggingEvent =
 export function logLoggingEvent(event: LoggingEvent): void {
   console.log('[basalt:logging]', event);
 }
+
+// Sharing (V3 Phase 4C) — grant lifecycle + viewer opens.
+export type ShareEvent =
+  | { type: 'share_grant_created'; role: string }
+  | { type: 'share_code_redeemed' }
+  | { type: 'share_grant_revoked' }
+  | { type: 'share_viewer_opened' };
+
+export function logShareEvent(event: ShareEvent): void {
+  console.log('[basalt:share]', event);
+}

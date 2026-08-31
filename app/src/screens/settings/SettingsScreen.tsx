@@ -12,6 +12,7 @@ import {
 } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { ImportSheet } from './ImportSheet';
+import { SharingSection } from './SharingSection';
 import { onOutboxChange, drainOutbox } from '../../lib/outbox';
 import { pendingLine } from '../../lib/outboxModel';
 import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
@@ -370,6 +371,8 @@ export function SettingsScreen() {
       </Card>
 
       {/* ── Your data ──────────────────────────────────────────────── */}
+      <SharingSection />
+
       <Card>
         <ReceiptHeader label="Your data" summary="yours, fully" />
         {/* The outbox's one visible surface — quiet, never a banner. */}
