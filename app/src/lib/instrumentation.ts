@@ -19,7 +19,8 @@ export type LoggingEvent =
   | { type: 'tray_commit'; items: number }
   | { type: 'favorite_relog'; via: 'tap' | 'longpress_edit' }
   | { type: 'copy_yesterday'; meal: string; entries: number }
-  | { type: 'entry_saved'; source: string; viaTray: boolean };
+  | { type: 'entry_saved'; source: string; viaTray: boolean }
+  | { type: 'fill_gap_add'; source: 'own' | 'off' };
 
 export function logLoggingEvent(event: LoggingEvent): void {
   console.log('[basalt:logging]', event);

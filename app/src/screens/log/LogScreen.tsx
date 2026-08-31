@@ -10,11 +10,13 @@ import { RecipesTab } from './RecipesTab';
 import { PlannerTab } from './PlannerTab';
 import {
   validateGs1, searchByBarcode, searchByName, addFoodEntry, recordFoodUse,
-  getFoodEntriesForDay, listFavorites, frequentAtHour,
+  getFoodEntriesForDay, getDailyTotals, listFavorites, frequentAtHour,
+  macroGap, suggestFill, scarcestMacro, gapLine, OFF_FALLBACK_QUERY, GAP_MIN_KCAL, MAX_SUGGESTIONS,
   type OFFProduct, type FoodEntryInput, type FoodFavorite, type LoggedFood,
+  type MacroGap, type FillCandidate, type FillSuggestion,
   uploadFoodPhoto,
 } from '@basalt/nutrition';
-import { isoDay } from '@basalt/core-data';
+import { isoDay, getTargetsFor } from '@basalt/core-data';
 import type { MealType } from '@basalt/nutrition';
 
 type AiItem = {
@@ -94,6 +96,7 @@ function CaptureTab() {
   const [favorites, setFavorites] = useState<FoodFavorite[]>([]);
   const [frequent, setFrequent] = useState<{ foodName: string; count: number; calories: number }[]>([]);
   const [yesterday, setYesterday] = useState<YesterdayMeal[]>([]);
+  const [fillGap, setFillGap] = useState<{ gap: MacroGap; suggestions: FillSuggestion[] } | null>(null);
   const [aiText, setAiText] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -134,6 +137,35 @@ function CaptureTab() {
     yd.setDate(yd.getDate() - 1);
     const yEntries = await getFoodEntriesForDay(supabase, isoDay(yd));
     setYesterday(yesterdayMeals(yEntries.ok ? yEntries.data : []));
+
+    // Fill the gap — own foods first; OFF only takes slots they leave empty.
+    const [targets, totals] = await Promise.all([getTargetsFor(supabase), getDailyTotals(supabase)]);
+    if (targets.ok && targets.data && totals.ok) {
+      const t = targets.data;
+      const gap = macroGap(
+        { calories: t.calories, protein: t.proteinG, carbs: t.carbsG, fat: t.fatG },
+        totals.data,
+      );
+      const ownCands: FillCandidate[] = (favs.ok ? favs.data : []).map((f) => ({
+        foodName: f.foodName, brand: f.brand, calories: f.calories,
+        protein: f.protein, carbs: f.carbs, fat: f.fat, source: 'own' as const,
+      }));
+      let suggestions = suggestFill(gap, ownCands);
+      if (suggestions.length < MAX_SUGGESTIONS && gap.calories >= GAP_MIN_KCAL) {
+        const m = scarcestMacro(gap);
+        if (m) {
+          const products = await searchByName(OFF_FALLBACK_QUERY[m]);
+          const offCands: FillCandidate[] = products.slice(0, 10).map((p) => ({
+            foodName: p.name, brand: p.brand || null, calories: p.calories,
+            protein: p.protein, carbs: p.carbs, fat: p.fat, source: 'off' as const,
+          }));
+          suggestions = suggestFill(gap, ownCands, offCands);
+        }
+      }
+      setFillGap({ gap, suggestions });
+    } else {
+      setFillGap(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -320,6 +352,24 @@ function CaptureTab() {
       ...favoriteToEntry(f),
       sourceNote: 'From your favourites · edit the portion, then log',
     });
+  };
+
+  // Fill-the-gap tap → Tray. Own suggestions reuse the favorite snapshot
+  // (full nutrition); OFF ones carry what the product data actually has.
+  const fillSuggestionToTray = (s: FillSuggestion) => {
+    logLoggingEvent({ type: 'fill_gap_add', source: s.source });
+    const fav = favorites.find((f) => f.foodName === s.foodName);
+    const entry: FoodEntryInput = fav
+      ? favoriteToEntry(fav)
+      : {
+          mealType: mealForHour(new Date().getHours()),
+          foodName: s.foodName,
+          brand: s.brand ?? undefined,
+          calories: s.calories, protein: s.protein, carbs: s.carbs, fat: s.fat,
+          fiber: 0,
+          source: 'search',
+        };
+    addToTray(entry, null);
   };
 
   // ── The Tray ──────────────────────────────────────────────────────────
@@ -674,6 +724,24 @@ function CaptureTab() {
                 value={groupInt(m.calories)}
                 unit="kcal"
                 last={i === yesterday.length - 1}
+              />
+            </Pressable>
+          ))}
+        </Card>
+      ) : null}
+
+      {/* ── Fill the gap — arithmetic against today's targets ──────── */}
+      {fillGap && fillGap.suggestions.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Fill the gap" summary={gapLine(fillGap.gap)} />
+          {fillGap.suggestions.map((s, i) => (
+            <Pressable key={`${s.source}:${s.foodName}`} onPress={() => fillSuggestionToTray(s)} hitSlop={8}>
+              <ReceiptRow
+                name={s.foodName}
+                meta={`${s.why}${s.source === 'off' ? ` · Open Food Facts${s.brand ? ` · ${s.brand}` : ''}` : ' · from your foods'} · tap for Tray`}
+                value={groupInt(s.calories)}
+                unit="kcal"
+                last={i === fillGap.suggestions.length - 1}
               />
             </Pressable>
           ))}
