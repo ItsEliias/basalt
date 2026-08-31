@@ -25,6 +25,10 @@ const ITEM_PROPS = {
   food_name: { type: 'string' },
   meal_guess: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
   calories: { type: 'number' },
+  // Graded uncertainty (V3 law): calibrated range from the model itself;
+  // `calories` stays the central estimate, and must lie within it.
+  calories_low: { type: 'number' },
+  calories_high: { type: 'number' },
   protein_g: { type: 'number' },
   carbs_g: { type: 'number' },
   fat_g: { type: 'number' },
@@ -79,6 +83,7 @@ const MEAL_SYSTEM = `You estimate nutrition from a photo of food in a health-tra
 Rules:
 - One item per distinct food you can see. Estimate the visible portion; state your portion assumption in portion_note (e.g. "looks like ~250 g cooked rice").
 - Values are honest estimates — realistic, not optimistic. Photos hide oil, butter and sauces: when likely present, include a conservative amount and say so in the note.
+- calories_low/calories_high: a CALIBRATED range the true energy plausibly falls in — photo portion estimation is uncertain, so ranges should be honestly wide; the true value inside the range beats a tight wrong range. calories must lie within the range.
 - meal_guess from the food type; note: one short sentence naming the biggest uncertainty in the whole estimate. Never marketing language, never advice.
 - If the photo does not show food, return an empty items array and say so in note.`;
 

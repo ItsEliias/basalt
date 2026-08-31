@@ -21,6 +21,10 @@ type AiItem = {
   food_name: string;
   meal_guess: MealType;
   calories: number;
+  /** Graded uncertainty: the model's calibrated energy range. Older
+   *  deployed functions may omit them — display falls back to ~point. */
+  calories_low?: number;
+  calories_high?: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
@@ -29,6 +33,14 @@ type AiItem = {
   sodium_mg: number;
   portion_note: string;
 };
+
+/** "~520–780" when the model gave a range, "~640" when it didn't. */
+function aiKcalText(item: AiItem): string {
+  if (item.calories_low !== undefined && item.calories_high !== undefined && item.calories_high > item.calories_low) {
+    return `~${Math.round(item.calories_low)}–${Math.round(item.calories_high)}`;
+  }
+  return `~${Math.round(item.calories)}`;
+}
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import {
@@ -85,6 +97,7 @@ function CaptureTab() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiItems, setAiItems] = useState<AiItem[] | null>(null);
+  const [aiOmissions, setAiOmissions] = useState<AiItem[]>([]);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState<string | null>(null);
   const [photoQueue, setPhotoQueue] = useState<QueuedPhoto[]>([]);
@@ -175,6 +188,7 @@ function CaptureTab() {
     setAiBusy(true);
     setAiError(null);
     setAiItems(null);
+    setAiOmissions([]);
     const { data, error } = await supabase.functions.invoke('ai-quick-add', {
       body: { description: aiText.trim() },
     });
@@ -193,6 +207,7 @@ function CaptureTab() {
       return;
     }
     setAiItems((data?.items ?? []) as AiItem[]);
+    setAiOmissions((data?.omissions ?? []) as AiItem[]);
     setAiNote(data?.note ?? null);
   };
 
@@ -217,6 +232,7 @@ function CaptureTab() {
     afterOk?.();
     if (mode2 === 'meal') {
       setAiItems((data?.items ?? []) as AiItem[]);
+      setAiOmissions([]);
       setAiNote(data?.note ?? null);
       return;
     }
@@ -544,7 +560,7 @@ function CaptureTab() {
                   <ReceiptRow
                     name={item.food_name}
                     meta={`~P ${Math.round(item.protein_g)} · ~C ${Math.round(item.carbs_g)} · ~F ${Math.round(item.fat_g)} · ${item.portion_note}`}
-                    value={`~${Math.round(item.calories)}`}
+                    value={aiKcalText(item)}
                     unit="kcal"
                     last={i === aiItems.length - 1}
                   />
@@ -556,6 +572,46 @@ function CaptureTab() {
           ) : (
             <EmptyState>No foods recognized in that description — try naming the items.</EmptyState>
           )}
+        </Card>
+      ) : null}
+
+      {/* ── Often forgotten — optional one-tap additions, never auto ── */}
+      {mode === 'ai' && aiOmissions.length > 0 ? (
+        <Card>
+          <ReceiptHeader label="Often forgotten" summary="optional — tap to add to tray" />
+          {aiOmissions.map((item, i) => (
+            <Pressable
+              key={`om-${i}`}
+              onPress={() => {
+                addToTray(
+                  {
+                    mealType: item.meal_guess,
+                    foodName: item.food_name,
+                    calories: Math.round(item.calories),
+                    protein: Math.round(item.protein_g * 10) / 10,
+                    carbs: Math.round(item.carbs_g * 10) / 10,
+                    fat: Math.round(item.fat_g * 10) / 10,
+                    fiber: Math.round(item.fiber_g * 10) / 10,
+                    sugar: Math.round(item.sugar_g * 10) / 10,
+                    sodiumMg: Math.round(item.sodium_mg),
+                    source: 'quick_add',
+                  },
+                  null,
+                );
+                setAiOmissions((o) => o.filter((_, idx) => idx !== i));
+              }}
+              hitSlop={8}
+            >
+              <ReceiptRow
+                name={`+ ${item.food_name}`}
+                meta={item.portion_note}
+                value={aiKcalText(item)}
+                unit="kcal"
+                last={i === aiOmissions.length - 1}
+              />
+            </Pressable>
+          ))}
+          <SrcNote>Commonly missed alongside what you described · nothing here is ever added by itself</SrcNote>
         </Card>
       ) : null}
 

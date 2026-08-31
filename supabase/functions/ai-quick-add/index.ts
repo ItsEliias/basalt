@@ -21,32 +21,50 @@ function json(body: unknown, status = 200): Response {
 
 // Strict schema — the API validates the model's output against this, so the
 // client never has to defensively parse.
+const ITEM_PROPS = {
+  food_name: { type: 'string' },
+  meal_guess: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
+  calories: { type: 'number' },
+  // Graded uncertainty (V3 law): a calibrated energy range from the model
+  // itself, never invented client-side. `calories` stays the central
+  // estimate the edit form prefills; the range is what displays until the
+  // user confirms.
+  calories_low: { type: 'number' },
+  calories_high: { type: 'number' },
+  protein_g: { type: 'number' },
+  carbs_g: { type: 'number' },
+  fat_g: { type: 'number' },
+  fiber_g: { type: 'number' },
+  sugar_g: { type: 'number' },
+  sodium_mg: { type: 'number' },
+  portion_note: { type: 'string' },
+} as const;
+
 const SUGGESTION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['items', 'note'],
+  required: ['items', 'omissions', 'note'],
   properties: {
     items: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: [
-          'food_name', 'meal_guess', 'calories', 'protein_g', 'carbs_g',
-          'fat_g', 'fiber_g', 'sugar_g', 'sodium_mg', 'portion_note',
-        ],
-        properties: {
-          food_name: { type: 'string' },
-          meal_guess: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
-          calories: { type: 'number' },
-          protein_g: { type: 'number' },
-          carbs_g: { type: 'number' },
-          fat_g: { type: 'number' },
-          fiber_g: { type: 'number' },
-          sugar_g: { type: 'number' },
-          sodium_mg: { type: 'number' },
-          portion_note: { type: 'string' },
-        },
+        required: Object.keys(ITEM_PROPS),
+        properties: ITEM_PROPS,
+      },
+    },
+    // The omissions pass — commonly forgotten companions NOT stated in the
+    // description (cooking oil, dressing, sugar in coffee, butter). The
+    // client renders them as optional one-tap additions; nothing here is
+    // ever auto-added.
+    omissions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: Object.keys(ITEM_PROPS),
+        properties: ITEM_PROPS,
       },
     },
     note: { type: 'string' },
@@ -66,7 +84,9 @@ const SYSTEM = `You estimate nutrition for food descriptions in a health-trackin
 Rules:
 - One item per distinct food in the description. Use the portion the user stated; when unstated, assume a typical single serving and say so in portion_note (e.g. "assumed 1 medium banana, ~120 g").
 - Values are honest estimates for that portion — realistic, not optimistic. Use Australian products/portions when a brand suggests it.
+- calories_low/calories_high: a CALIBRATED range the true energy plausibly falls in, given portion and preparation uncertainty. The true value inside an honest range beats a tight wrong range — width should reflect real uncertainty (a packaged branded item is narrow; "a bowl of curry" is wide). When preparation or portion is ambiguous (home-cooked, restaurant, "a bowl of"), widen substantially — under-width is the common failure mode, especially on the high side where oil and portions hide. calories must lie within the range.
 - meal_guess from any time-of-day hints in the text; default to the most typical meal for that food.
+- omissions: 0–3 commonly forgotten companions NOT stated in the description — cooking oil for pan-cooked items, dressing on salads, sugar/milk in coffee, butter on toast, sauces. Same item shape, portion_note explaining the assumption. Empty array when nothing plausibly applies. Never duplicate anything the user already stated.
 - note: one short sentence naming the biggest uncertainty in the whole estimate (e.g. "Cooking oil not counted unless stated"). Never marketing language, never advice.`;
 
 Deno.serve(async (req) => {
@@ -136,6 +156,7 @@ Deno.serve(async (req) => {
     const parsed = JSON.parse(textBlock.text);
     return json({
       items: parsed.items,
+      omissions: parsed.omissions ?? [],
       note: parsed.note,
       estimated: true,
       model: response.model,
