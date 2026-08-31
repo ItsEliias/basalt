@@ -40,8 +40,8 @@ export function TrendsScreen() {
     void (async () => {
       try {
         const [full, any, wr] = await Promise.all([
-          activeDaysFor(supabase, 'full'),
-          activeDaysFor(supabase, 'any'),
+          activeDaysFor(supabase, 'full', { restAware: true }),
+          activeDaysFor(supabase, 'any', { restAware: true }),
           loadWeekReview(supabase, new Date()),
         ]);
         if (wr.ok) setReview(wr.data);
@@ -166,8 +166,11 @@ export function TrendsScreen() {
           <ReceiptRow name="Current run — any logging" meta="days in a row with anything logged" value={String(streak.current)} unit="days" />
           <ReceiptRow name="Longest run — any logging" meta="within the last 180 days" value={String(streak.longest)} unit="days" />
           {fullStreak ? (
-            <ReceiptRow name="Longest full-log run" meta="food and training on the same day" value={String(fullStreak.longest)} unit="days" last />
+            <ReceiptRow name="Longest full-log run" meta="food logged + trained or rested properly" value={String(fullStreak.longest)} unit="days" last />
           ) : null}
+          <SrcNote>
+            Rest doesn't break a training run — a day with readiness below 40 (when a number existed) counts as rest · rest maintains a run, only sessions start one
+          </SrcNote>
         </Card>
       ) : null}
 
