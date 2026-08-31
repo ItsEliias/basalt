@@ -21,3 +21,4 @@ export * from './social-import';
 export * from './meal-budgets';
 export * from './fasting';
 export * from './fill-gap';
+export * from './cooking-mode';

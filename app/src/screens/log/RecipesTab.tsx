@@ -16,6 +16,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { capturePhoto } from '../../lib/photoFood';
+import { CookingSheet } from './CookingSheet';
 
 // Recipes — persisted, scalable, conflict-flagged, loggable. Imports follow
 // capture → editable suggestion → confirm; imported macros wear ~ until
@@ -50,6 +51,9 @@ export function RecipesTab() {
   const [ideasNote, setIdeasNote] = useState<string | null>(null);
   const [ideasBusy, setIdeasBusy] = useState(false);
   const [ideasError, setIdeasError] = useState<string | null>(null);
+  const [cookSelect, setCookSelect] = useState(false);
+  const [cookIds, setCookIds] = useState<Set<string>>(new Set());
+  const [cookingOpen, setCookingOpen] = useState(false);
   const [serves, setServes] = useState(1);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [groceryNote, setGroceryNote] = useState<string | null>(null);
@@ -445,7 +449,15 @@ export function RecipesTab() {
       <SrcNote>Only your listed ingredients plus salt, pepper, water and oil are assumed on hand · the list is sent to Anthropic (Claude) — never your ledger, name or email · macros wear ~ until you confirm</SrcNote>
 
       <Card>
-        <ReceiptHeader label="Saved recipes" summary={filtered.length > 0 ? 'per serve · scalable' : undefined} />
+        <ReceiptHeader
+          label="Saved recipes"
+          summary={cookSelect ? 'tap recipes to cook together' : filtered.length > 0 ? 'per serve · scalable' : undefined}
+        />
+        {filtered.length > 1 ? (
+          <Pressable onPress={() => { setCookSelect(!cookSelect); setCookIds(new Set()); }} hitSlop={8}>
+            <Text style={styles.scanLink}>{cookSelect ? 'CANCEL COOK TOGETHER' : 'COOK TOGETHER — MERGED TIMELINE'}</Text>
+          </Pressable>
+        ) : null}
         {recipesFailed ? (
           <Pressable onPress={refresh} hitSlop={8}>
             <EmptyState>Couldn't load your recipes — tap to retry.</EmptyState>
@@ -457,12 +469,23 @@ export function RecipesTab() {
             return (
               <Pressable
                 key={r.id}
-                onPress={() => void openDetail(r.id)}
-                onLongPress={() => void deleteRecipe(supabase, r.id).then(refresh)}
+                onPress={() => {
+                  if (cookSelect) {
+                    setCookIds((ids) => {
+                      const next = new Set(ids);
+                      if (next.has(r.id)) next.delete(r.id);
+                      else next.add(r.id);
+                      return next;
+                    });
+                    return;
+                  }
+                  void openDetail(r.id);
+                }}
+                onLongPress={() => { if (!cookSelect) void deleteRecipe(supabase, r.id).then(refresh); }}
                 hitSlop={8}
               >
                 <ReceiptRow
-                  name={r.title}
+                  name={cookSelect && cookIds.has(r.id) ? `✓ ${r.title}` : r.title}
                   thumb={
                     r.coverPath && photoUrls.get(r.coverPath) ? (
                       <Image source={{ uri: photoUrls.get(r.coverPath)! }} style={styles.rowThumb} />
@@ -489,7 +512,18 @@ export function RecipesTab() {
           </EmptyState>
         )}
       </Card>
+      {cookSelect && cookIds.size > 0 ? (
+        <CTA
+          label={`Cook ${cookIds.size} together — merged timeline`}
+          onPress={() => setCookingOpen(true)}
+        />
+      ) : null}
       <SrcNote>Imports keep their source link · dietary conflicts flagged per-ingredient, never hidden</SrcNote>
+      <CookingSheet
+        open={cookingOpen}
+        recipeIds={[...cookIds]}
+        onClose={() => { setCookingOpen(false); setCookSelect(false); setCookIds(new Set()); }}
+      />
     </ScrollView>
   );
 }
