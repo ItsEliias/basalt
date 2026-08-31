@@ -15,6 +15,7 @@ import { e1rm, bigThree, type BigThree } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
+import { CoopCard } from './CoopCard';
 
 // Trends — everything here is computed from the ledger or absent. Gaps stay
 // gray, streak resets don't shame, and there are no charts until there is
@@ -344,6 +345,9 @@ export function TrendsScreen() {
         EVERYTHING ON THIS SCREEN IS COMPUTED FROM YOUR LEDGER OR ABSENT — NOTHING HERE
         WILL EVER BE A MOCK
       </Text>
+      {/* ── One friend — dots only, engine-pinned copy ────────────── */}
+      <CoopCard />
+
     </ScrollView>
   );
 }
