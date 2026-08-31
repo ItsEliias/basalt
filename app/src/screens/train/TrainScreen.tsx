@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, BodyFigure,
+  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, ChipGroup, BodyFigure,
   ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav,
   GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput,
   color, mono, mmss, groupInt, useTheme,
@@ -13,6 +13,7 @@ import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
   platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
   emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree, recoveryIntensity, MIN_TRANSITION_S,
+  getActiveProgram, startProgram, stopProgram, phaseFor, weekIndexFor, phaseLabel, type Program,
   REGION_FOR_MUSCLE, type RegionRecovery, type BodyRegion,
   describe as describeGuided,
   listTemplates, deleteTemplate, duplicateTemplate, type WorkoutTemplate,
@@ -25,6 +26,7 @@ import { useSessionStore, type SessionExerciseState } from '../../state/sessionS
 import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './model';
 import { OutdoorTab } from './OutdoorTab';
 import { AdaptSheet } from './AdaptSheet';
+import { loadDeloadSignals } from '../../lib/periodizationData';
 import { timerServiceFailed } from '../../lib/timerService';
 import { loadRecovery, toggleRecoveryOverride } from '../../lib/recoveryData';
 import { PrShareCard, ShareSheet } from '../../components/ShareCards';
@@ -84,11 +86,21 @@ function SessionTab() {
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [builderOpen, setBuilderOpen] = useState(false);
   const refreshTemplates = () => void listTemplates(supabase).then((r) => r.ok && setTemplates(r.data));
+  const [program, setProgram] = useState<Program | null>(null);
+  const [programDays, setProgramDays] = useState<number[]>([1, 3, 5]);
+  const [deload, setDeload] = useState<{ advised: boolean; reasons: string[] } | null>(null);
+  const refreshProgram = () =>
+    void getActiveProgram(supabase).then((r) => {
+      if (!r.ok) return;
+      setProgram(r.data);
+      if (r.data) void loadDeloadSignals().then(setDeload);
+    });
 
   useEffect(() => {
     if (!session.sessionId) {
       void listRecentSessions(supabase, 8).then((r) => r.ok && setRecent(r.data));
       refreshTemplates();
+      refreshProgram();
     }
     refreshRecovery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,6 +170,59 @@ function SessionTab() {
           <Pressable onPress={() => setBuilderOpen(true)}>
             <Text style={styles.addSet}>+ NEW TEMPLATE</Text>
           </Pressable>
+        </Card>
+
+        {/* ── Program — the mesocycle, phase + planned rest ──────────── */}
+        <Card>
+          <ReceiptHeader
+            label="Program"
+            summary={program ? phaseLabel(phaseFor(weekIndexFor(program.startedOn, new Date()))) : undefined}
+          />
+          {program ? (
+            <>
+              <ReceiptRow
+                name="Training days"
+                meta="the rest are planned rest — they hold your streak"
+                value={program.trainingDays.map((d) => ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d]).join(' ')}
+                unit=""
+              />
+              {deload?.advised ? (
+                <ReceiptRow
+                  name="Early deload suggested"
+                  meta={deload.reasons.join(' · ')}
+                  value="~"
+                  unit=""
+                  last
+                />
+              ) : null}
+              <Pressable onPress={() => void stopProgram(supabase).then(refreshProgram)} hitSlop={8}>
+                <Text style={styles.addSet}>STOP PROGRAM</Text>
+              </Pressable>
+              <SrcNote>
+                Block: 3 weeks accumulation · 2 intensification · 1 deload — suggested loads and sets follow the phase · a suggestion, never a mandate
+              </SrcNote>
+            </>
+          ) : (
+            <>
+              <EmptyState>
+                A program is your own week structure — training days, planned rest, and a published
+                6-week block that shapes the suggestions. Nothing is prescribed without your history.
+              </EmptyState>
+              <ChipGroup
+                options={['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']}
+                values={programDays.map((d) => ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d]!)}
+                onToggle={(label) => {
+                  const idx = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].indexOf(label);
+                  setProgramDays((days) => (days.includes(idx) ? days.filter((d) => d !== idx) : [...days, idx].sort()));
+                }}
+              />
+              <CTA
+                label="Start a 6-week block"
+                disabled={programDays.length === 0}
+                onPress={() => void startProgram(supabase, programDays).then(refreshProgram)}
+              />
+            </>
+          )}
         </Card>
 
         {recovery && recovery.length > 0 ? (

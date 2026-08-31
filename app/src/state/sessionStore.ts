@@ -6,8 +6,9 @@ import {
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
   collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
   removeSessionExercise, startSessionFromTemplate, getExerciseById,
+  getActiveProgram, periodize, phaseFor, weekIndexFor,
   type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange, type TimerMode,
-  type SetEntry, type Exercise, type GuidedState, type GuidedEvent,
+  type SetEntry, type Exercise, type GuidedState, type GuidedEvent, type Program,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
 
@@ -60,6 +61,9 @@ type SessionState = {
   rest: RestState;
   busy: boolean;
   error: string | null;
+  /** Active periodization program, loaded at session start — null runs
+   *  suggestNext unlayered, exactly as before programs existed. */
+  program: Program | null;
 
   start: () => Promise<void>;
   startFromTemplate: (templateId: string) => Promise<void>;
@@ -206,6 +210,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
   rest: null,
   busy: false,
   error: null,
+  program: null,
 
   start: async () => {
     set({ busy: true, error: null });
@@ -214,7 +219,11 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
       set({ busy: false, error: r.error });
       return;
     }
-    set({ sessionId: r.data.id, startedAt: r.data.startedAt, exercises: [], rest: null, busy: false });
+    const prog = await getActiveProgram(supabase);
+    set({
+      sessionId: r.data.id, startedAt: r.data.startedAt, exercises: [], rest: null, busy: false,
+      program: prog.ok ? prog.data : null,
+    });
   },
 
   startFromTemplate: async (templateId) => {
@@ -224,7 +233,11 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
       set({ busy: false, error: r.error });
       return;
     }
-    set({ sessionId: r.data.session.id, startedAt: r.data.session.startedAt, exercises: [], rest: null, busy: false });
+    const prog = await getActiveProgram(supabase);
+    set({
+      sessionId: r.data.session.id, startedAt: r.data.session.startedAt, exercises: [], rest: null, busy: false,
+      program: prog.ok ? prog.data : null,
+    });
     for (const te of r.data.exercises) {
       const resolved = te.exerciseId ? await getExerciseById(supabase, te.exerciseId) : null;
       const exercise: Exercise = resolved?.ok && resolved.data
@@ -263,7 +276,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     const prev = await getPrevExerciseSets(supabase, exercise.id);
     const prevSets = prev.ok && prev.data ? prev.data.sets : [];
     const history = await historyFor(exercise.id);
-    const suggestion = timed
+    const baseSuggestion = timed
       ? null
       : suggestNext({
           prev:
@@ -278,7 +291,18 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
               : null,
           today: new Date(),
         });
-    const rowCount = target?.sets || prevSets.filter((s) => s.setType !== 'warmup').length || 3;
+    // Mesocycle layer — only when a program is active; first_time passes
+    // through untouched (periodization never invents a starting number).
+    const program = get().program;
+    const suggestion =
+      baseSuggestion && program
+        ? periodize(baseSuggestion, phaseFor(weekIndexFor(program.startedOn, new Date())))
+        : baseSuggestion;
+    const setsDelta = suggestion && 'setsDelta' in suggestion ? (suggestion as { setsDelta: number }).setsDelta : 0;
+    const rowCount = Math.max(
+      1,
+      (target?.sets || prevSets.filter((s) => s.setType !== 'warmup').length || 3) + setsDelta,
+    );
     const rows = timed
       ? []
       : Array.from({ length: Math.max(1, rowCount) }, (_, i) => ({

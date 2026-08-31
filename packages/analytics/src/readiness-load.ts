@@ -84,3 +84,23 @@ export async function loadReadiness(
     },
   });
 }
+
+/**
+ * Readiness scores for each of the last `days` days (today inclusive),
+ * recomputed from persisted rows with the same published components —
+ * days with no computable number are simply absent. Feeds the
+ * periodization deload trigger's 7-day mean.
+ */
+export async function readinessScoresForLastDays(
+  client: SupabaseClient,
+  days = 7,
+  today: Date = new Date(),
+): Promise<Result<number[]>> {
+  const scores: number[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const r = await loadReadiness(client, d);
+    if (r.ok && r.data.readiness.score !== null) scores.push(r.data.readiness.score);
+  }
+  return ok(scores);
+}

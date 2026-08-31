@@ -262,12 +262,29 @@ export async function activeDaysFor(
     case 'workout': {
       const trained = await timestampDays(client, userId, 'basalt_workout_sessions', 'started_at', sinceISO);
       if (!trained.ok || !options.restAware) return trained;
-      // Planned rest (a program's rest day) joins this union when the
-      // periodization engine lands and programs carry a week structure —
-      // today the only derivable rest source is readiness-advised.
       const advised = await restAdvisedDaysFor(client);
       if (!advised.ok) return advised;
-      return ok(restAwareDays(trained.data, advised.data));
+      // Planned rest: the active program's non-training weekdays
+      // (basalt_programs — the periodization engine's week structure).
+      const rest = new Set(advised.data);
+      const prog = await client
+        .from('basalt_programs')
+        .select('started_on, training_days')
+        .eq('user_id', userId)
+        .eq('active', true)
+        .limit(1)
+        .maybeSingle();
+      if (!prog.error && prog.data) {
+        const trainingDays = (prog.data.training_days ?? []).map((d: any) => Number(d));
+        const startProg = new Date(`${prog.data.started_on}T00:00:00`);
+        const cursor = new Date(since);
+        const today = new Date();
+        while (cursor <= today) {
+          if (cursor >= startProg && !trainingDays.includes(cursor.getDay())) rest.add(isoDay(cursor));
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
+      return ok(restAwareDays(trained.data, rest));
     }
     case 'weight':
       return timestampDays(client, userId, 'basalt_weight_entries', 'measured_at', sinceISO);
