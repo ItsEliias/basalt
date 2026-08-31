@@ -12,7 +12,7 @@ import { healthService, labelForPackage, type SleepSessionSummary } from '@basal
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, type SleepNeedReport } from '@basalt/analytics';
+import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
 import { ProgressPhotosCard } from './ProgressPhotos';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
@@ -62,6 +62,7 @@ function VitalsTab() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [sleepNeed, setSleepNeed] = useState<SleepNeedReport | null>(null);
   const [needMathOpen, setNeedMathOpen] = useState(false);
+  const [deviation, setDeviation] = useState<DeviationReport | null>(null);
 
   useEffect(() => {
     if (!fastingEnabled) return;
@@ -80,6 +81,7 @@ function VitalsTab() {
         if (w.ok) setWeights(w.data);
         setReadiness(await loadReadiness(supabase, new Date()));
         void loadSleepNeed(supabase).then((r) => r.ok && setSleepNeed(r.data));
+        void loadDeviation(supabase).then((r) => r.ok && setDeviation(r.data));
         const c = await getCheckin(supabase, isoDay(new Date()));
         if (c.ok && c.data) {
           setCheckinFactors(c.data.factors);
@@ -361,6 +363,18 @@ function VitalsTab() {
           </>
         )}
       </Card>
+
+      {/* ── Vitals deviation — outlier-only, your own baselines ────── */}
+      {deviation?.headline ? (
+        <Card>
+          <ReceiptHeader label="Out of your range" summary="today vs your last 30 days" />
+          <Text style={styles.needLine}>{deviation.headline}</Text>
+          {deviation.lines.map((line) => (
+            <SrcNote key={line}>{line}</SrcNote>
+          ))}
+          <SrcNote>{deviation.srcnote}</SrcNote>
+        </Card>
+      ) : null}
 
       {/* ── Sleep need + debt — need/debt words, never a score ─────── */}
       {sleepNeed && sleepNeed.debt.nightsSeen > 0 ? (

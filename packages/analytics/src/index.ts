@@ -15,3 +15,5 @@ export * from './sleep-need';
 export * from './sleep-need-load';
 export * from './monthly-report';
 export * from './monthly-report-load';
+export * from './deviation';
+export * from './deviation-load';
