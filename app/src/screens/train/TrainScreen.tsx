@@ -25,6 +25,7 @@ import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
 import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './model';
 import { OutdoorTab } from './OutdoorTab';
+import { RacePlanCard } from './RacePlanCard';
 import { AdaptSheet } from './AdaptSheet';
 import { loadDeloadSignals } from '../../lib/periodizationData';
 import { timerServiceFailed } from '../../lib/timerService';
@@ -224,6 +225,9 @@ function SessionTab() {
             </>
           )}
         </Card>
+
+        {/* ── Race plan — one knob, Riegel model, tick-box weeks ────── */}
+        <RacePlanCard />
 
         {recovery && recovery.length > 0 ? (
           <Card>
