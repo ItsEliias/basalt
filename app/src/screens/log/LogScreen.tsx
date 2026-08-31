@@ -50,6 +50,7 @@ import {
   trayTotals, trayLine, type TrayItem,
 } from './model';
 import { logLoggingEvent } from '../../lib/instrumentation';
+import { writeThroughOutbox } from '../../lib/outbox';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 import { capturePhoto, enqueuePhoto, dequeuePhoto, loadPhotoQueue, readQueuedPhotoB64 } from '../../lib/photoFood';
 import { queuedLabel, type QueuedPhoto } from '../../lib/photoQueueModel';
@@ -281,10 +282,13 @@ function CaptureTab() {
       const up = await uploadFoodPhoto(supabase, photoB64, Date.now(), Math.random().toString(36).slice(2, 8));
       if (up.ok) photoPath = up.data; // upload failure logs the entry photo-less, honestly
     }
-    const r = await addFoodEntry(supabase, { ...entry, photoPath });
+    const r = await writeThroughOutbox(
+      () => addFoodEntry(supabase, { ...entry, photoPath }),
+      { kind: 'food_entry', input: { ...entry, photoPath } },
+    );
     if (r.ok) {
       logLoggingEvent({ type: 'entry_saved', source: entry.source ?? 'manual', viaTray: false });
-      void recordFoodUse(supabase, entry);
+      if (!('queued' in r)) void recordFoodUse(supabase, entry);
       setDraft(null);
       setScan({ kind: 'idle' });
       bumpToday();
@@ -337,8 +341,11 @@ function CaptureTab() {
         const up = await uploadFoodPhoto(supabase, photoB64, Date.now(), Math.random().toString(36).slice(2, 8));
         if (up.ok) photoPath = up.data;
       }
-      const r = await addFoodEntry(supabase, { ...entry, photoPath });
-      if (r.ok) void recordFoodUse(supabase, entry);
+      const r = await writeThroughOutbox(
+        () => addFoodEntry(supabase, { ...entry, photoPath }),
+        { kind: 'food_entry', input: { ...entry, photoPath } },
+      );
+      if (r.ok && !('queued' in r)) void recordFoodUse(supabase, entry);
     }
     logLoggingEvent({ type: 'tray_commit', items: tray.length });
     setTray([]);

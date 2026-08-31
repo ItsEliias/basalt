@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, CTA, ObInput, SrcNote } from '@basalt/ui';
 import { addWeightEntry } from '@basalt/core-data';
+import { writeThroughOutbox } from '../lib/outbox';
 import { supabase } from '../lib/supabase';
 
 // Quick weight log — the ledger's TDEE loop feeds on these.
@@ -22,7 +23,11 @@ export function WeightSheet({
     const n = parseFloat(kg.replace(',', '.'));
     if (!isFinite(n) || n <= 0) return;
     setBusy(true);
-    const r = await addWeightEntry(supabase, n);
+    const measuredAt = new Date().toISOString();
+    const r = await writeThroughOutbox(
+      () => addWeightEntry(supabase, n, { measuredAt, source: 'manual' }),
+      { kind: 'weight', weightKg: n, measuredAt, source: 'manual' },
+    );
     setBusy(false);
     if (r.ok) {
       setKg('');

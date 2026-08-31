@@ -12,6 +12,8 @@ import {
 } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { ImportSheet } from './ImportSheet';
+import { onOutboxChange, drainOutbox } from '../../lib/outbox';
+import { pendingLine } from '../../lib/outboxModel';
 import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -60,6 +62,8 @@ export function SettingsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [importOpen, setImportOpen] = useState(false);
+  const [pendingWrites, setPendingWrites] = useState(0);
+  useEffect(() => onOutboxChange(setPendingWrites), []);
   const profile = useAppStore((s) => s.profile);
   const targets = useAppStore((s) => s.targets);
   const session = useAppStore((s) => s.session);
@@ -342,6 +346,12 @@ export function SettingsScreen() {
       {/* ── Your data ──────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Your data" summary="yours, fully" />
+        {/* The outbox's one visible surface — quiet, never a banner. */}
+        {pendingLine(pendingWrites) ? (
+          <Pressable onPress={() => void drainOutbox()} hitSlop={8}>
+            <SrcNote>{`${pendingLine(pendingWrites)} · retries by itself · tap to retry now`}</SrcNote>
+          </Pressable>
+        ) : null}
         <Pressable onPress={() => void exportJson()} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
             name={busy === 'basalt-export.json' ? 'Exporting…' : 'Export everything — JSON'}

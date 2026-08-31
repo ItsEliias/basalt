@@ -45,10 +45,14 @@ import { TrendsScreen } from './src/screens/trends/TrendsScreen';
 import { WeightSheet } from './src/components/WeightSheet';
 import { wireWeekReviewNotifTap } from './src/lib/weekReviewNotif';
 import { registerTimerService } from './src/lib/timerService';
+import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
+import { isoDay } from '@basalt/core-data';
 
 // Foreground-service runner must be registered before any notification is
-// displayed — module scope, once.
+// displayed — module scope, once. The outbox drains on start, foreground,
+// and interval — a committed write must never be lost to a dead spot.
 registerTimerService();
+wireOutboxDraining();
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
 // tab bar with the centre +. Settings rides over the tabs via the gear;
@@ -90,8 +94,13 @@ function MainShell() {
 
   const onQuickAction = (a: QuickAction) => {
     if (a === 'water') {
-      // +250 commits instantly — no confirmation screen, ever.
-      void addWater(supabase, 250).then(() => {
+      // +250 commits instantly — no confirmation screen, ever. Offline it
+      // queues just as instantly; the outbox replays it when we're back.
+      const ts = new Date().toISOString();
+      void writeThroughOutbox(
+        () => addWater(supabase, 250, isoDay(new Date()), ts),
+        { kind: 'water', ml: 250, date: isoDay(new Date()), ts },
+      ).then(() => {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         bumpToday();
       });

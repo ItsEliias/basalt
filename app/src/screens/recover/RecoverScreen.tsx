@@ -20,6 +20,7 @@ import {
 } from '@basalt/nutrition';
 import { isoDay } from '@basalt/core-data';
 import { useAppStore } from '../../state/appStore';
+import { writeThroughOutbox } from '../../lib/outbox';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
 
 // Recover — Vitals (real-or-hidden, sources named) and Mind (breathing
@@ -280,7 +281,10 @@ function VitalsTab() {
               : [...checkinFactors, key];
             setCheckinFactors(next);
             setCheckinSaved(true);
-            void saveCheckin(supabase, { date: isoDay(new Date()), factors: next, mood: checkinMood });
+            void writeThroughOutbox(
+              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: next, mood: checkinMood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
+              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: next, mood: checkinMood } },
+            );
           }}
         />
         <ChipRow
@@ -290,7 +294,10 @@ function VitalsTab() {
             const mood = parseInt(v, 10);
             setCheckinMood(mood);
             setCheckinSaved(true);
-            void saveCheckin(supabase, { date: isoDay(new Date()), factors: checkinFactors, mood });
+            void writeThroughOutbox(
+              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: checkinFactors, mood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
+              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: checkinFactors, mood } },
+            );
           }}
         />
         <SrcNote>Facts about today, one row per day · they feed Trends' correlations through the same gates (|r| ≥ 0.45, 30+ days) · never scored, never judged · mood 1–5 optional</SrcNote>
@@ -480,14 +487,21 @@ function MindTab() {
     setClock(0);
     // Log only real practice — under 30 seconds is a false start, not a session.
     if (startedAt && (completed || clock >= 30)) {
-      await supabase.from('basalt_mindfulness_sessions').insert({
+      const row = {
         user_id: (await supabase.auth.getUser()).data.user?.id,
         started_at: startedAt,
         ended_at: new Date().toISOString(),
         minutes: completed ? minutes : elapsedMin,
         kind: protocol.key,
         source: 'manual',
-      });
+      };
+      await writeThroughOutbox(
+        async () => {
+          const { error } = await supabase.from('basalt_mindfulness_sessions').insert(row);
+          return error ? { ok: false as const, error: error.message } : { ok: true as const, data: undefined };
+        },
+        { kind: 'mindfulness', row },
+      );
       bumpToday();
       void loadRecent();
     }
