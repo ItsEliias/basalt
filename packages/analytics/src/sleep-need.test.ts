@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   SLEEP_NEED_RULES, personalSleepNeed, strainAdjustedNeed, sleepDebt,
-  lastNightLine, debtLine,
+  lastNightLine, debtLine, classifyDaySleep, napCreditLine,
 } from './sleep-need';
 
 describe('personal sleep need — your own median or an honest default', () => {
@@ -92,5 +92,27 @@ describe('the phrasing — need/debt words, never a score', () => {
     );
     expect(debtLine({ debtMin: 0, nightsSeen: 14, windowDays: 14 })).toContain('No sleep debt');
     expect(debtLine({ debtMin: 0, nightsSeen: 0, windowDays: 14 })).toContain('no debt number without nights');
+  });
+});
+
+describe('nap credit (V3.1 item 4)', () => {
+  it('longest session is the night; short extras are naps; long extras split-merge', () => {
+    expect(classifyDaySleep([440, 40])).toEqual({ nightMin: 440, napMin: 40 });
+    expect(classifyDaySleep([300, 200])).toEqual({ nightMin: 500, napMin: 0 }); // split sleep
+    expect(classifyDaySleep([420, 180, 30])).toEqual({ nightMin: 420, napMin: 210 });
+    expect(classifyDaySleep([])).toEqual({ nightMin: 0, napMin: 0 });
+  });
+
+  it(`the nap boundary is published (${SLEEP_NEED_RULES.napMaxMin} min)`, () => {
+    expect(SLEEP_NEED_RULES.napMaxMin).toBe(180);
+  });
+
+  it('the last-night line states the credit, and only when there is one', () => {
+    expect(lastNightLine(470, 480, 40)).toBe('You got 7:50 of the 8:00 your body needed — nap 0:40 credited');
+    expect(lastNightLine(470, 480)).toBe('You got 7:50 of the 8:00 your body needed');
+  });
+
+  it('the math row shows the arithmetic exactly as promised', () => {
+    expect(napCreditLine(470, 40)).toBe('need 7:50 − nap 0:40 = 7:10 remaining');
   });
 });

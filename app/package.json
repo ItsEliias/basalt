@@ -65,6 +65,8 @@
     "react-native-svg": "^15.15.5",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-view-shot": "^5.1.1",
+    "react-native-vision-camera": "4.7.2",
+    "react-native-worklets-core": "1.6.2",
     "zustand": "^5.0.13"
   },
   "devDependencies": {

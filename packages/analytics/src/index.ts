@@ -21,3 +21,4 @@ export * from './cycle';
 export * from './cycle-load';
 export * from './coop';
 export * from './coop-load';
+export * from './sleep-window';

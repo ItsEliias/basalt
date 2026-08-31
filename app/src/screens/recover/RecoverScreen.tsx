@@ -12,7 +12,7 @@ import { healthService, labelForPackage, type SleepSessionSummary } from '@basal
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
+import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, napCreditLine, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
 import { ProgressPhotosCard } from './ProgressPhotos';
 import { CycleCard } from './CycleCard';
 import {
@@ -386,6 +386,12 @@ function VitalsTab() {
               <Text style={styles.needLine}>{sleepNeed.lastNight.line}</Text>
             ) : null}
             <Text style={styles.debtLine}>{sleepNeed.debtText}</Text>
+            {sleepNeed.window ? (
+              <Text style={styles.debtLine}>{sleepNeed.window.line}</Text>
+            ) : null}
+            {sleepNeed.consistency ? (
+              <Text style={styles.debtLine}>{sleepNeed.consistency.line}</Text>
+            ) : null}
           </Pressable>
           {needMathOpen ? (
             <>
@@ -399,7 +405,10 @@ function VitalsTab() {
                 <ReceiptRow
                   key={n.date}
                   name={n.date.slice(5)}
-                  meta={n.strained ? 'heavy prior day · +30 min need' : 'need per your median'}
+                  meta={[
+                    n.strained ? 'heavy prior day · +30 min need' : 'need per your median',
+                    n.napMin > 0 ? napCreditLine(n.needMin, n.napMin) : null,
+                  ].filter(Boolean).join(' · ')}
                   value={`${Math.floor(n.sleptMin / 60)}:${String(n.sleptMin % 60).padStart(2, '0')} / ${Math.floor(n.needMin / 60)}:${String(n.needMin % 60).padStart(2, '0')}`}
                   unit=""
                   last={i === arr.length - 1}
@@ -407,8 +416,14 @@ function VitalsTab() {
               ))}
             </>
           ) : null}
+          {needMathOpen && sleepNeed.window ? (
+            <SrcNote>{`${sleepNeed.window.formulaLine} · anchored to your own median wake (nothing in the ledger carries a clock time) · a suggestion, never an alarm`}</SrcNote>
+          ) : null}
+          {needMathOpen && sleepNeed.consistency ? (
+            <SrcNote>{sleepNeed.consistency.mathLine}</SrcNote>
+          ) : null}
           <SrcNote>
-            Need = median of your own recent nights (published default until 14 exist) · a P75-heavy training day adds 30 min · debt sums the last 14 nights, surplus repays · absent nights are absent, never zeros
+            Need = median of your own recent nights (published default until 14 exist) · a P75-heavy training day adds 30 min · naps up to 3 h credit the day, never the median · debt sums the last 14 nights, surplus repays · absent nights are absent, never zeros
           </SrcNote>
         </Card>
       ) : null}
