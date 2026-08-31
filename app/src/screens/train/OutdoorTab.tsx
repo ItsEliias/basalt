@@ -54,6 +54,7 @@ export function OutdoorTab() {
   const [loopBusy, setLoopBusy] = useState(false);
   const [loopError, setLoopError] = useState<string | null>(null);
   const [voiceSplits, setVoiceSplits] = useState(false);
+  const [glance, setGlance] = useState(false);
   const lastAnnouncedKm = useRef(0);
   const [guided, setGuided] = useState<IntervalWalk | null>(null);
   const [shoes, setShoes] = useState<ShoeWithKm[]>([]);
@@ -102,6 +103,7 @@ export function OutdoorTab() {
 
   useEffect(() => {
     void AsyncStorage.getItem('basalt.voiceSplits').then((v) => setVoiceSplits(v === 'on'));
+    void AsyncStorage.getItem('basalt.walkGlance').then((v) => setGlance(v === 'on'));
   }, []);
 
   const generateLoop = async (km: number) => {
@@ -430,12 +432,34 @@ export function OutdoorTab() {
               <View style={styles.liveDot} />
               <Text style={styles.liveText}>RECORDING · GPS ±{Math.round(mode.last.accuracy)} M</Text>
             </View>
-            <View style={styles.statRow}>
-              <Stat k="Distance" v={liveDistance < 1000 ? `${Math.round(liveDistance)}` : (liveDistance / 1000).toFixed(2)} u={liveDistance < 1000 ? 'm' : 'km'} />
-              <Stat k="Time" v={mmss(liveSeconds)} />
-              <Stat k="Pace" v={livePace ? paceText(livePace) : '—'} u={livePace ? '/km' : undefined} />
-              <Stat k="Points" v={String(mode.points.length)} />
-            </View>
+            {glance ? (
+              // Glance mode — the FIXED stat set (distance, time, pace) in
+              // large type, readable at arm's length mid-walk. No config.
+              <View style={styles.glanceBlock}>
+                <Text style={styles.glanceValue}>
+                  {liveDistance < 1000 ? `${Math.round(liveDistance)} m` : `${(liveDistance / 1000).toFixed(2)} km`}
+                </Text>
+                <Text style={styles.glanceValue}>{mmss(liveSeconds)}</Text>
+                <Text style={styles.glanceValue}>{livePace ? `${paceText(livePace)} /km` : '— /km'}</Text>
+              </View>
+            ) : (
+              <View style={styles.statRow}>
+                <Stat k="Distance" v={liveDistance < 1000 ? `${Math.round(liveDistance)}` : (liveDistance / 1000).toFixed(2)} u={liveDistance < 1000 ? 'm' : 'km'} />
+                <Stat k="Time" v={mmss(liveSeconds)} />
+                <Stat k="Pace" v={livePace ? paceText(livePace) : '—'} u={livePace ? '/km' : undefined} />
+                <Stat k="Points" v={String(mode.points.length)} />
+              </View>
+            )}
+            <Pressable
+              onPress={() => {
+                const next = !glance;
+                setGlance(next);
+                void AsyncStorage.setItem('basalt.walkGlance', next ? 'on' : 'off');
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.shareLink}>{glance ? 'GLANCE TYPE ON · TAP FOR DETAIL' : 'LARGE GLANCE TYPE · TAP TO ENLARGE'}</Text>
+            </Pressable>
             {guided ? (
               guidedPos ? (
                 <View style={styles.guidedRow}>
@@ -622,6 +646,8 @@ const styles = StyleSheet.create({
   guidedEffort: { fontFamily: mono, fontSize: 13, letterSpacing: 1.2, color: color.ink, fontWeight: '600' },
   guidedRemain: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.mute },
   shoeAddRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  glanceBlock: { paddingVertical: 10, gap: 6 },
+  glanceValue: { fontFamily: mono, fontSize: 40, letterSpacing: 0.5, color: color.ink, fontVariant: ['tabular-nums'] },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
   loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
   loopChip: {

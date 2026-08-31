@@ -16,6 +16,8 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
 import { CoopCard } from './CoopCard';
+import { loadWeeklyVolume, type WeeklyVolumeReport } from '../../lib/weeklyVolumeData';
+import { volumeLine } from '@basalt/training';
 
 // Trends — everything here is computed from the ledger or absent. Gaps stay
 // gray, streak resets don't shame, and there are no charts until there is
@@ -26,6 +28,7 @@ type Records = { name: string; e1rm: number; date: string }[];
 export function TrendsScreen() {
   const { theme } = useTheme();
   const [fullDays, setFullDays] = useState<Set<string> | null>(null);
+  const [weeklyVol, setWeeklyVol] = useState<WeeklyVolumeReport | null>(null);
   const [anyDays, setAnyDays] = useState<Set<string> | null>(null);
   const [records, setRecords] = useState<Records | null>(null);
   const [big3, setBig3] = useState<BigThree | null>(null);
@@ -92,6 +95,10 @@ export function TrendsScreen() {
       }
     })();
   }, [hideNumbers]);
+  useEffect(() => {
+    void loadWeeklyVolume(supabase).then((r) => r.ok && setWeeklyVol(r.data));
+  }, []);
+
   useEffect(() => load(), [load]);
 
   const today = new Date();
@@ -345,6 +352,32 @@ export function TrendsScreen() {
         EVERYTHING ON THIS SCREEN IS COMPUTED FROM YOUR LEDGER OR ABSENT — NOTHING HERE
         WILL EVER BE A MOCK
       </Text>
+      {/* ── Weekly muscle volume — position vs a published band ───── */}
+      {weeklyVol && weeklyVol.regions.length > 0 ? (
+        <Card>
+          <ReceiptHeader
+            label="Weekly muscle volume"
+            summary={`last 7 days${weeklyVol.phase === 'deload' ? ' · deload band' : ''}`}
+          />
+          {weeklyVol.regions.map((v, i) => (
+            <ReceiptRow
+              key={v.region}
+              name={v.region.charAt(0).toUpperCase() + v.region.slice(1)}
+              meta={volumeLine(v)}
+              value={Number.isInteger(v.sets) ? String(v.sets) : v.sets.toFixed(1)}
+              unit="sets"
+              last={i === weeklyVol.regions.length - 1}
+            />
+          ))}
+          <SrcNote>
+            {`Published band: 10–20 hard sets per muscle per week (a deload halves it) · primary sets count 1, secondary ½ · warmups excluded · a position, never a prescription` +
+              (weeklyVol.unlinkedExercises > 0
+                ? ` · ${weeklyVol.unlinkedExercises} ${weeklyVol.unlinkedExercises === 1 ? 'exercise' : 'exercises'} without a library link not counted`
+                : '')}
+          </SrcNote>
+        </Card>
+      ) : null}
+
       {/* ── One friend — dots only, engine-pinned copy ────────────── */}
       <CoopCard />
 
