@@ -42,7 +42,7 @@ export function TrendsScreen() {
         const [full, any, wr] = await Promise.all([
           activeDaysFor(supabase, 'full', { restAware: true }),
           activeDaysFor(supabase, 'any', { restAware: true }),
-          loadWeekReview(supabase, new Date()),
+          loadWeekReview(supabase, new Date(), { hideNumbers }),
         ]);
         if (wr.ok) setReview(wr.data);
         else setLoadFailed(true);
@@ -86,7 +86,7 @@ export function TrendsScreen() {
         setLoadFailed(true);
       }
     })();
-  }, []);
+  }, [hideNumbers]);
   useEffect(() => load(), [load]);
 
   const today = new Date();
@@ -123,7 +123,8 @@ export function TrendsScreen() {
             <Text style={styles.lede}>{review.lede}</Text>
             {review.stats.length > 0 ? (
               <View style={styles.wstatRow}>
-                {review.stats.filter((s) => !(hideNumbers && (s.k === 'Deficit' || s.k === 'Surplus'))).map((s) => (
+                {/* Hide-numbers quieting happens in the composer itself, not here. */}
+                {review.stats.map((s) => (
                   <View key={s.k} style={styles.wstat}>
                     <Text style={styles.wstatK}>{s.k}</Text>
                     <Text style={styles.wstatV}>{s.v}</Text>

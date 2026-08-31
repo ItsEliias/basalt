@@ -144,3 +144,54 @@ describe('lastCompletedWeek', () => {
     expect(w.endIso).toBe('2026-08-09');
   });
 });
+
+describe('hide-the-numbers — quieted in the composer, pinned', () => {
+  const hidden: WeekReviewInput = { ...fullWeek, hideNumbers: true };
+
+  it('the protein clause goes qualitative — no digits anywhere near protein', () => {
+    const r = composeWeekReview(hidden);
+    expect(r.lede).toContain('protein mostly on target');
+    expect(r.lede).not.toMatch(/protein[^.·]*\d/);
+  });
+
+  it('often-under weeks say so qualitatively', () => {
+    const underWeek: WeekReviewInput = {
+      ...hidden,
+      days: hidden.days.map((d) =>
+        d.loggedFood ? { ...d, proteinG: 100 } : d,
+      ),
+    };
+    const r = composeWeekReview(underWeek);
+    expect(r.lede).toContain('protein often under target');
+    expect(r.lede).not.toMatch(/protein[^.·]*\d/);
+  });
+
+  it('Deficit/Surplus stat chips never render', () => {
+    const r = composeWeekReview(hidden);
+    expect(r.stats.map((s) => s.k)).not.toContain('Deficit');
+    expect(r.stats.map((s) => s.k)).not.toContain('Surplus');
+  });
+
+  it('gap texts carry no counts in hide-numbers mode', () => {
+    const underWeek: WeekReviewInput = {
+      ...hidden,
+      days: hidden.days.map((d) => (d.loggedFood ? { ...d, proteinG: 100 } : d)),
+    };
+    const gap = pickGap(underWeek);
+    expect(gap).toBe('protein came in under target on several days');
+
+    const overWeek: WeekReviewInput = {
+      ...hidden,
+      proteinTarget: null,
+      days: hidden.days.map((d) => (d.loggedFood ? { ...d, calories: 3200 } : { ...d, loggedFood: true, calories: 3200, proteinG: null } )),
+    };
+    const overGap = pickGap(overWeek);
+    expect(overGap).toBe('several logged days ran well over the energy target');
+  });
+
+  it('non-nutrition facts still read plainly — sessions and logging counts stay', () => {
+    const r = composeWeekReview(hidden);
+    expect(r.lede).toContain('4 training sessions');
+    expect(r.lede).toContain('food logged on 6 of 7 days');
+  });
+});

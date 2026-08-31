@@ -20,7 +20,11 @@ function dayLabel(d: Date): string {
   return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-export async function loadWeekReview(client: SupabaseClient, today: Date): Promise<Result<WeekReview>> {
+export async function loadWeekReview(
+  client: SupabaseClient,
+  today: Date,
+  options: { hideNumbers?: boolean } = {},
+): Promise<Result<WeekReview>> {
   const u = await currentUserId(client);
   if (!u.ok) return u;
   const win = lastCompletedWeek(today);
@@ -130,6 +134,7 @@ export async function loadWeekReview(client: SupabaseClient, today: Date): Promi
       volumeKg,
       calorieTarget,
       proteinTarget,
+      hideNumbers: options.hideNumbers ?? false,
     }),
   );
 }
