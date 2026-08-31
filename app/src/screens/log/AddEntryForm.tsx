@@ -25,11 +25,15 @@ export type DraftEntry = FoodEntryInput & {
 };
 
 export function AddEntryForm({
-  draft, onCancel, onSave,
+  draft, onCancel, onSave, onAddToTray, trayCalories = 0, trayCount = 0,
 }: {
   draft: DraftEntry | null;
   onCancel: () => void;
   onSave: (entry: FoodEntryInput, photoB64: string | null) => Promise<void>;
+  /** The Tray lane: stash the entry, clear the search, keep logging. */
+  onAddToTray?: (entry: FoodEntryInput, photoB64: string | null) => void;
+  trayCalories?: number;
+  trayCount?: number;
 }) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<DraftEntry | null>(draft);
@@ -121,6 +125,12 @@ export function AddEntryForm({
             </View>
             {state.conflictNote ? <Text style={styles.conflict}>{state.conflictNote.toUpperCase()}</Text> : null}
             {state.sourceNote ? <SrcNote>{state.sourceNote}</SrcNote> : null}
+            {/* Live-total keypad: the tray total updates as you type. */}
+            {onAddToTray && trayCount > 0 ? (
+              <Text style={styles.trayLive}>
+                {`TRAY AFTER ADD · ${trayCount + 1} ITEMS · ${Math.round(trayCalories + (state.calories || 0)).toLocaleString('en-US')} KCAL`}
+              </Text>
+            ) : null}
           </ScrollView>
           <CTA
             label={busy ? '…' : 'Log it'}
@@ -132,6 +142,18 @@ export function AddEntryForm({
               setBusy(false);
             }}
           />
+          {onAddToTray ? (
+            <Pressable
+              disabled={busy || !state.foodName.trim()}
+              onPress={() => {
+                const { conflictNote: _c, sourceNote: _s, pendingPhotoB64, ...entry } = state;
+                onAddToTray(entry, pendingPhotoB64 ?? null);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.trayAction}>ADD TO TRAY · KEEP LOGGING</Text>
+            </Pressable>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -169,5 +191,10 @@ const styles = StyleSheet.create({
   conflict: {
     fontFamily: mono, fontSize: 11, letterSpacing: 0.38, color: color.fat,
     lineHeight: 15, marginTop: 12,
+  },
+  trayLive: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, marginTop: 12 },
+  trayAction: {
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.ink2,
+    textAlign: 'center', paddingVertical: 12,
   },
 });

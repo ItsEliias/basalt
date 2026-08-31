@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts, conflictLine, mealForHour, yesterdayMeals , labelToDraftFields } from './model';
+import { barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts, conflictLine, mealForHour, yesterdayMeals, labelToDraftFields, trayTotals, trayLine, type TrayItem } from './model';
 import type { OFFProduct } from '@basalt/nutrition';
 
 const yoghurt: OFFProduct = {
@@ -128,5 +128,30 @@ describe('labelToDraftFields', () => {
 
   it('null brand maps to undefined, not the string "null"', () => {
     expect(labelToDraftFields({ ...label, brand: null }, 8).brand).toBeUndefined();
+  });
+});
+
+describe('the Tray — running totals, plain sums, honest', () => {
+  const item = (calories: number, protein = 10, carbs = 20, fat = 5): TrayItem => ({
+    entry: {
+      mealType: 'lunch', foodName: 'x', calories, protein, carbs, fat, fiber: 1,
+    },
+    photoB64: null,
+  });
+
+  it('sums entry totals as entered — quantity is metadata, never a multiplier', () => {
+    const t = trayTotals([item(300), item(450), { ...item(250), entry: { ...item(250).entry, quantity: 3 } }]);
+    expect(t).toEqual({ count: 3, calories: 1000, protein: 30, carbs: 60, fat: 15 });
+  });
+
+  it('an empty tray is zeroes, not fabrications', () => {
+    expect(trayTotals([])).toEqual({ count: 0, calories: 0, protein: 0, carbs: 0, fat: 0 });
+  });
+
+  it('the banner line reads like the receipt it is', () => {
+    expect(trayLine(trayTotals([item(1240, 82, 130, 41)]))).toBe('1 ITEM · 1,240 KCAL · P 82 · C 130 · F 41');
+    expect(trayLine(trayTotals([item(600, 40, 60, 20), item(640, 42, 70, 21)]))).toBe(
+      '2 ITEMS · 1,240 KCAL · P 82 · C 130 · F 41',
+    );
   });
 });

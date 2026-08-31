@@ -35,7 +35,9 @@ import {
   barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts,
   conflictLine, mealForHour, yesterdayMeals, type YesterdayMeal,
   labelToDraftFields, type LabelScan,
+  trayTotals, trayLine, type TrayItem,
 } from './model';
+import { logLoggingEvent } from '../../lib/instrumentation';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 import { capturePhoto, enqueuePhoto, dequeuePhoto, loadPhotoQueue, readQueuedPhotoB64 } from '../../lib/photoFood';
 import { queuedLabel, type QueuedPhoto } from '../../lib/photoQueueModel';
@@ -74,6 +76,8 @@ function CaptureTab() {
   const [results, setResults] = useState<OFFProduct[]>([]);
   const [searching, setSearching] = useState(false);
   const [draft, setDraft] = useState<DraftEntry | null>(null);
+  const [tray, setTray] = useState<TrayItem[]>([]);
+  const [trayBusy, setTrayBusy] = useState(false);
   const [favorites, setFavorites] = useState<FoodFavorite[]>([]);
   const [frequent, setFrequent] = useState<{ foodName: string; count: number; calories: number }[]>([]);
   const [yesterday, setYesterday] = useState<YesterdayMeal[]>([]);
@@ -263,6 +267,7 @@ function CaptureTab() {
     }
     const r = await addFoodEntry(supabase, { ...entry, photoPath });
     if (r.ok) {
+      logLoggingEvent({ type: 'entry_saved', source: entry.source ?? 'manual', viaTray: false });
       void recordFoodUse(supabase, entry);
       setDraft(null);
       setScan({ kind: 'idle' });
@@ -271,17 +276,59 @@ function CaptureTab() {
     }
   };
 
+  const favoriteToEntry = (f: FoodFavorite): FoodEntryInput => ({
+    mealType: mealForHour(new Date().getHours()),
+    foodName: f.foodName,
+    brand: f.brand ?? undefined,
+    calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
+    fiber: f.fiber, sugar: f.sugar, sodiumMg: f.sodiumMg, saturatedFat: f.saturatedFat,
+    servingSize: f.servingSize, servingUnit: f.servingUnit, quantity: f.quantity,
+    barcode: f.barcode ?? undefined,
+    source: 'search',
+  });
+
+  // One tap logs the favorite at its stored default portion — same law as
+  // water +250. Long-press opens the editable form for a different portion.
   const relogFavorite = async (f: FoodFavorite) => {
-    await saveEntry({
-      mealType: mealForHour(new Date().getHours()),
-      foodName: f.foodName,
-      brand: f.brand ?? undefined,
-      calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
-      fiber: f.fiber, sugar: f.sugar, sodiumMg: f.sodiumMg, saturatedFat: f.saturatedFat,
-      servingSize: f.servingSize, servingUnit: f.servingUnit, quantity: f.quantity,
-      barcode: f.barcode ?? undefined,
-      source: 'search',
+    logLoggingEvent({ type: 'favorite_relog', via: 'tap' });
+    await saveEntry(favoriteToEntry(f));
+  };
+
+  const editFavorite = (f: FoodFavorite) => {
+    logLoggingEvent({ type: 'favorite_relog', via: 'longpress_edit' });
+    setDraft({
+      ...favoriteToEntry(f),
+      sourceNote: 'From your favourites · edit the portion, then log',
     });
+  };
+
+  // ── The Tray ──────────────────────────────────────────────────────────
+  const addToTray = (entry: FoodEntryInput, photoB64: string | null) => {
+    setTray((t) => [...t, { entry, photoB64 }]);
+    // The add clears the working surface so the next item starts clean.
+    setDraft(null);
+    setScan({ kind: 'idle' });
+    setQuery('');
+    setResults([]);
+  };
+
+  const commitTray = async () => {
+    if (tray.length === 0 || trayBusy) return;
+    setTrayBusy(true);
+    for (const { entry, photoB64 } of tray) {
+      let photoPath = entry.photoPath;
+      if (photoB64) {
+        const up = await uploadFoodPhoto(supabase, photoB64, Date.now(), Math.random().toString(36).slice(2, 8));
+        if (up.ok) photoPath = up.data;
+      }
+      const r = await addFoodEntry(supabase, { ...entry, photoPath });
+      if (r.ok) void recordFoodUse(supabase, entry);
+    }
+    logLoggingEvent({ type: 'tray_commit', items: tray.length });
+    setTray([]);
+    setTrayBusy(false);
+    bumpToday();
+    void refreshLists();
   };
 
   const copyYesterdayMeal = async (meal: MealType) => {
@@ -289,7 +336,8 @@ function CaptureTab() {
     yd.setDate(yd.getDate() - 1);
     const yEntries = await getFoodEntriesForDay(supabase, isoDay(yd));
     if (!yEntries.ok) return;
-    for (const e of yEntries.data.filter((x) => x.mealType === meal)) {
+    const toCopy = yEntries.data.filter((x) => x.mealType === meal);
+    for (const e of toCopy) {
       await addFoodEntry(supabase, {
         mealType: e.mealType, foodName: e.foodName, brand: e.brand ?? undefined,
         calories: e.calories, protein: e.protein, carbs: e.carbs, fat: e.fat,
@@ -299,6 +347,7 @@ function CaptureTab() {
         micros: e.micros ?? undefined,
       });
     }
+    logLoggingEvent({ type: 'copy_yesterday', meal, entries: toCopy.length });
     bumpToday();
     void refreshLists();
   };
@@ -310,7 +359,24 @@ function CaptureTab() {
     setSearching(false);
   };
 
+  const totals = trayTotals(tray);
+
   return (
+    <View style={{ flex: 1 }}>
+      {/* ── The Tray — sticky running total, commit once ───────────── */}
+      {tray.length > 0 ? (
+        <View style={[styles.trayBanner, { backgroundColor: theme.surfaces.surface2, borderBottomColor: theme.surfaces.border }]}>
+          <Text style={[styles.trayLine, { color: theme.text.ink2 }]}>{trayLine(totals)}</Text>
+          <View style={styles.trayActions}>
+            <Pressable onPress={() => void commitTray()} disabled={trayBusy} hitSlop={10}>
+              <Text style={[styles.trayCommit, { color: theme.text.carbs }]}>{trayBusy ? 'LOGGING…' : 'LOG ALL'}</Text>
+            </Pressable>
+            <Pressable onPress={() => setTray([])} disabled={trayBusy} hitSlop={10}>
+              <Text style={[styles.trayClear, { color: theme.text.faint }]}>CLEAR</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={styles.vf}>
@@ -556,10 +622,10 @@ function CaptureTab() {
         <ReceiptHeader label="Favorites" summary={favorites.length > 0 ? '1-tap re-log' : undefined} />
         {favorites.length > 0 ? (
           favorites.map((f, i) => (
-            <Pressable key={f.id} onPress={() => void relogFavorite(f)} hitSlop={8}>
+            <Pressable key={f.id} onPress={() => void relogFavorite(f)} onLongPress={() => editFavorite(f)} hitSlop={8}>
               <ReceiptRow
                 name={f.foodName}
-                meta={`logged ${f.useCount}×${f.brand ? ` · ${f.brand}` : ''}`}
+                meta={`logged ${f.useCount}×${f.brand ? ` · ${f.brand}` : ''} · hold to edit portion`}
                 value={groupInt(f.calories)}
                 unit="kcal"
                 last={i === favorites.length - 1}
@@ -573,12 +639,33 @@ function CaptureTab() {
         )}
       </Card>
 
-      <AddEntryForm draft={draft} onCancel={() => setDraft(null)} onSave={saveEntry} />
+      <AddEntryForm
+        draft={draft}
+        onCancel={() => setDraft(null)}
+        onSave={saveEntry}
+        onAddToTray={addToTray}
+        trayCalories={totals.calories}
+        trayCount={totals.count}
+      />
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  trayBanner: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  trayLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, flexShrink: 1 },
+  trayActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  trayCommit: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, fontWeight: '600' },
+  trayClear: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9 },
   photoMinor: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
   photoMinorLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
   queueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border, paddingVertical: 2 },
