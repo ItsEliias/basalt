@@ -46,6 +46,7 @@ import { WeightSheet } from './src/components/WeightSheet';
 import { wireWeekReviewNotifTap } from './src/lib/weekReviewNotif';
 import { registerTimerService } from './src/lib/timerService';
 import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
+import { rescheduleMonthlyReportNotif, wireMonthlyReportNotifTap } from './src/lib/monthlyReportNotif';
 import { isoDay } from '@basalt/core-data';
 
 // Foreground-service runner must be registered before any notification is
@@ -53,6 +54,7 @@ import { isoDay } from '@basalt/core-data';
 // and interval — a committed write must never be lost to a dead spot.
 registerTimerService();
 wireOutboxDraining();
+void rescheduleMonthlyReportNotif();
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
 // tab bar with the centre +. Settings rides over the tabs via the gear;
@@ -86,10 +88,15 @@ function MainShell() {
   // A tap on the Week in Review notification lands on Trends, where the
   // digest is composed live from the ledger — cold start included.
   useEffect(() => {
-    return wireWeekReviewNotifTap(() => {
+    const unWeek = wireWeekReviewNotifTap(() => {
       setSettingsOpen(false);
       setTab('trends');
     });
+    const unMonth = wireMonthlyReportNotifTap(() => {
+      setSettingsOpen(false);
+      setTab('trends');
+    });
+    return () => { unWeek(); unMonth(); };
   }, []);
 
   const onQuickAction = (a: QuickAction) => {

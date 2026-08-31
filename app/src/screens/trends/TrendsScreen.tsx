@@ -7,6 +7,7 @@ import {
 } from '@basalt/ui';
 import {
   activeDaysFor, currentAndLongest, monthCells, loadWeekReview, loadDailySeries, computeCorrelations,
+  loadMonthlyBehavior, type MonthlyBehaviorReport,
   loadYearAndChallenge,
   type WeekReview, type CorrelationResult, type YearReview, type MonthlyChallenge,
 } from '@basalt/analytics';
@@ -35,6 +36,7 @@ export function TrendsScreen() {
   const [challenge, setChallenge] = useState<MonthlyChallenge>(null);
   const challengeEnabled = useAppStore((s) => s.profile?.challengeEnabled ?? false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [monthly, setMonthly] = useState<MonthlyBehaviorReport | null>(null);
 
   const load = useCallback(() => {
     setLoadFailed(false);
@@ -50,6 +52,7 @@ export function TrendsScreen() {
         const series = await loadDailySeries(supabase, new Date());
         if (series.ok) setCorrelations(computeCorrelations(series.data));
         else setLoadFailed(true);
+        void loadMonthlyBehavior(supabase).then((r) => r.ok && setMonthly(r.data));
         const yc = await loadYearAndChallenge(supabase, new Date());
         if (yc.ok) {
           setYear(yc.data.year);
@@ -256,6 +259,45 @@ export function TrendsScreen() {
           </>
         )}
       </Card>
+
+      {/* ── Monthly behavior impact — facts + gated correlations ───── */}
+      {monthly ? (
+        <Card>
+          <ReceiptHeader label="Behavior impact" summary={monthly.rangeLabel} />
+          {monthly.lede === null ? (
+            <EmptyState>
+              Not enough evening check-ins last month to report honestly — it needs 8+. Nothing is
+              invented to fill this card.
+            </EmptyState>
+          ) : (
+            <>
+              <Text style={styles.lede}>{monthly.lede}</Text>
+              {monthly.factorLines.map((line) => (
+                <SrcNote key={line}>{line}</SrcNote>
+              ))}
+              {monthly.impactLines.length > 0 ? (
+                monthly.impactLines.map((line) => (
+                  <ReceiptRow key={line} name={line} value="" unit="" />
+                ))
+              ) : (
+                <EmptyState>
+                  No behavior–outcome pair passed the gates (|r| ≥ 0.45 over ≥ 30 days). The bar
+                  doesn't bend for a monthly report.
+                </EmptyState>
+              )}
+              {monthly.checkedNotShownLines.length > 0 ? (
+                <View style={{ marginTop: 6, gap: 3 }}>
+                  <SrcNote>Checked, not shown</SrcNote>
+                  {monthly.checkedNotShownLines.map((line) => (
+                    <SrcNote key={line} style={{ opacity: 0.75 }}>{line}</SrcNote>
+                  ))}
+                </View>
+              ) : null}
+              <SrcNote>Correlation, never cause · same gates as the card above · check-ins feed this</SrcNote>
+            </>
+          )}
+        </Card>
+      ) : null}
 
       {/* ── Monthly challenge — private, optional, your own baseline ── */}
       {challengeEnabled && challenge ? (

@@ -27,6 +27,9 @@ import {
 import {
   disableWeekReviewNotif, enableWeekReviewNotif, isWeekReviewNotifEnabled,
 } from '../../lib/weekReviewNotif';
+import {
+  disableMonthlyReportNotif, enableMonthlyReportNotif, isMonthlyReportNotifEnabled,
+} from '../../lib/monthlyReportNotif';
 import { buildJson, buildSectionedCsv } from '../../lib/exportFormat';
 import { recomputeTargetsFromProfile } from '../../lib/recomputeTargets';
 import {
@@ -76,11 +79,13 @@ export function SettingsScreen() {
   const [confirmText, setConfirmText] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [weekNotif, setWeekNotif] = useState<boolean | null>(null);
+  const [monthNotif, setMonthNotif] = useState<boolean | null>(null);
   const [includePhotos, setIncludePhotos] = useState(false);
   const [weekNotifNote, setWeekNotifNote] = useState<string | null>(null);
 
   useEffect(() => {
     void isWeekReviewNotifEnabled().then(setWeekNotif);
+    void isMonthlyReportNotifEnabled().then(setMonthNotif);
   }, []);
 
   const toggleWeekNotif = async () => {
@@ -94,6 +99,19 @@ export function SettingsScreen() {
       const r = await enableWeekReviewNotif();
       setWeekNotif(r.ok);
       setWeekNotifNote(r.ok ? null : (r.reason ?? null));
+    }
+    setBusy(null);
+  };
+
+  const toggleMonthNotif = async () => {
+    if (monthNotif === null) return;
+    setBusy('monthnotif');
+    if (monthNotif) {
+      await disableMonthlyReportNotif();
+      setMonthNotif(false);
+    } else {
+      const r = await enableMonthlyReportNotif();
+      setMonthNotif(r.ok);
     }
     setBusy(null);
   };
@@ -297,6 +315,14 @@ export function SettingsScreen() {
             metaAccent={weekNotifNote ? color.fat : undefined}
             value={weekNotif === null ? '…' : weekNotif ? 'on' : 'off'}
             valueColor={weekNotif ? color.carbs : color.faint}
+          />
+        </Pressable>
+        <Pressable onPress={() => void toggleMonthNotif()} disabled={busy !== null || monthNotif === null} hitSlop={8}>
+          <ReceiptRow
+            name="Monthly behavior report — 1st, 18:00"
+            meta="same rule: a fixed prompt, the report composes in Trends"
+            value={monthNotif === null ? '…' : monthNotif ? 'on' : 'off'}
+            valueColor={monthNotif ? color.carbs : color.faint}
             last
           />
         </Pressable>
