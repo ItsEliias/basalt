@@ -22,6 +22,7 @@ import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
 import { logThemeLayoutEvent } from '../../lib/instrumentation';
 import { HIDEABLE_SECTIONS } from '../today/model';
+import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgroundWork';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { zipSync, strToU8 } from 'fflate';
 import {
@@ -69,6 +70,10 @@ export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [importOpen, setImportOpen] = useState(false);
   const [hiddenToday, setHiddenToday] = useState<string[]>([]);
+  const [illnessNotif, setIllnessNotif] = useState<boolean | null>(null);
+  useEffect(() => {
+    void isIllnessNotifEnabled().then(setIllnessNotif);
+  }, []);
   useEffect(() => {
     void AsyncStorage.getItem('basalt.hiddenToday').then((raw) => {
       try { setHiddenToday(raw ? (JSON.parse(raw) as string[]) : []); } catch { setHiddenToday([]); }
@@ -338,6 +343,21 @@ export function SettingsScreen() {
             meta="same rule: a fixed prompt, the report composes in Trends"
             value={monthNotif === null ? '…' : monthNotif ? 'on' : 'off'}
             valueColor={monthNotif ? color.carbs : color.faint}
+          />
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            const next = !illnessNotif;
+            setIllnessNotif(next);
+            void setIllnessNotifEnabled(next);
+          }}
+          hitSlop={8}
+        >
+          <ReceiptRow
+            name="Vitals-deviation alert"
+            meta="off by default · at most one a day, only when ≥2 vitals sit outside your own 30-day range · an observation, never a diagnosis"
+            value={illnessNotif === null ? '…' : illnessNotif ? 'on' : 'off'}
+            valueColor={illnessNotif ? color.carbs : color.faint}
             last
           />
         </Pressable>

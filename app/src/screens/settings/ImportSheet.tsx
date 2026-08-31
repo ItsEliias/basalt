@@ -15,6 +15,8 @@ import {
 import { supabase } from '../../lib/supabase';
 import { logLoggingEvent } from '../../lib/instrumentation';
 import { capturePhoto } from '../../lib/photoFood';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // Competitor import — Strong / Hevy / generic CSV / Basalt's own export,
 // through a DRY-RUN preview before anything commits: session count, date
@@ -197,13 +199,38 @@ export function ImportSheet({ open, onClose, onImported }: {
             onChange={(v) => { setFormat(v as Format); setSessions(null); setPreview(null); setRoutine(null); setRoutineDone(null); }}
           />
           {format !== 'Photo' ? (
-            <ObInput
-              placeholder="Paste the CSV export here"
-              value={text}
-              onChangeText={(t) => { setText(t); setSessions(null); setPreview(null); }}
-              multiline
-              style={styles.pasteBox}
-            />
+            <>
+              <ObInput
+                placeholder="Paste the CSV export here"
+                value={text}
+                onChangeText={(t) => { setText(t); setSessions(null); setPreview(null); }}
+                multiline
+                style={styles.pasteBox}
+              />
+              <Pressable
+                onPress={() => {
+                  void (async () => {
+                    const picked = await DocumentPicker.getDocumentAsync({
+                      type: ['text/csv', 'text/comma-separated-values', 'text/plain'],
+                      copyToCacheDirectory: true,
+                    });
+                    const asset = picked.assets?.[0];
+                    if (picked.canceled || !asset) return;
+                    try {
+                      const content = await FileSystem.readAsStringAsync(asset.uri);
+                      setText(content);
+                      setSessions(null);
+                      setPreview(null);
+                    } catch {
+                      setError('Could not read that file.');
+                    }
+                  })();
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.pickLink}>…OR PICK A CSV FILE</Text>
+              </Pressable>
+            </>
           ) : null}
           {format === 'Generic' && headerCols.length > 1 ? (
             <>
@@ -328,6 +355,7 @@ export function ImportSheet({ open, onClose, onImported }: {
 }
 
 const styles = StyleSheet.create({
+  pickLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 8 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
     backgroundColor: color.surface,

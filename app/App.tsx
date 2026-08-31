@@ -47,6 +47,7 @@ import { wireWeekReviewNotifTap } from './src/lib/weekReviewNotif';
 import { registerTimerService } from './src/lib/timerService';
 import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
 import { rescheduleMonthlyReportNotif, wireMonthlyReportNotifTap } from './src/lib/monthlyReportNotif';
+import { registerBackgroundWork } from './src/lib/backgroundWork';
 import { isoDay } from '@basalt/core-data';
 
 // Foreground-service runner must be registered before any notification is
@@ -55,6 +56,7 @@ import { isoDay } from '@basalt/core-data';
 registerTimerService();
 wireOutboxDraining();
 void rescheduleMonthlyReportNotif();
+void registerBackgroundWork();
 
 // Shell mirrors the prototype exactly: statusbar-safe head, view area,
 // tab bar with the centre +. Settings rides over the tabs via the gear;

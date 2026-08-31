@@ -25,7 +25,8 @@ import {
   type RouteCluster, type IntervalWalk, type ShoeWithKm, type DeviationState,
 } from '@basalt/training';
 import * as Haptics from 'expo-haptics';
-import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed } from '../../lib/walkTrackingService';
+import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed, WALK_STOP_ACTION_ID } from '../../lib/walkTrackingService';
+import notifee, { EventType } from '@notifee/react-native';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
 // the pieces the audit found missing built for real: Douglas-Peucker before
@@ -287,6 +288,19 @@ export function OutdoorTab() {
       guidedLastIndex.current = -1;
       guidedDone.current = false;
     }
+  }, [tracking]);
+
+  // Notification "Stop & save" (and its mirror on a paired watch) runs the
+  // SAME stop path as the on-screen button — the app foregrounds first, so
+  // nothing ever saves from a headless context.
+  useEffect(() => {
+    if (!tracking) return;
+    return notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.ACTION_PRESS && detail.pressAction?.id === WALK_STOP_ACTION_ID) {
+        void stop();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracking]);
   const liveDistance = tracking ? routeDistanceM(mode.points) : 0;
 

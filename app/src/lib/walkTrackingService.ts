@@ -20,6 +20,21 @@ import { acquireForegroundService, releaseForegroundService } from './foreground
 const CHANNEL_ID = 'walk-tracking';
 const NOTIF_ID = 'walk-tracking';
 
+/** Notification action id — OutdoorTab listens and runs its normal stop
+ *  path. On a paired watch the mirrored notification carries the same
+ *  button, which is the whole of "Wear step 0": action-complete
+ *  notifications, no watch app. */
+export const WALK_STOP_ACTION_ID = 'walk-stop';
+
+// notifee requires a background handler to exist; the stop action uses
+// launchActivity so the app foregrounds and OutdoorTab's own listener
+// does the actual stop — nothing is saved from a headless context.
+notifee.onBackgroundEvent(async () => { /* handled in foreground */ });
+
+const WALK_ACTIONS = [
+  { title: 'Stop & save', pressAction: { id: WALK_STOP_ACTION_ID, launchActivity: 'default' } },
+];
+
 let running = false;
 let failed = false;
 
@@ -53,6 +68,7 @@ export async function startWalkTracking(label: string): Promise<boolean> {
         ongoing: true,
         onlyAlertOnce: true,
         pressAction: { id: 'default' },
+        actions: WALK_ACTIONS,
         smallIcon: 'ic_launcher',
       },
     });
@@ -81,6 +97,7 @@ export async function updateWalkTracking(label: string): Promise<void> {
         ongoing: true,
         onlyAlertOnce: true,
         pressAction: { id: 'default' },
+        actions: WALK_ACTIONS,
         smallIcon: 'ic_launcher',
       },
     });
