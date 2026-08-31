@@ -96,6 +96,13 @@
             "com.google.android.googlequicksearchbox"
           ]
         }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "bluetoothAlwaysPermission": "Basalt uses Bluetooth to read weigh-ins from your smart scale — only when you ask it to."
+        }
       ]
     ]
   }

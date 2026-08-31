@@ -9,3 +9,4 @@ export * from './daily-log';
 export * from './sync';
 export * from './profile';
 export * from './progress-photos';
+export * from './ble-scale';
