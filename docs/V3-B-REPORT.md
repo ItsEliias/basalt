@@ -1,6 +1,6 @@
 # V3-B report — Phase 4 items 6–11
 
-**Date:** 2026-08-31 · **Branch:** `v3-full-batch` · **Suite:** 837 green (was 696 at V3-A).
+**Date:** 2026-08-31 · **Branch:** `v3-full-batch` · **Suite:** 737 green (was 696 at V3-A).
 Commits: fill-gap `e80d04a` · voice `4766b25` · on-hand recipes `d550bf1` ·
 OCR + routine `60579f7` · interval walks `4721b0e` · race plans `83169b3`.
 

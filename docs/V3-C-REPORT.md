@@ -1,6 +1,6 @@
 # V3-C report — Phase 4 items 12–17
 
-**Date:** 2026-08-31 · **Branch:** `v3-full-batch` · **Suite:** 882 green (was 837 at V3-B).
+**Date:** 2026-08-31 · **Branch:** `v3-full-batch` · **Suite:** 777 green (was 737 at V3-B).
 Commits: cooking `51d9705` · shoes `28802df` · BLE scale `0f81dea` · sharing design `3e3be53` +
 implementation `4d6a203` · cycle `10966e2` · co-op `6ffb0cb`.
 
