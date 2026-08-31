@@ -76,3 +76,62 @@ Legend: each line is a checkbox; note failures inline with device + Android vers
 ## 10 · Fasting + check-ins (plain RN — smoke only)
 - [ ] Fasting toggle in Settings gates the Recover card; start/end round-trips
 - [ ] Check-in chips + mood persist across app restarts (one row per day)
+
+## Appendix — V3 batch (2026-08-31). Everything below needs the dev-client REBUILD first
+(two new native modules: `expo-speech-recognition`, `react-native-ble-plx`).
+
+### 11 · Offline outbox (no module — behavior)
+- [ ] Airplane mode → log food (single + Tray), water, weigh-in, check-in → Settings shows
+      the pending line; radio back on → drains within ~60 s or on tap; rows appear once, never twice
+- [ ] Kill the app with writes pending → relaunch → they still drain (AsyncStorage survival)
+
+### 12 · Logging speed lanes
+- [ ] Tray: add three items across barcode + search + manual, live line updates, one commit
+- [ ] Favorite tap = instant log; long-press opens portion edit
+- [ ] Fill-the-gap card: rows match the stated gap; tap lands in the Tray, not the ledger
+- [ ] Voice (needs rebuild): mic control appears; disfluent speech lands in the box; final
+      transcript auto-estimates; ranges wear ~; airplane mode shows the honest error
+
+### 13 · AI lanes (live functions)
+- [ ] On-hand recipes: proposals use only listed ingredients + the four staples; missing
+      list is concrete; tap opens the editable draft with ~ macros
+- [ ] Recipe OCR: photograph a cookbook page → title/ingredients/steps transcribed,
+      unreadable parts named in the note
+- [ ] Routine photo: screenshot of a plan → day-by-day preview, unmatched names mappable,
+      saves as templates; re-import does not duplicate templates (it will duplicate names —
+      known: templates have no ext_id; delete manually)
+
+### 14 · Programs, race plans, volume
+- [ ] Start a 6-week block → suggestions shift by phase; planned-rest days hold the streak
+- [ ] Race plan: create from a recent result → predicted time plausible; tick a week's
+      sessions; skip a week → ramp-back note appears with the published rule
+- [ ] Trends weekly-volume card matches the sets actually logged this week (spot-check one region)
+
+### 15 · Walks: guided, shoes, glance, nudge
+- [ ] Guided walk: phase change = vibration first (double-heavy up / single-light down),
+      then voice; script end announces and recording continues
+- [ ] Shoe picked → saved walk adds km to that shoe; threshold line states, never nags
+- [ ] Glance mode readable at arm's length in sunlight; toggle persists
+- [ ] Route nudge (loop on screen, toggle ON): walk >50 m off → exactly one buzz;
+      return and leave again → one more
+
+### 16 · BLE scale (needs rebuild + a standard-profile scale)
+- [ ] LISTEN → step on → reading fills the field; save untouched → source ble_scale;
+      edit first → source manual; no scale found → quiet listening state, no crash
+- [ ] A non-standard scale simply never produces a reading (no invented values)
+
+### 17 · Sharing (two devices / two accounts)
+- [ ] Create coach grant → code claims once on the second account; viewer shows granted
+      domains only; walks show WITHOUT route lines anywhere
+- [ ] Revoke on the owner → viewer refresh on the grantee is empty immediately
+- [ ] Cycle domain: invisible unless granted by itself
+
+### 18 · Cycle, co-op, tiles, sleep need, deviation, monthly report
+- [ ] Cycle card: opt-in line → chips write days; estimate appears only after two cycles
+- [ ] Co-op: pair two accounts → dots render both sides; end pair → dots stop immediately
+- [ ] Hide a Today section in Settings → it is GONE from both layouts (no ghost); energy
+      hero cannot be hidden
+- [ ] Sleep need card math opens; strained nights show "+30 min need"
+- [ ] Vitals-deviation card only when ≥2 vitals sit outside their 30-day range (hard to
+      stage honestly — verify absence on a normal day)
+- [ ] Monthly notification (1st, 18:00 — or reschedule device clock) opens Trends
