@@ -21,6 +21,8 @@ import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
 import { logThemeLayoutEvent } from '../../lib/instrumentation';
+import { HIDEABLE_SECTIONS } from '../today/model';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { zipSync, strToU8 } from 'fflate';
 import {
   buildPerTableCsvs, buildExportReadme, u8ToBase64,
@@ -66,6 +68,18 @@ export function SettingsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [importOpen, setImportOpen] = useState(false);
+  const [hiddenToday, setHiddenToday] = useState<string[]>([]);
+  useEffect(() => {
+    void AsyncStorage.getItem('basalt.hiddenToday').then((raw) => {
+      try { setHiddenToday(raw ? (JSON.parse(raw) as string[]) : []); } catch { setHiddenToday([]); }
+    });
+  }, []);
+  const toggleTodaySection = (key: string) => {
+    const next = hiddenToday.includes(key) ? hiddenToday.filter((k) => k !== key) : [...hiddenToday, key];
+    setHiddenToday(next);
+    logThemeLayoutEvent({ type: 'today_sections_hidden', hidden: next });
+    void AsyncStorage.setItem('basalt.hiddenToday', JSON.stringify(next));
+  };
   const [pendingWrites, setPendingWrites] = useState(0);
   useEffect(() => onOutboxChange(setPendingWrites), []);
   const profile = useAppStore((s) => s.profile);
@@ -368,6 +382,18 @@ export function SettingsScreen() {
           }}
         />
         <SrcNote>Tiles is Today only — Log, Train, Recover and Trends stay ledger for now</SrcNote>
+        <ObChipLabel>Today sections — hiding is omission, never a ghost</ObChipLabel>
+        {HIDEABLE_SECTIONS.map((sec, i) => (
+          <Pressable key={sec.key} onPress={() => toggleTodaySection(sec.key)} hitSlop={8}>
+            <ReceiptRow
+              name={sec.label}
+              meta={hiddenToday.includes(sec.key) ? 'hidden — tap to show' : 'shown — tap to hide'}
+              value={hiddenToday.includes(sec.key) ? 'off' : 'on'}
+              last={i === HIDEABLE_SECTIONS.length - 1}
+            />
+          </Pressable>
+        ))}
+        <SrcNote>The energy hero is the day's anchor and always shows · hidden sections still record — everything stays in your ledger and exports</SrcNote>
       </Card>
 
       {/* ── Your data ──────────────────────────────────────────────── */}

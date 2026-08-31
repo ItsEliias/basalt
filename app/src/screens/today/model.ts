@@ -212,3 +212,29 @@ export function microTotals(entries: FoodEntryRow[]): MicroTotal[] {
     .map(([name, pct]) => ({ name, pct: Math.round(pct) }))
     .sort((a, b) => b.pct - a.pct);
 }
+
+// ── Tile hide/show (V3 Phase 5) ─────────────────────────────────────
+// Hiding is OMISSION: a hidden section renders nothing at all — never a
+// ghost, never a locked placeholder. The energy hero is the day's anchor
+// and cannot be hidden; everything else is the user's call.
+
+export const HIDEABLE_SECTIONS = [
+  { key: 'macros', label: 'Macros & caps' },
+  { key: 'meals', label: 'Logged meals' },
+  { key: 'micros', label: 'Micronutrients' },
+  { key: 'steps', label: 'Steps' },
+  { key: 'sleep', label: 'Sleep tile' },
+  { key: 'water', label: 'Water' },
+  { key: 'training', label: 'Training tile' },
+] as const;
+
+export type HideableSection = (typeof HIDEABLE_SECTIONS)[number]['key'];
+
+/** Tiles-layout keys fold into the same registry (macros covers P/C/F). */
+export function sectionForTile(tileKey: string): string {
+  return tileKey === 'protein' || tileKey === 'carbs' || tileKey === 'fat' ? 'macros' : tileKey;
+}
+
+export function filterTiles(tiles: TileSpec[], hidden: ReadonlySet<string>): TileSpec[] {
+  return tiles.filter((t) => t.key === 'energy' || !hidden.has(sectionForTile(t.key)));
+}

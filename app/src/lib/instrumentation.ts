@@ -7,7 +7,8 @@
 
 export type ThemeLayoutEvent =
   | { type: 'theme_selected'; theme: string; previous: string }
-  | { type: 'layout_selected'; surface: 'today'; layout: string; previous: string };
+  | { type: 'layout_selected'; surface: 'today'; layout: string; previous: string }
+  | { type: 'today_sections_hidden'; hidden: string[] };
 
 export function logThemeLayoutEvent(event: ThemeLayoutEvent): void {
   console.log('[basalt:display]', event);

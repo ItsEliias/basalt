@@ -15,7 +15,8 @@ import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
-import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow } from './model';
+import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles,
+} from './model';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -124,11 +125,19 @@ export function TodayScreen() {
   const [data, setData] = useState<TodayData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
   const layout = profile?.todayLayout ?? 'ledger';
 
   const refresh = useCallback(async () => {
     setData(await loadToday());
+    // Tile hide/show — hiding is omission; re-read so Settings changes land.
+    const raw = await AsyncStorage.getItem('basalt.hiddenToday');
+    try {
+      setHidden(new Set(raw ? (JSON.parse(raw) as string[]) : []));
+    } catch {
+      setHidden(new Set());
+    }
   }, []);
 
   useEffect(() => {
@@ -231,7 +240,7 @@ export function TodayScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
       >
         <TileGridThemed>
-          {tileSpecs.map((t) => (
+          {filterTiles(tileSpecs, hidden).map((t) => (
             <Tile
               key={t.key}
               span={t.span}
@@ -291,7 +300,7 @@ export function TodayScreen() {
       </Card>
 
       {/* ── Macros + caps ──────────────────────────────────────────── */}
-      {targets && data && !hideNumbers ? (
+      {targets && data && !hideNumbers && !hidden.has('macros') ? (
         <Card>
           <MacroRow name="Protein" dot={color.protein} value={data.totals.protein} target={targets.proteinG} />
           <MacroRow name="Carbohydrate" dot={color.carbs} value={data.totals.carbs} target={targets.carbsG} />
@@ -342,6 +351,7 @@ export function TodayScreen() {
       ) : null}
 
       {/* ── Logged receipt ─────────────────────────────────────────── */}
+      {hidden.has('meals') ? null : (
       <Card>
         <ReceiptHeader
           label="Logged"
@@ -391,9 +401,10 @@ export function TodayScreen() {
           </EmptyState>
         )}
       </Card>
+      )}
 
       {/* ── Micronutrients — only with source data ─────────────────── */}
-      {micros.length > 0 ? (
+      {micros.length > 0 && !hidden.has('micros') ? (
         <Card>
           <ReceiptHeader label="Micronutrients" summary="from logged foods" />
           <View style={{ marginTop: 8 }}>
@@ -407,7 +418,7 @@ export function TodayScreen() {
 
       {/* ── Tiles: steps + water ───────────────────────────────────── */}
       <TileGrid>
-        {data?.steps != null ? (
+        {hidden.has('steps') ? null : data?.steps != null ? (
           <StatTile label="Steps" source="Health Connect" value={groupInt(data.steps)} />
         ) : (
           <EmptyTile
@@ -415,6 +426,7 @@ export function TodayScreen() {
             message="No step source connected. Connect Health Connect in Recover to see movement here."
           />
         )}
+        {hidden.has('water') ? null : (
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
           <StatTile
             label="Water"
@@ -434,8 +446,11 @@ export function TodayScreen() {
             </SrcNote>
           </StatTile>
         </View>
+        )}
       </TileGrid>
-      <Text onPress={onUndoWater} style={styles.undo}>UNDO LAST WATER</Text>
+      {hidden.has('water') ? null : (
+        <Text onPress={onUndoWater} style={styles.undo}>UNDO LAST WATER</Text>
+      )}
     </ScrollView>
   );
 }

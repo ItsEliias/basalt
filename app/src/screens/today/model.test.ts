@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { groupEntriesByMeal, heroModel, sessionMeta, microTotals, entryMeta, todayTileSpecs } from './model';
+import { groupEntriesByMeal, heroModel, sessionMeta, microTotals, entryMeta, todayTileSpecs, filterTiles, sectionForTile, HIDEABLE_SECTIONS,
+} from './model';
 import type { FoodEntryRow } from '@basalt/nutrition';
 import type { TargetsRecord } from '@basalt/core-data';
 
@@ -158,5 +159,34 @@ describe('todayTileSpecs — the Tiles layout fixed v1 content model', () => {
     const t = todayTileSpecs({ ...base, hideNumbers: true }).find((x) => x.key === 'energy')!;
     expect(t.empty).toBe(true);
     expect(t.value).toBeUndefined();
+  });
+});
+
+describe('tile hide/show — omission only', () => {
+  const tiles = [
+    { key: 'energy', span: 'full', label: 'Energy remaining', value: '612' },
+    { key: 'protein', span: 'half', label: 'Protein', value: '90' },
+    { key: 'water', span: 'half', label: 'Water', value: '1,250' },
+  ] as any[];
+
+  it('the energy hero cannot be hidden', () => {
+    const out = filterTiles(tiles, new Set(['macros', 'water', 'energy']));
+    expect(out.map((t) => t.key)).toEqual(['energy']);
+  });
+
+  it('macro tiles fold under the macros section', () => {
+    expect(sectionForTile('protein')).toBe('macros');
+    expect(sectionForTile('carbs')).toBe('macros');
+    expect(sectionForTile('water')).toBe('water');
+  });
+
+  it('hiding removes the tile entirely — no placeholder rides along', () => {
+    const out = filterTiles(tiles, new Set(['water']));
+    expect(out).toHaveLength(2);
+    expect(out.some((t) => t.key === 'water')).toBe(false);
+  });
+
+  it('the registry never contains the hero', () => {
+    expect(HIDEABLE_SECTIONS.map((s2) => s2.key as string)).not.toContain('energy');
   });
 });
