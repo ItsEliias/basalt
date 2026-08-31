@@ -11,7 +11,7 @@ import {
 
 export async function startSession(
   client: SupabaseClient,
-  input: { notes?: string; startedAt?: string } = {},
+  input: { notes?: string; startedAt?: string; source?: string; extId?: string } = {},
 ): Promise<Result<WorkoutSession>> {
   const u = await currentUserId(client);
   if (!u.ok) return u;
@@ -19,6 +19,11 @@ export async function startSession(
   const payload: Record<string, unknown> = { user_id: u.data };
   if (input.notes) payload.notes = input.notes;
   if (input.startedAt) payload.started_at = input.startedAt;
+  // Imported sessions carry their origin (source shows in srcnotes) and a
+  // stable ext_id — the (user_id, ext_id) unique index makes re-importing
+  // the same file a no-op instead of a duplicate.
+  if (input.source) payload.source = input.source;
+  if (input.extId) payload.ext_id = input.extId;
 
   const { data, error } = await client
     .from('basalt_workout_sessions')

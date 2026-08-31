@@ -11,6 +11,7 @@ import {
   ScaledText as Text,
 } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
+import { ImportSheet } from './ImportSheet';
 import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -58,6 +59,7 @@ function layoutKey(label: string): 'ledger' | 'tiles' {
 export function SettingsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const [importOpen, setImportOpen] = useState(false);
   const profile = useAppStore((s) => s.profile);
   const targets = useAppStore((s) => s.targets);
   const session = useAppStore((s) => s.session);
@@ -390,10 +392,19 @@ export function SettingsScreen() {
             meta="one file per table, zipped · README lists every table incl. empty ones"
             value="→"
             valueColor={color.faint}
+          />
+        </Pressable>
+        <Pressable onPress={() => setImportOpen(true)} disabled={busy !== null} hitSlop={8}>
+          <ReceiptRow
+            name="Import training history"
+            meta="Strong, Hevy, generic CSV, or a Basalt export · dry-run preview before anything commits"
+            value="→"
+            valueColor={color.faint}
             last
           />
         </Pressable>
       </Card>
+      <ImportSheet open={importOpen} onClose={() => setImportOpen(false)} onImported={() => void refreshCore()} />
 
       {/* ── Account ────────────────────────────────────────────────── */}
       <Card>
