@@ -5,7 +5,8 @@
   "scripts": {
     "test": "pnpm -r test",
     "seed:test-account": "tsx scripts/seedTestAccount.ts",
-    "eval:quick-add": "tsx scripts/eval/quickAddEval.ts"
+    "eval:quick-add": "tsx scripts/eval/quickAddEval.ts",
+    "eval:recipe-ideas": "tsx scripts/eval/recipeIdeasEval.ts"
   },
   "dependencies": {
     "@basalt/core-data": "workspace:*",

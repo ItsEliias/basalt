@@ -20,6 +20,14 @@ import { useAppStore } from '../../state/appStore';
 // capture → editable suggestion → confirm; imported macros wear ~ until
 // confirmed.
 
+// ai-recipe-ideas response item — proposals from the user's on-hand list.
+type RecipeIdea = {
+  name: string; uses: string[]; missing: string[]; steps: string[];
+  serves: number; time_min: number;
+  calories: number; calories_low: number; calories_high: number;
+  protein_g: number; carbs_g: number; fat_g: number;
+};
+
 export function RecipesTab() {
   const { theme } = useTheme();
   const profile = useAppStore((s) => s.profile);
@@ -36,6 +44,11 @@ export function RecipesTab() {
   const [importError, setImportError] = useState<string | null>(null);
   const [draft, setDraft] = useState<SaveRecipeInput | null>(null);
   const [detail, setDetail] = useState<RecipeDetail | null>(null);
+  const [onHandText, setOnHandText] = useState('');
+  const [ideas, setIdeas] = useState<RecipeIdea[] | null>(null);
+  const [ideasNote, setIdeasNote] = useState<string | null>(null);
+  const [ideasBusy, setIdeasBusy] = useState(false);
+  const [ideasError, setIdeasError] = useState<string | null>(null);
   const [serves, setServes] = useState(1);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [groceryNote, setGroceryNote] = useState<string | null>(null);
@@ -111,6 +124,54 @@ export function RecipesTab() {
     setDraft(draftFromImport(imp));
     setImportUrl('');
   };
+
+  // On-hand ideas — the model may only cook with the listed ingredients
+  // plus published staples; a tapped idea lands in the SAME editable draft
+  // as any import, macros unconfirmed and wearing ~.
+  const runIdeas = async () => {
+    const ingredients = onHandText.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+    if (ingredients.length < 2) {
+      setIdeasError('List at least two ingredients, separated by commas.');
+      return;
+    }
+    setIdeasBusy(true);
+    setIdeasError(null);
+    setIdeas(null);
+    const { data, error } = await supabase.functions.invoke('ai-recipe-ideas', { body: { ingredients } });
+    setIdeasBusy(false);
+    if (error) {
+      let message = error.message ?? 'Could not propose recipes.';
+      try {
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) message = body.error;
+        }
+      } catch { /* keep generic */ }
+      setIdeasError(message);
+      return;
+    }
+    setIdeas((data?.ideas ?? []) as RecipeIdea[]);
+    setIdeasNote(data?.note ?? null);
+  };
+
+  const ideaToDraft = (i: RecipeIdea) =>
+    setDraft({
+      title: i.name,
+      serves: Math.max(1, Math.round(i.serves)),
+      totalTimeMin: Math.round(i.time_min) || null,
+      source: 'ai_on_hand',
+      caloriesPerServe: Math.round(i.calories),
+      proteinPerServe: Math.round(i.protein_g * 10) / 10,
+      carbsPerServe: Math.round(i.carbs_g * 10) / 10,
+      fatPerServe: Math.round(i.fat_g * 10) / 10,
+      macrosConfirmed: false,
+      ingredients: [
+        ...i.uses.map((n) => ({ qty: null, unit: null, name: n })),
+        ...i.missing.map((n) => ({ qty: null, unit: null, name: `${n} (not on hand)` })),
+      ],
+      steps: i.steps,
+    });
 
   const openDetail = async (id: string) => {
     const d = await getRecipeDetail(supabase, id);
@@ -294,6 +355,40 @@ export function RecipesTab() {
       <CTA label={importing ? 'Importing…' : 'Import from URL'} disabled={importing || !importUrl.trim()} onPress={() => void runImport()} />
       {importError ? <Text style={styles.conflict}>{importError.toUpperCase()}</Text> : null}
       <SrcNote>JSON-LD import · TikTok/Instagram/YouTube links go through an AI-structured draft, source link kept · everything editable before save</SrcNote>
+
+      {/* ── What's on hand — proposals from the user's list only ────── */}
+      <Card>
+        <ReceiptHeader label="What's on hand" summary="proposals from your list" />
+        <ObInput
+          placeholder={'chicken breast, broccoli, rice, soy sauce…'}
+          value={onHandText}
+          onChangeText={setOnHandText}
+          multiline
+        />
+        <CTA label={ideasBusy ? 'Proposing…' : 'Propose recipes'} disabled={ideasBusy || !onHandText.trim()} onPress={() => void runIdeas()} />
+        {ideasError ? <Text style={styles.conflict}>{ideasError.toUpperCase()}</Text> : null}
+        {ideas && ideas.length > 0
+          ? ideas.map((i, idx) => (
+              <Pressable key={i.name} onPress={() => ideaToDraft(i)} hitSlop={8}>
+                <ReceiptRow
+                  name={i.name}
+                  meta={[
+                    `~${Math.round(i.calories_low)}–${Math.round(i.calories_high)} kcal/serve`,
+                    `${Math.round(i.time_min)} min`,
+                    i.missing.length > 0 ? `you'd need: ${i.missing.join(', ')}` : 'nothing extra needed',
+                    'tap to edit & save',
+                  ].join(' · ')}
+                  value={approxValue(i.calories, false)}
+                  unit="kcal"
+                  last={idx === ideas.length - 1}
+                />
+              </Pressable>
+            ))
+          : null}
+        {ideas && ideas.length === 0 ? <EmptyState>No cookable ideas from that list.</EmptyState> : null}
+        {ideasNote && ideas ? <SrcNote>{ideasNote}</SrcNote> : null}
+      </Card>
+      <SrcNote>Only your listed ingredients plus salt, pepper, water and oil are assumed on hand · the list is sent to Anthropic (Claude) — never your ledger, name or email · macros wear ~ until you confirm</SrcNote>
 
       <Card>
         <ReceiptHeader label="Saved recipes" summary={filtered.length > 0 ? 'per serve · scalable' : undefined} />
