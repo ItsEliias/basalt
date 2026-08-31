@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, color, mono } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, color, mono, ScaledText as Text } from '@basalt/ui';
 import {
   addProgressPhoto, listProgressPhotos, signedProgressUrls, type ProgressPhoto, type ProgressPose,
 } from '@basalt/core-data';

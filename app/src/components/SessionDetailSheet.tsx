@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, ReceiptHeader, ReceiptRow, ExerciseHead, EmptyState, color, mono, mmss } from '@basalt/ui';
+import { Card, ReceiptHeader, ReceiptRow, ExerciseHead, EmptyState, color, mono, mmss, ScaledText as Text } from '@basalt/ui';
 import { getSessionDetail, type SessionDetail } from '@basalt/training';
 import { supabase } from '../lib/supabase';
 

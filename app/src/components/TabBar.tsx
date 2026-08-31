@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type TextStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, resolveTypeface, TodayIcon, LogIcon, TrainIcon, RecoverIcon, TrendsIcon } from '@basalt/ui';
+import { useTheme, resolveTypeface, TodayIcon, LogIcon, TrainIcon, RecoverIcon, TrendsIcon, ScaledText as Text } from '@basalt/ui';
 
 // The prototype tab bar. `expression.nav` decides its voice per theme:
 //   'iconLabel' — line icon above a mono-caps label (Minimal)

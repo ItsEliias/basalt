@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Stepper,
   ChipRow, ObInput, ObChipLabel, NewRow, approxValue, groupInt,
   color, mono, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
 import {
   importRecipeFromUrl, draftFromImport, saveRecipe, listRecipes, getRecipeDetail, deleteRecipe,

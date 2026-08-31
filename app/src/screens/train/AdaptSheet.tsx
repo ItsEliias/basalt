@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CTA, ChipRow, ReceiptRow, SrcNote, color, mono } from '@basalt/ui';
+import { CTA, ChipRow, ReceiptRow, SrcNote, color, mono, ScaledText as Text } from '@basalt/ui';
 import {
   adaptSession, adaptSummary, getExercises,
   type AdaptChange, type AdaptMode, type Exercise,

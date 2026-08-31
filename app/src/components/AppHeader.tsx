@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
-import { useTheme, resolveTypeface } from '@basalt/ui';
+import { Pressable, StyleSheet, View, type TextStyle } from 'react-native';
+import { useTheme, resolveTypeface, ScaledText as Text } from '@basalt/ui';
 
 // The app head — title left, mono context + gear right (prototype .apphead).
 

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   color, mono, CTA, ObDots, ObQuestion, ObSub, ObOption, ObInput, ObInRow,
   ObChipLabel, ObNote, ChipRow, ChipGroup, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
 import { saveProfile, saveTargets, addWeightEntry } from '@basalt/core-data';
 import { computeTargets } from '@basalt/nutrition';

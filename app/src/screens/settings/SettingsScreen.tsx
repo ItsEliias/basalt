@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -8,6 +8,7 @@ import {
   ChipRow, ChipGroup, kgText, groupInt,
   THEME_IDS, THEMES, type ThemeId,
   color, mono, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { healthService, ALL_HEALTH_PERMISSIONS } from '@basalt/health-connect';

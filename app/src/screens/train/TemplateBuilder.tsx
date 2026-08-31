@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, Chip, ObInput, ObChipLabel, color, mono, useTheme } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, Chip, ObInput, ObChipLabel, color, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import { saveTemplate, type TemplateLocation } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';

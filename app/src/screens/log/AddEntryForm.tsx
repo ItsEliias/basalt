@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote } from '@basalt/ui';
+import { color, mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote, ScaledText as Text } from '@basalt/ui';
 import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { FoodEntryInput, MealType } from '@basalt/nutrition';

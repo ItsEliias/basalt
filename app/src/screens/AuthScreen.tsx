@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, ObChipLabel, SrcNote, useTheme } from '@basalt/ui';
+import { color, mono, CTA, ObInput, ObChipLabel, SrcNote, useTheme, ScaledText as Text } from '@basalt/ui';
 import { supabase } from '../lib/supabase';
 
 // Sign in / create account — email + password, nothing else. No quiz, no

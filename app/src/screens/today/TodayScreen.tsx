@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import {
   Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule,
   MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag,
   TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow,
   TileGridThemed, Tile,
   color, mono, groupInt, useTheme,
+  ScaledText as Text,
 } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
