@@ -15,6 +15,7 @@ import {
 } from '@basalt/nutrition';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
+import { capturePhoto } from '../../lib/photoFood';
 
 // Recipes — persisted, scalable, conflict-flagged, loggable. Imports follow
 // capture → editable suggestion → confirm; imported macros wear ~ until
@@ -123,6 +124,51 @@ export function RecipesTab() {
     }
     setDraft(draftFromImport(imp));
     setImportUrl('');
+  };
+
+  // Recipe OCR — cookbook page, screenshot or handwritten card, transcribed
+  // (never invented) into the same editable draft as any import.
+  const scanRecipe = async (from: 'camera' | 'gallery') => {
+    const shot = await capturePhoto(from);
+    if (!shot) return;
+    setImporting(true);
+    setImportError(null);
+    const { data, error } = await supabase.functions.invoke('ai-photo-food', {
+      body: { imageB64: shot.b64, mode: 'recipe' },
+    });
+    setImporting(false);
+    if (error) {
+      let message = error.message ?? 'Could not read that photo.';
+      try {
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) message = body.error;
+        }
+      } catch { /* keep generic */ }
+      setImportError(message);
+      return;
+    }
+    if (!data?.title) {
+      setImportError(data?.note ?? 'No recipe found in that photo.');
+      return;
+    }
+    setDraft({
+      title: data.title,
+      serves: Math.max(1, Math.round(data.serves || 1)),
+      totalTimeMin: Math.round(data.time_min) || null,
+      source: 'photo_ocr',
+      caloriesPerServe: Math.round(data.calories || 0),
+      proteinPerServe: Math.round((data.protein_g || 0) * 10) / 10,
+      carbsPerServe: Math.round((data.carbs_g || 0) * 10) / 10,
+      fatPerServe: Math.round((data.fat_g || 0) * 10) / 10,
+      macrosConfirmed: false,
+      // Quantities stay verbatim in the name — transcription is the record.
+      ingredients: (data.ingredients ?? []).map((i: { quantity: string; name: string }) => ({
+        qty: null, unit: null, name: i.quantity ? `${i.quantity} ${i.name}` : i.name,
+      })),
+      steps: data.steps ?? [],
+    });
   };
 
   // On-hand ideas — the model may only cook with the listed ingredients
@@ -353,8 +399,16 @@ export function RecipesTab() {
         />
       </View>
       <CTA label={importing ? 'Importing…' : 'Import from URL'} disabled={importing || !importUrl.trim()} onPress={() => void runImport()} />
+      <View style={styles.scanRow}>
+        <Pressable onPress={() => void scanRecipe('camera')} hitSlop={8} disabled={importing}>
+          <Text style={styles.scanLink}>SCAN A RECIPE — CAMERA</Text>
+        </Pressable>
+        <Pressable onPress={() => void scanRecipe('gallery')} hitSlop={8} disabled={importing}>
+          <Text style={styles.scanLink}>GALLERY</Text>
+        </Pressable>
+      </View>
       {importError ? <Text style={styles.conflict}>{importError.toUpperCase()}</Text> : null}
-      <SrcNote>JSON-LD import · TikTok/Instagram/YouTube links go through an AI-structured draft, source link kept · everything editable before save</SrcNote>
+      <SrcNote>JSON-LD import · TikTok/Instagram/YouTube links go through an AI-structured draft, source link kept · a scanned page is transcribed, never invented — unreadable parts named, macros estimated only when the page prints none · everything editable before save</SrcNote>
 
       {/* ── What's on hand — proposals from the user's list only ────── */}
       <Card>
@@ -458,6 +512,8 @@ function NumField({ label, value, onChange }: { label: string; value: number; on
 }
 
 const styles = StyleSheet.create({
+  scanRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
+  scanLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   importRow: { flexDirection: 'row' },

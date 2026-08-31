@@ -8,10 +8,13 @@ import {
 import {
   parseStrongCsv, parseHevyCsv, parseGenericCsv, parseBasaltSectionedCsv,
   buildImportPreview, commitImport, getExercises, normalizeExerciseName,
+  routineToTemplates, routinePreviewLine, saveTemplate,
   type ImportedSession, type ImportPreview, type ImportCommitReport,
+  type OcrRoutine, type RoutinePreview,
 } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { logLoggingEvent } from '../../lib/instrumentation';
+import { capturePhoto } from '../../lib/photoFood';
 
 // Competitor import — Strong / Hevy / generic CSV / Basalt's own export,
 // through a DRY-RUN preview before anything commits: session count, date
@@ -21,7 +24,7 @@ import { logLoggingEvent } from '../../lib/instrumentation';
 // carry source `import:<format>` and a stable ext_id, so re-importing the
 // same file skips instead of duplicating.
 
-type Format = 'Strong' | 'Hevy' | 'Generic' | 'Basalt';
+type Format = 'Strong' | 'Hevy' | 'Generic' | 'Basalt' | 'Photo';
 
 export function ImportSheet({ open, onClose, onImported }: {
   open: boolean;
@@ -40,6 +43,9 @@ export function ImportSheet({ open, onClose, onImported }: {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<ImportCommitReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [routine, setRoutine] = useState<OcrRoutine | null>(null);
+  const [routineNote, setRoutineNote] = useState<string | null>(null);
+  const [routineDone, setRoutineDone] = useState<string | null>(null);
 
   const headerCols = (() => {
     const line = text.slice(0, text.indexOf('\n') === -1 ? text.length : text.indexOf('\n'));
@@ -87,6 +93,67 @@ export function ImportSheet({ open, onClose, onImported }: {
     setOverrides({});
   };
 
+  // Routine-photo lane — a screenshot/photo of a plan, OCR'd server-side,
+  // through the same dry-run discipline: preview, manual mapping, commit.
+  const scanRoutine = async (from: 'camera' | 'gallery') => {
+    setError(null);
+    setRoutineDone(null);
+    const shot = await capturePhoto(from);
+    if (!shot) return;
+    setBusy(true);
+    const { data, error: fnError } = await supabase.functions.invoke('ai-photo-food', {
+      body: { imageB64: shot.b64, mode: 'routine' },
+    });
+    setBusy(false);
+    if (fnError) {
+      let message = fnError.message ?? 'Could not read that photo.';
+      try {
+        const ctx = (fnError as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) message = body.error;
+        }
+      } catch { /* keep generic */ }
+      setError(message);
+      return;
+    }
+    const r = data as OcrRoutine & { note?: string };
+    if (!r?.days || r.days.length === 0) {
+      setError(r?.note ?? 'No routine found in that photo.');
+      return;
+    }
+    const cat = await getExercises(supabase, { limit: 1000 });
+    setCatalog(cat.ok ? cat.data.map((e) => ({ id: e.id, name: e.name })) : []);
+    setRoutine({ name: r.name || 'Imported routine', days: r.days });
+    setRoutineNote(r.note ?? null);
+    setOverrides({});
+  };
+
+  const routinePreview: RoutinePreview | null = routine
+    ? routineToTemplates(routine, catalog, Object.fromEntries(
+        Object.entries(overrides).map(([k, v]) => [normalizeExerciseName(k), v]).filter(([, v]) => v),
+      ))
+    : null;
+
+  const commitRoutine = async () => {
+    if (!routinePreview) return;
+    setBusy(true);
+    let saved = 0;
+    const failed: string[] = [];
+    for (const t of routinePreview.templates) {
+      const r = await saveTemplate(supabase, t);
+      if (r.ok) saved++;
+      else failed.push(`${t.name}: ${r.error}`);
+    }
+    setBusy(false);
+    logLoggingEvent({ type: 'entry_saved', source: 'import:routine_photo', viaTray: false });
+    setRoutineDone(
+      `Saved ${saved} ${saved === 1 ? 'template' : 'templates'}` +
+        (failed.length > 0 ? ` · ${failed.length} failed` : ''),
+    );
+    if (saved > 0) onImported();
+  };
+
   const runImport = async () => {
     if (!sessions || !preview) return;
     setBusy(true);
@@ -125,17 +192,19 @@ export function ImportSheet({ open, onClose, onImported }: {
           <ReceiptHeader label="Import training history" summary="dry-run first, always" />
           <ObChipLabel>Source</ObChipLabel>
           <ChipRow
-            options={['Strong', 'Hevy', 'Generic', 'Basalt']}
+            options={['Strong', 'Hevy', 'Generic', 'Basalt', 'Photo']}
             value={format}
-            onChange={(v) => { setFormat(v as Format); setSessions(null); setPreview(null); }}
+            onChange={(v) => { setFormat(v as Format); setSessions(null); setPreview(null); setRoutine(null); setRoutineDone(null); }}
           />
-          <ObInput
-            placeholder="Paste the CSV export here"
-            value={text}
-            onChangeText={(t) => { setText(t); setSessions(null); setPreview(null); }}
-            multiline
-            style={styles.pasteBox}
-          />
+          {format !== 'Photo' ? (
+            <ObInput
+              placeholder="Paste the CSV export here"
+              value={text}
+              onChangeText={(t) => { setText(t); setSessions(null); setPreview(null); }}
+              multiline
+              style={styles.pasteBox}
+            />
+          ) : null}
           {format === 'Generic' && headerCols.length > 1 ? (
             <>
               {(['date', 'exercise', 'weight', 'reps'] as const).map((field) => (
@@ -153,10 +222,63 @@ export function ImportSheet({ open, onClose, onImported }: {
             </>
           ) : null}
 
-          {!preview ? (
+          {format === 'Photo' && !routine ? (
+            <>
+              <CTA label={busy ? 'Reading…' : 'Photograph a routine'} disabled={busy} onPress={() => void scanRoutine('camera')} />
+              <CTA label="Pick a screenshot" disabled={busy} onPress={() => void scanRoutine('gallery')} />
+              <SrcNote>A plan screenshot or gym card — day labels, exercises, sets and reps are transcribed, never invented · printed lb converts to kg</SrcNote>
+            </>
+          ) : null}
+          {format !== 'Photo' && !preview ? (
             <CTA label="Preview — nothing commits" disabled={!text.trim()} onPress={() => void runPreview()} />
           ) : null}
           {error ? <EmptyState>{error}</EmptyState> : null}
+
+          {format === 'Photo' && routine && routinePreview ? (
+            <>
+              <ReceiptRow name={routine.name} value={String(routinePreview.templates.length)} unit={routinePreview.templates.length === 1 ? 'day' : 'days'} />
+              {routinePreview.templates.map((t) => (
+                <ReceiptRow
+                  key={t.name}
+                  name={t.name}
+                  meta={t.exercises.map((e) => `${e.exerciseName} ${e.targetSets}×${e.targetReps ?? '—'}`).join(' · ')}
+                  value={String(t.exercises.length)}
+                  unit="ex"
+                />
+              ))}
+              {routinePreview.skipped.length > 0 ? (
+                <SrcNote>{`Skipped (no set count): ${routinePreview.skipped.join(' · ')}`}</SrcNote>
+              ) : null}
+              {routineNote ? <SrcNote>{routineNote}</SrcNote> : null}
+              {routinePreview.unmatched.length > 0 ? (
+                <>
+                  <ObChipLabel>{`${routinePreview.unmatched.length} exercise ${routinePreview.unmatched.length === 1 ? 'name' : 'names'} without a library match`}</ObChipLabel>
+                  {routinePreview.unmatched.map((name) => (
+                    <View key={name}>
+                      <Text style={styles.unmatchedName}>{name}</Text>
+                      <ObInput
+                        placeholder="Map to a library exercise (optional — imports as written otherwise)"
+                        value={overrides[name] ?? ''}
+                        onChangeText={(v) => setOverrides((o) => ({ ...o, [name]: v }))}
+                      />
+                    </View>
+                  ))}
+                </>
+              ) : null}
+              {routineDone === null ? (
+                <CTA
+                  label={busy ? 'Saving…' : `Save as ${routinePreview.templates.length} ${routinePreview.templates.length === 1 ? 'template' : 'templates'} — ${routinePreviewLine(routinePreview)}`}
+                  disabled={busy}
+                  onPress={() => void commitRoutine()}
+                />
+              ) : (
+                <>
+                  <EmptyState>{routineDone}</EmptyState>
+                  <CTA label="Done" onPress={() => { setRoutine(null); setRoutineDone(null); onClose(); }} />
+                </>
+              )}
+            </>
+          ) : null}
 
           {preview && sessions ? (
             <>

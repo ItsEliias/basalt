@@ -24,3 +24,4 @@ export * from './import-csv';
 export * from './import-commit';
 export * from './periodization';
 export * from './programs';
+export * from './routine-import';
