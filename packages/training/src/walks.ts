@@ -41,6 +41,8 @@ export async function saveWalk(
     elevationGainM: number | null;
     avgPaceSecPerKm: number | null;
     route: { lat: number; lng: number; t: number }[];
+    /** The shoe this walk wears down — user-picked, optional forever. */
+    shoeId?: string | null;
   },
 ): Promise<Result<WalkRow>> {
   const u = await currentUserId(client);
@@ -57,6 +59,7 @@ export async function saveWalk(
       elevation_gain_m: input.elevationGainM,
       avg_pace_s_per_km: input.avgPaceSecPerKm,
       route: input.route,
+      shoe_id: input.shoeId ?? null,
       source: 'gps',
     })
     .select('*')

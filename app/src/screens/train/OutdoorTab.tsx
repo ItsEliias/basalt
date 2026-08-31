@@ -5,7 +5,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA,
   color, mono, mmss, paceText, groupInt, useTheme,
-  ScaledText as Text,
+  ScaledText as Text, ObInput,
 } from '@basalt/ui';
 import {
   acceptFix, routeDistanceM, summarizeWalk, computeSplits, saveWalk, listRecentWalks,
@@ -18,7 +18,11 @@ import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
 import * as Speech from 'expo-speech';
 import { Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { usualLoop, INTERVAL_WALKS, phaseAt, walkTotalSeconds, WALK_DONE_CUE, type RouteCluster, type IntervalWalk } from '@basalt/training';
+import {
+  usualLoop, INTERVAL_WALKS, phaseAt, walkTotalSeconds, WALK_DONE_CUE,
+  listShoesWithKm, addShoe, setShoeThreshold, retireShoe, shoeStatusLine, SHOE_GUIDANCE,
+  type RouteCluster, type IntervalWalk, type ShoeWithKm,
+} from '@basalt/training';
 import * as Haptics from 'expo-haptics';
 import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed } from '../../lib/walkTrackingService';
 
@@ -52,6 +56,9 @@ export function OutdoorTab() {
   const [voiceSplits, setVoiceSplits] = useState(false);
   const lastAnnouncedKm = useRef(0);
   const [guided, setGuided] = useState<IntervalWalk | null>(null);
+  const [shoes, setShoes] = useState<ShoeWithKm[]>([]);
+  const [activeShoeId, setActiveShoeId] = useState<string | null>(null);
+  const [newShoe, setNewShoe] = useState('');
   const guidedLastIndex = useRef(-1);
   const guidedDone = useRef(false);
   const [beacon, setBeacon] = useState<{ id: string; expiresAt: string } | null>(null);
@@ -130,6 +137,12 @@ export function OutdoorTab() {
     void listRecentWalks(supabase, 8).then((r) => r.ok && setRecent(r.data));
   }, []);
   useEffect(() => loadRecent(), [loadRecent]);
+
+  const loadShoes = useCallback(() => {
+    void listShoesWithKm(supabase).then((r) => r.ok && setShoes(r.data));
+    void AsyncStorage.getItem('basalt.activeShoe').then((v) => setActiveShoeId(v || null));
+  }, []);
+  useEffect(() => loadShoes(), [loadShoes]);
 
   const boot = useCallback(async () => {
     setMode({ kind: 'checking' });
@@ -234,7 +247,9 @@ export function OutdoorTab() {
       elevationGainM: s.elevationGainM,
       avgPaceSecPerKm: s.avgPaceSecPerKm,
       route: s.simplified,
+      shoeId: activeShoeId,
     });
+    loadShoes();
 
     setMode({
       kind: 'summary',
@@ -344,6 +359,23 @@ export function OutdoorTab() {
             </View>
             {guided ? (
               <SrcNote>{`${guided.structure} — cues by vibration first, then voice · talk-test effort, never pace targets · deselect to walk unscripted`}</SrcNote>
+            ) : null}
+            {shoes.length > 0 ? (
+              <View style={styles.loopRow}>
+                <Text style={styles.loopLabel}>SHOE…</Text>
+                {shoes.map((sh) => (
+                  <Pressable
+                    key={sh.id}
+                    onPress={() => {
+                      const next = activeShoeId === sh.id ? null : sh.id;
+                      setActiveShoeId(next);
+                      void AsyncStorage.setItem('basalt.activeShoe', next ?? '');
+                    }}
+                  >
+                    <Text style={[styles.loopChip, activeShoeId === sh.id && styles.loopChipOn]}>{sh.name.toUpperCase()}</Text>
+                  </Pressable>
+                ))}
+              </View>
             ) : null}
             <View style={styles.loopRow}>
               <Text style={styles.loopLabel}>LOOP OF…</Text>
@@ -463,6 +495,44 @@ export function OutdoorTab() {
         ) : null}
       </Card>
 
+      {/* ── Shoes — mileage attribution, your threshold, no nagging ── */}
+      <Card>
+        <ReceiptHeader label="Shoes" summary={shoes.length > 0 ? 'walks wear down the picked shoe' : undefined} />
+        {shoes.map((sh, i) => (
+          <Pressable
+            key={sh.id}
+            onPress={() => {
+              const t = sh.thresholdKm === null ? 500 : sh.thresholdKm >= 800 ? null : sh.thresholdKm + 100;
+              void setShoeThreshold(supabase, sh.id, t).then(loadShoes);
+            }}
+            onLongPress={() => void retireShoe(supabase, sh.id).then(loadShoes)}
+            hitSlop={8}
+          >
+            <ReceiptRow
+              name={sh.name}
+              meta={`${shoeStatusLine(sh.km, sh.thresholdKm)} · tap cycles threshold (500–800 or none) · hold to retire`}
+              value={String(Math.round(sh.km))}
+              unit="km"
+              last={i === shoes.length - 1}
+            />
+          </Pressable>
+        ))}
+        {shoes.length === 0 ? (
+          <EmptyState>Name a shoe and pick it before a walk — its lifetime distance accumulates here.</EmptyState>
+        ) : null}
+        <View style={styles.shoeAddRow}>
+          <ObInput placeholder="Add a shoe — e.g. Pegasus 41" value={newShoe} onChangeText={setNewShoe} style={{ flex: 1 }} />
+          <Pressable
+            onPress={() => void addShoe(supabase, newShoe).then(() => { setNewShoe(''); loadShoes(); })}
+            hitSlop={10}
+            disabled={!newShoe.trim()}
+          >
+            <Text style={styles.shareLink}>ADD</Text>
+          </Pressable>
+        </View>
+        <SrcNote>{SHOE_GUIDANCE}</SrcNote>
+      </Card>
+
       {/* ── Recent walks ───────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Recent walks" />
@@ -551,6 +621,7 @@ const styles = StyleSheet.create({
   guidedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border },
   guidedEffort: { fontFamily: mono, fontSize: 13, letterSpacing: 1.2, color: color.ink, fontWeight: '600' },
   guidedRemain: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.mute },
+  shoeAddRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
   loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
   loopChip: {

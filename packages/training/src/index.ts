@@ -28,3 +28,4 @@ export * from './routine-import';
 export * from './interval-walks';
 export * from './race-plans';
 export * from './race-plans-service';
+export * from './shoes';
