@@ -18,7 +18,8 @@ import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
 import * as Speech from 'expo-speech';
 import { Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { usualLoop, type RouteCluster } from '@basalt/training';
+import { usualLoop, INTERVAL_WALKS, phaseAt, walkTotalSeconds, WALK_DONE_CUE, type RouteCluster, type IntervalWalk } from '@basalt/training';
+import * as Haptics from 'expo-haptics';
 import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed } from '../../lib/walkTrackingService';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
@@ -50,6 +51,9 @@ export function OutdoorTab() {
   const [loopError, setLoopError] = useState<string | null>(null);
   const [voiceSplits, setVoiceSplits] = useState(false);
   const lastAnnouncedKm = useRef(0);
+  const [guided, setGuided] = useState<IntervalWalk | null>(null);
+  const guidedLastIndex = useRef(-1);
+  const guidedDone = useRef(false);
   const [beacon, setBeacon] = useState<{ id: string; expiresAt: string } | null>(null);
   const beaconLastPush = useRef(0);
   const notifLastUpdate = useRef(0);
@@ -258,6 +262,12 @@ export function OutdoorTab() {
   );
 
   const tracking = mode.kind === 'tracking';
+  useEffect(() => {
+    if (tracking) {
+      guidedLastIndex.current = -1;
+      guidedDone.current = false;
+    }
+  }, [tracking]);
   const liveDistance = tracking ? routeDistanceM(mode.points) : 0;
 
   // Voice split announcements — OS text-to-speech, opt-in, on whole kms.
@@ -273,6 +283,32 @@ export function OutdoorTab() {
   }, [tracking, voiceSplits, liveDistance, mode]);
   const liveSeconds = tracking ? Math.max(1, Math.round((now - mode.started) / 1000)) : 0;
   const livePace = tracking && liveDistance > 50 ? liveSeconds / (liveDistance / 1000) : null;
+
+  // Guided interval script — haptics are the PRIMARY signal (pocket, no
+  // earbuds), speech the detail layer. Phase changes fire once each.
+  const guidedPos = tracking && guided ? phaseAt(guided, liveSeconds) : null;
+  useEffect(() => {
+    if (!tracking || !guided) return;
+    if (guidedPos === null) {
+      if (!guidedDone.current) {
+        guidedDone.current = true;
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        Speech.speak(WALK_DONE_CUE);
+      }
+      return;
+    }
+    if (guidedPos.index !== guidedLastIndex.current) {
+      guidedLastIndex.current = guidedPos.index;
+      const up = guidedPos.phase.effort === 'brisk';
+      void (up
+        ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+            .then(() => new Promise((r) => setTimeout(r, 250)))
+            .then(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy))
+        : Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      ).catch(() => {});
+      Speech.speak(guidedPos.phase.cue);
+    }
+  }, [tracking, guided, guidedPos]);
 
   return (
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
@@ -295,6 +331,20 @@ export function OutdoorTab() {
             }}>
               <Text style={styles.shareLink}>{voiceSplits ? 'VOICE SPLITS ON — EVERY KM · TAP TO TURN OFF' : 'VOICE SPLITS OFF · TAP TO ANNOUNCE EVERY KM'}</Text>
             </Pressable>
+            {/* Guided interval scripts — a fixed set, not a library */}
+            <View style={styles.loopRow}>
+              <Text style={styles.loopLabel}>GUIDED…</Text>
+              {INTERVAL_WALKS.map((w) => (
+                <Pressable key={w.key} onPress={() => { setGuided(guided?.key === w.key ? null : w); }}>
+                  <Text style={[styles.loopChip, guided?.key === w.key && styles.loopChipOn]}>
+                    {w.name.replace(' · ', ' ').toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {guided ? (
+              <SrcNote>{`${guided.structure} — cues by vibration first, then voice · talk-test effort, never pace targets · deselect to walk unscripted`}</SrcNote>
+            ) : null}
             <View style={styles.loopRow}>
               <Text style={styles.loopLabel}>LOOP OF…</Text>
               {[2, 3, 5, 8].map((km) => (
@@ -354,6 +404,16 @@ export function OutdoorTab() {
               <Stat k="Pace" v={livePace ? paceText(livePace) : '—'} u={livePace ? '/km' : undefined} />
               <Stat k="Points" v={String(mode.points.length)} />
             </View>
+            {guided ? (
+              guidedPos ? (
+                <View style={styles.guidedRow}>
+                  <Text style={styles.guidedEffort}>{guidedPos.phase.effort.toUpperCase()}</Text>
+                  <Text style={styles.guidedRemain}>{mmss(guidedPos.phaseRemainS)} LEFT · {mmss(Math.max(0, walkTotalSeconds(guided) - liveSeconds))} IN SCRIPT</Text>
+                </View>
+              ) : (
+                <Text style={styles.shareLink}>SCRIPT FINISHED — RECORDING CONTINUES UNTIL YOU STOP</Text>
+              )
+            ) : null}
             {beacon ? (
               <Pressable onPress={() => void stopBeacon()}>
                 <View style={styles.beaconRow}>
@@ -487,6 +547,10 @@ function KeepAwakeWhileTracking() {
 
 const styles = StyleSheet.create({
   shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
+  loopChipOn: { color: color.ink, borderBottomWidth: 1, borderBottomColor: color.ink },
+  guidedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border },
+  guidedEffort: { fontFamily: mono, fontSize: 13, letterSpacing: 1.2, color: color.ink, fontWeight: '600' },
+  guidedRemain: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.mute },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
   loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
   loopChip: {
