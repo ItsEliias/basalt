@@ -32,6 +32,15 @@ Internal codename LEDGER appears in older docs — same product.
    48dp minimum via `hitSlop`. Pinned in `packages/ui/src/tokens.test.ts`;
    see `docs/basalt-design-spec.md` §1–2 for the full table. Do not shrink
    or dim below these without updating that pinned test in the same change.
+7. **Five audit laws (2026-08-31 amendment, spec §5 has the full text +
+   rationale):** capture is never paywalled; no capture modality is ever
+   mandatory (manual entry is the floor); AI proposes, never narrates (no
+   AI summaries of completed activity, at all); graded uncertainty
+   (unconfirmed AI = ranges from the model, charts draw inferred values
+   dashed/banded vs solid measured); sleep stages are display-only and
+   never enter any score or suggestion. Plus the timer laws in spec §4:
+   visible running state on every timed surface, and the engine-enforced
+   10 s transition floor (`MIN_TRANSITION_S`).
 
 ## Architecture
 

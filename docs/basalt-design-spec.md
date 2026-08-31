@@ -58,11 +58,41 @@ Card (surface, 1px border, radius 14, padding 16, +4dp when density=comfortable)
 
 ## 4. Interaction rules
 
-Every logging action ≤2 taps from the + sheet. Water +250 commits instantly with no confirmation screen. Set completion is a typographic state change — **no confetti, no bouncy checkmarks**. Timers: haptic pulse on phase change is primary; sound optional-off; legible at arm's length; keep running with screen off (Live Activity / foreground service). Previous values are ghosted defaults, editable in place. Tab switch resets scroll; sub-nav switch preserves tab. View transitions: 180ms fade+4px rise, nothing springier.
+Every logging action ≤2 taps from the + sheet. Water +250 commits instantly with no confirmation screen. Set completion is a typographic state change — **no confetti, no bouncy checkmarks**. Timers: haptic pulse on phase change is primary; sound optional-off; legible at arm's length; keep running with screen off (Live Activity / foreground service); **every timed surface shows an unmistakable running state** (phase + countdown + session progress — a glance must answer "is this moving"). **Transition floor (2026-08-31):** any auto-advancing timed sequence gives at least `MIN_TRANSITION_S = 10` seconds to get into position, user-settable upward, engine-enforced (`guided-timer.ts`); protocol-defined work:rest cycles (Tabata's 20/10) are training structure, not transitions, and stay verbatim; an explicit zero lead-in ("work on tap") is user-initiated and exempt. Previous values are ghosted defaults, editable in place. Tab switch resets scroll; sub-nav switch preserves tab. View transitions: 180ms fade+4px rise, nothing springier.
 
 ## 5. Honesty rules (product-level, non-negotiable)
 
-Real-or-hidden: no data → quiet typographic empty state ("No glucose data recorded for this period"), never a zero, never a placeholder chart. AI-derived values wear `~` until user-confirmed; AI flow is always capture → editable suggestion → confirm. Over-cap states are stated plainly ("41 / 36 g · 5 over") — never hidden, never scolded. Dietary conflicts are flagged with a swap suggestion, never filtered out silently. Correlations show their stats (`r`, `n`, threshold) plus a "checked, not shown" list; always "correlation, not cause". Streak gaps stay gray — no flames, no broken-streak shaming, dual milestones (streak + lifetime). Every synced datum shows its source (`SOURCE · GALAXY WATCH VIA HEALTH CONNECT`). Published formulas: any score links to its inputs and math.
+Real-or-hidden: no data → quiet typographic empty state ("No glucose data recorded for this period"), never a zero, never a placeholder chart. AI-derived values wear `~` until user-confirmed; AI flow is always capture → editable suggestion → confirm. Over-cap states are stated plainly ("41 / 36 g · 5 over") — never hidden, never scolded. Dietary conflicts are flagged with a swap suggestion, never filtered out silently. Correlations show their stats (`r`, `n`, threshold) plus a "checked, not shown" list; always "correlation, not cause". Streak gaps stay gray — no flames, no broken-streak shaming, dual milestones (streak + lifetime); rest days maintain training runs per the published rule (readiness-advised or planned rest counts; rest never *starts* a run — `streaks.ts`). Every synced datum shows its source (`SOURCE · GALAXY WATCH VIA HEALTH CONNECT`). Published formulas: any score links to its inputs and math.
+
+### Amendment (2026-08-31) — five product laws from the competitive audit
+
+Each carries the one-line reason it exists; the failures named are real, shipped failures
+in this category, not hypotheticals.
+
+1. **Capture is never paywalled.** Barcode, photo, voice, manual entry, export, and media
+   transport controls (pause included) are permanently free. *Why: barcode-scan paywalls
+   and a paywalled pause button are the category's most-hated moves — capture is the
+   ledger's front door, and charging for the door poisons everything behind it.*
+2. **No capture modality is ever mandatory.** Photo/AI/voice/barcode are lanes; manual
+   entry is the floor and can never be removed or demoted to unreachable. *Why: a major
+   competitor removed food search in Aug 2026 and users who log after eating simply
+   couldn't log at all.*
+3. **AI proposes, never narrates.** No AI summary of completed activity, ever — the
+   ledger speaks for itself. AI may only propose a next action the user confirms. *Why:
+   narration AI was uniformly rejected across the category; intervening AI was uniformly
+   welcomed. This subsumes the existing "no AI summaries that displace data" ban and goes
+   further: none at all.*
+4. **Graded uncertainty.** Unconfirmed AI estimates display as low–high ranges, not
+   points; confirming collapses to the user-accepted value. Charts visually distinguish
+   measured/logged values (solid) from modelled/inferred values (dashed or banded). The
+   `~` prefix survives as the inline shorthand. Range width comes from the model, never
+   invented client-side. *Why: a tight wrong point is a lie with confidence; an honest
+   range that contains the truth beats it every time.*
+5. **Sleep stages are display-only.** Stages may be shown (coarse taxonomy, source
+   named, accuracy ceiling stated) but never enter any score, suggestion, or derived
+   number. Any composite Basalt ever ships publishes its weights. *Why: consumer staging
+   runs κ 0.21–0.53 against PSG — dressing that up as an input is fabricated precision,
+   and publishing weights is already this app's own standard (readiness).*
 
 ## 6. Forbidden
 
