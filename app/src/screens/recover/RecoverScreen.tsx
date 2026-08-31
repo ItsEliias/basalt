@@ -12,7 +12,7 @@ import { healthService, labelForPackage, type SleepSessionSummary } from '@basal
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS } from '@basalt/analytics';
+import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, type SleepNeedReport } from '@basalt/analytics';
 import { ProgressPhotosCard } from './ProgressPhotos';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
@@ -60,6 +60,8 @@ function VitalsTab() {
   const [fastNow, setFastNow] = useState(Date.now());
   const fastingEnabled = profile?.fastingEnabled ?? false;
   const [loadFailed, setLoadFailed] = useState(false);
+  const [sleepNeed, setSleepNeed] = useState<SleepNeedReport | null>(null);
+  const [needMathOpen, setNeedMathOpen] = useState(false);
 
   useEffect(() => {
     if (!fastingEnabled) return;
@@ -77,6 +79,7 @@ function VitalsTab() {
         const w = await listWeightEntries(supabase, 14);
         if (w.ok) setWeights(w.data);
         setReadiness(await loadReadiness(supabase, new Date()));
+        void loadSleepNeed(supabase).then((r) => r.ok && setSleepNeed(r.data));
         const c = await getCheckin(supabase, isoDay(new Date()));
         if (c.ok && c.data) {
           setCheckinFactors(c.data.factors);
@@ -333,6 +336,11 @@ function VitalsTab() {
               </>
             ) : null}
             <SrcNote>{`Source · ${labelForPackage(vitals.sleep.dataOrigin)} via Health Connect${vitals.sleep.hasRealStages ? ' — measured stages' : ' — session only, no stage data'}`}</SrcNote>
+            {vitals.sleep.hasRealStages ? (
+              <SrcNote>
+                Stages are display-only — consumer staging runs well below lab accuracy, so nothing here ever feeds a score or suggestion
+              </SrcNote>
+            ) : null}
           </>
         ) : (
           <>
@@ -353,6 +361,42 @@ function VitalsTab() {
           </>
         )}
       </Card>
+
+      {/* ── Sleep need + debt — need/debt words, never a score ─────── */}
+      {sleepNeed && sleepNeed.debt.nightsSeen > 0 ? (
+        <Card>
+          <ReceiptHeader label="Sleep need" summary="tap for the math" />
+          <Pressable onPress={() => setNeedMathOpen(!needMathOpen)} hitSlop={8}>
+            {sleepNeed.lastNight ? (
+              <Text style={styles.needLine}>{sleepNeed.lastNight.line}</Text>
+            ) : null}
+            <Text style={styles.debtLine}>{sleepNeed.debtText}</Text>
+          </Pressable>
+          {needMathOpen ? (
+            <>
+              <ReceiptRow
+                name="Nightly need"
+                meta={sleepNeed.need.basis}
+                value={`${Math.floor(sleepNeed.need.needMin / 60)}:${String(sleepNeed.need.needMin % 60).padStart(2, '0')}`}
+                unit=""
+              />
+              {sleepNeed.nights.slice(-7).map((n, i, arr) => (
+                <ReceiptRow
+                  key={n.date}
+                  name={n.date.slice(5)}
+                  meta={n.strained ? 'heavy prior day · +30 min need' : 'need per your median'}
+                  value={`${Math.floor(n.sleptMin / 60)}:${String(n.sleptMin % 60).padStart(2, '0')} / ${Math.floor(n.needMin / 60)}:${String(n.needMin % 60).padStart(2, '0')}`}
+                  unit=""
+                  last={i === arr.length - 1}
+                />
+              ))}
+            </>
+          ) : null}
+          <SrcNote>
+            Need = median of your own recent nights (published default until 14 exist) · a P75-heavy training day adds 30 min · debt sums the last 14 nights, surplus repays · absent nights are absent, never zeros
+          </SrcNote>
+        </Card>
+      ) : null}
 
       {/* ── Vitals tiles — real-or-hidden ──────────────────────────── */}
       <TileGrid>
@@ -617,5 +661,7 @@ const styles = StyleSheet.create({
   },
   pacerLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.98, color: color.ink2 },
   pacerCount: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 18, letterSpacing: 1 },
+  needLine: { fontSize: 14, color: color.ink, lineHeight: 21, marginTop: 4 },
+  debtLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, color: color.mute, marginTop: 6 },
   protocolTap: { marginTop: 4 },
 });

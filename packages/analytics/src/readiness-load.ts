@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ok, err, isoDay, currentUserId, getTargetsFor, type Result } from '@basalt/core-data';
 import { computeReadiness, baselineBand, type Readiness } from './readiness';
+import { personalSleepNeed, SLEEP_NEED_RULES } from './sleep-need';
 
 // Ledger → readiness inputs. Everything reads persisted rows only — the
 // HC sync's vitals rollups, the persisted sleep night, the set ledger.
@@ -63,7 +64,26 @@ export async function loadReadiness(
   }
 
   const targets = await getTargetsFor(client, todayIso);
-  const sleepTargetMin = (targets.ok && targets.data?.sleepMin) || 480;
+  // Sleep need feeds the readiness sleep component: your own personal need
+  // (median of recent nights) once 14 nights exist, else the stated target.
+  const needWindow = new Date(today);
+  needWindow.setDate(needWindow.getDate() - SLEEP_NEED_RULES.personalWindowNights);
+  const needNights = await client
+    .from('basalt_sleep_sessions')
+    .select('date, bedtime, waketime')
+    .eq('user_id', u.data)
+    .gte('date', isoDay(needWindow));
+  const nightMins: number[] = [];
+  for (const s of needNights.data ?? []) {
+    const r = s as any;
+    if (!r.bedtime || !r.waketime) continue;
+    const min = (Date.parse(r.waketime) - Date.parse(r.bedtime)) / 60000;
+    if (min > 0) nightMins.push(min);
+  }
+  const need = personalSleepNeed(nightMins);
+  const sleepTargetMin = need.personal
+    ? need.needMin
+    : (targets.ok && targets.data?.sleepMin) || 480;
 
   const readiness = computeReadiness({
     todayHrv: todayOf('hrv_rmssd'),
