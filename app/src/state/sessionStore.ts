@@ -305,7 +305,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           historyBestE1rm: history.bestE1rm,
           repPrs: history.repPrs,
           timed,
-          guided: timed ? createGuidedTimer({ leadInS: 5, workS: 50, restS: 20, sets: 4 }) : null,
+          guided: timed ? createGuidedTimer({ leadInS: 10, workS: 50, restS: 20, sets: 4 }) : null,
           suggestion,
           feedback: null,
           timerMode: 'custom',

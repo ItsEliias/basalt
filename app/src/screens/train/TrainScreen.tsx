@@ -12,7 +12,7 @@ import {
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
   platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
-  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree, recoveryIntensity,
+  emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree, recoveryIntensity, MIN_TRANSITION_S,
   REGION_FOR_MUSCLE, type RegionRecovery, type BodyRegion,
   describe as describeGuided,
   listTemplates, deleteTemplate, duplicateTemplate, type WorkoutTemplate,
@@ -318,7 +318,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
             value={ex.timerMode === 'custom' ? 'Custom' : ex.timerMode === 'emom' ? 'EMOM' : ex.timerMode === 'tabata' ? 'Tabata' : 'Circuit'}
             onChange={(label) => {
               const id = ex.sessionExerciseId;
-              if (label === 'Custom') session.setTimerMode(id, 'custom', { leadInS: 5, workS: 50, restS: 20, sets: 4 });
+              if (label === 'Custom') session.setTimerMode(id, 'custom', { leadInS: 10, workS: 50, restS: 20, sets: 4 });
               if (label === 'EMOM') session.setTimerMode(id, 'emom', emomConfig(40, 10));
               if (label === 'Tabata') session.setTimerMode(id, 'tabata', TABATA_CONFIG);
               if (label === 'Circuit') session.setTimerMode(id, 'circuit', circuitConfig(4, 3, 45, 15), 4);
@@ -339,6 +339,8 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
               }}
             />
             <Stepper value={`${ex.guided.config.sets} sets`} onMinus={() => session.guidedConfigure(ex.sessionExerciseId, { sets: Math.max(1, ex.guided!.config.sets - 1) })} onPlus={() => session.guidedConfigure(ex.sessionExerciseId, { sets: ex.guided!.config.sets + 1 })} />
+            {/* Transition floor: settable upward, engine refuses below MIN_TRANSITION_S. */}
+            <Stepper value={`${ex.guided.config.leadInS}s lead`} onMinus={() => session.guidedConfigure(ex.sessionExerciseId, { leadInS: Math.max(MIN_TRANSITION_S, ex.guided!.config.leadInS - 5) })} onPlus={() => session.guidedConfigure(ex.sessionExerciseId, { leadInS: ex.guided!.config.leadInS + 5 })} />
           </View>
         ) : null}
         <GuidedTimerDisplay

@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import {
   Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav,
   TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow,
-  color, mono, kgText, hoursMinutes, groupInt,
+  color, mono, kgText, hoursMinutes, groupInt, mmss,
   ChipGroup, useTheme,
   ScaledText as Text,
 } from '@basalt/ui';
@@ -505,6 +505,11 @@ function MindTab() {
           <Text style={styles.pacerCount}>
             {running ? `${phase.remaining} · FOLLOW THE RING` : `${cycleSeconds(protocol)} S CYCLE`}
           </Text>
+          {/* Running-state invariant: a glance must show the session is
+              progressing, not just which phase it's in. */}
+          {running ? (
+            <Text style={styles.pacerCount}>{`${mmss(clock)} OF ${minutes}:00`}</Text>
+          ) : null}
         </View>
         <ChipRow
           options={['5 min', '10 min', '15 min', '20 min']}
