@@ -86,6 +86,16 @@
         {
           "locationWhenInUsePermission": "Basalt records your walks with GPS so you can see your route, pace and splits."
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Basalt uses the microphone so you can speak a meal instead of typing it.",
+          "speechRecognitionPermission": "Basalt uses speech recognition to turn what you say into a food description.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
       ]
     ]
   }

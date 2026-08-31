@@ -47,6 +47,7 @@
     "expo-print": "~56.0.4",
     "expo-sharing": "~56.0.25",
     "expo-speech": "~56.0.3",
+    "expo-speech-recognition": "~56.0.4",
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",
     "fflate": "^0.8.3",

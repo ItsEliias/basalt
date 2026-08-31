@@ -55,6 +55,7 @@ import { logLoggingEvent } from '../../lib/instrumentation';
 import { writeThroughOutbox } from '../../lib/outbox';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 import { capturePhoto, enqueuePhoto, dequeuePhoto, loadPhotoQueue, readQueuedPhotoB64 } from '../../lib/photoFood';
+import { voiceAvailable, startVoiceCapture } from '../../lib/voiceCapture';
 import { queuedLabel, type QueuedPhoto } from '../../lib/photoQueueModel';
 
 // Log / Capture — viewfinder with on-device GS1 verification, OFF lookup,
@@ -105,6 +106,8 @@ function CaptureTab() {
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState<string | null>(null);
   const [photoQueue, setPhotoQueue] = useState<QueuedPhoto[]>([]);
+  const [voiceState, setVoiceState] = useState<'idle' | 'listening'>('idle');
+  const voiceStopRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     void loadPhotoQueue().then(setPhotoQueue);
   }, []);
@@ -207,6 +210,29 @@ function CaptureTab() {
     });
   };
 
+  // Voice lane — the OS transcribes into the same box, a final transcript
+  // runs the same estimate. Different input surface, identical gates.
+  const toggleVoice = async () => {
+    if (voiceState === 'listening') {
+      voiceStopRef.current?.();
+      return;
+    }
+    logLoggingEvent({ type: 'voice_capture' });
+    const h = await startVoiceCapture({
+      onPartial: (t) => setAiText(t),
+      onFinal: (t) => {
+        setAiText(t);
+        if (t.trim()) void runAiEstimate(t);
+      },
+      onError: (m) => setAiError(m),
+      onEnd: () => setVoiceState('idle'),
+    });
+    if (h.ok) {
+      voiceStopRef.current = h.stop;
+      setVoiceState('listening');
+    }
+  };
+
   const openManualDraft = () => {
     setDraft({
       mealType: mealForHour(new Date().getHours()),
@@ -216,14 +242,15 @@ function CaptureTab() {
     });
   };
 
-  const runAiEstimate = async () => {
-    if (!aiText.trim()) return;
+  const runAiEstimate = async (text?: string) => {
+    const description = (text ?? aiText).trim();
+    if (!description) return;
     setAiBusy(true);
     setAiError(null);
     setAiItems(null);
     setAiOmissions([]);
     const { data, error } = await supabase.functions.invoke('ai-quick-add', {
-      body: { description: aiText.trim() },
+      body: { description },
     });
     setAiBusy(false);
     if (error) {
@@ -549,8 +576,15 @@ function CaptureTab() {
               onChangeText={setAiText}
               multiline
             />
+            {voiceAvailable() ? (
+              <Pressable onPress={() => void toggleVoice()} hitSlop={8}>
+                <Text style={[styles.voiceLink, voiceState === 'listening' && styles.voiceLive]}>
+                  {voiceState === 'listening' ? 'LISTENING — TAP WHEN DONE' : 'SPEAK IT INSTEAD'}
+                </Text>
+              </Pressable>
+            ) : null}
             <CTA label={aiBusy ? 'Estimating…' : 'Estimate with AI'} disabled={aiBusy || !aiText.trim()} onPress={() => void runAiEstimate()} />
-            <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app · your keyboard's mic dictates straight into the box</SrcNote>
+            <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app · speech is transcribed by your phone's OS, audio never reaches Basalt's servers</SrcNote>
           </View>
         ) : null}
       </View>
@@ -798,6 +832,8 @@ const styles = StyleSheet.create({
   trayCommit: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, fontWeight: '600' },
   trayClear: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9 },
   photoMinor: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
+  voiceLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, paddingVertical: 10, textAlign: 'center' },
+  voiceLive: { color: color.ink },
   photoMinorLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
   queueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border, paddingVertical: 2 },
   queueLabel: { fontFamily: mono, fontSize: 11.5, color: color.ink2, letterSpacing: 0.4 },

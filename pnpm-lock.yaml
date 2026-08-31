@@ -144,6 +144,9 @@ importers:
       expo-speech:
         specifier: ~56.0.3
         version: 56.0.3(expo@56.0.20)
+      expo-speech-recognition:
+        specifier: ~56.0.4
+        version: 56.0.4(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       expo-status-bar:
         specifier: ~56.0.4
         version: 56.0.4(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -1999,6 +2002,13 @@ packages:
 
   expo-sharing@56.0.25:
     resolution: {integrity: sha512-X3QviZbMuWrizYmsGojmbahoKBappNe8AvGl+g+Heh1Ebgr3thHotJbBOkgTK5scBszA3qc83MZTtHJ3gAtRaQ==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+
+  expo-speech-recognition@56.0.4:
+    resolution: {integrity: sha512-6Sh6aeKSG4W81TYfHUL8sgOxO++YrUi5Zhpmu5tiWurm6NP5hFL1SHd6+GbtV7Fyo4Cc35AofR9QxiSROZMJcQ==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -5395,6 +5405,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  expo-speech-recognition@56.0.4(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+    dependencies:
+      expo: 56.0.20(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
 
   expo-speech@56.0.3(expo@56.0.20):
     dependencies:

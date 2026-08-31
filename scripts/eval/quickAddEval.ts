@@ -54,10 +54,18 @@ async function main() {
   let omissionChecks = 0;
 
   for (const c of CASES) {
+    // One retry on transport errors only — a transient non-2xx is not what
+    // this harness measures. Honesty failures are never retried.
     const t0 = Date.now();
-    const { data, error } = await client.functions.invoke('ai-quick-add', {
+    let { data, error } = await client.functions.invoke('ai-quick-add', {
       body: model ? { description: c.description, model } : { description: c.description },
     });
+    if (error) {
+      await new Promise((r) => setTimeout(r, 2000));
+      ({ data, error } = await client.functions.invoke('ai-quick-add', {
+        body: model ? { description: c.description, model } : { description: c.description },
+      }));
+    }
     latencies.push(Date.now() - t0);
     const fail = (why: string) => failures.push(`${c.id}: ${why}`);
 

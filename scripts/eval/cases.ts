@@ -32,7 +32,7 @@ export const CASES: EvalCase[] = [
   { id: 'smoothie', description: 'banana and peanut butter smoothie with milk', items: [1, 1], kcal: [250, 550] },
   { id: 'oats', description: 'overnight oats with yoghurt and berries', items: [1, 2], kcal: [250, 550] },
   { id: 'pizza', description: '3 slices of pepperoni pizza', items: [1, 1], kcal: [550, 1000] },
-  { id: 'stirfry', description: 'beef and vegetable stir fry, pan cooked', items: [1, 2], kcal: [350, 800], expectOmissionOneOf: ['oil'] },
+  { id: 'stirfry', description: 'beef and vegetable stir fry, pan cooked', items: [1, 2], kcal: [300, 700], expectOmissionOneOf: ['oil'] }, // USDA beef stir-fry w/ veg ~330/serve + pan oil ~120 → ~450; big serves to ~650
   { id: 'protein-shake', description: 'protein shake, one scoop in water', items: [1, 1], kcal: [90, 180] },
   { id: 'avo-toast', description: 'avocado on two slices of sourdough', items: [1, 2], kcal: [280, 550] },
   { id: 'meat-pie', description: 'a meat pie from the servo', items: [1, 1], kcal: [350, 550] },
@@ -42,4 +42,13 @@ export const CASES: EvalCase[] = [
   { id: 'burger-chips', description: 'cheeseburger and medium chips', items: [2, 2], kcal: [650, 1100] },
   { id: 'apple-pb', description: 'apple with a tablespoon of peanut butter', items: [1, 2], kcal: [140, 260] }, // USDA: medium apple ~95 + 16g PB ~96 → ~191
   { id: 'wine', description: 'two glasses of red wine', items: [1, 1], kcal: [200, 340] },
+
+  // Voice-transcript cases (V3 Phase 4.7) — what OS speech-to-text actually
+  // hands over: lowercase, no punctuation, disfluencies, mid-sentence
+  // self-corrections, run-on quantities. The function must read through the
+  // noise, and a self-correction must land on the CORRECTED value.
+  { id: 'voice-eggs', description: 'uh two eggs no wait three eggs scrambled with butter', items: [1, 2], kcal: [220, 380], expectNote: [] }, // USDA scrambled egg ~91 ×3 (corrected count) ≈ 273 + butter pat ~36
+  { id: 'voice-runon', description: 'chicken breast about one fifty grams and half a cup of rice and some broccoli', items: [2, 3], kcal: [300, 550] },
+  { id: 'voice-brand', description: 'a up and go the chocolate one and a muesli bar', items: [2, 2], kcal: [230, 420] }, // Sanitarium Up&Go Choc Ice 250ml 776 kJ ≈ 185 + typical 30g muesli bar ≈ 130 → ~315
+  { id: 'voice-vague', description: 'i had like a handful of mixed nuts', items: [1, 1], kcal: [120, 300] }, // USDA mixed nuts ~170 kcal per 30g handful; hand sizes vary — a vague-portion case, not a dual-reading one
 ];
