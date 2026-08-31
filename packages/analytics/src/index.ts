@@ -17,3 +17,5 @@ export * from './monthly-report';
 export * from './monthly-report-load';
 export * from './deviation';
 export * from './deviation-load';
+export * from './cycle';
+export * from './cycle-load';

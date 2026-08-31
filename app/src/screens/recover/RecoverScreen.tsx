@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
 import { ProgressPhotosCard } from './ProgressPhotos';
+import { CycleCard } from './CycleCard';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
   FASTING_DISCLAIMER, type Fast,
@@ -411,6 +412,9 @@ function VitalsTab() {
           </SrcNote>
         </Card>
       ) : null}
+
+      {/* ── Cycle — opt-in, facts vs labelled estimates ────────────── */}
+      <CycleCard />
 
       {/* ── Vitals tiles — real-or-hidden ──────────────────────────── */}
       <TileGrid>
