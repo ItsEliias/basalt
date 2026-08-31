@@ -616,6 +616,9 @@ function MindTab() {
             onChange={(name) => !running && setProtocol(PROTOCOLS.find((p) => p.name === name)!)}
           />
         </View>
+        {protocol.phases[1] > 0 || protocol.phases[3] > 0 ? (
+          <SrcNote>This protocol holds the breath — not while driving, standing, or in water; stop if dizzy</SrcNote>
+        ) : null}
       </Card>
 
       <Card>

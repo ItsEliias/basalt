@@ -94,6 +94,29 @@ in this category, not hypotheticals.
    runs κ 0.21–0.53 against PSG — dressing that up as an input is fabricated precision,
    and publishing weights is already this app's own standard (readiness).*
 
+### Amendment (2026-08-31) — mindfulness guardrails (V3 Phase 5)
+
+Mindfulness surfaces (breathwork, meditation minutes, the Recover mindfulness row) get
+their own guardrails, because calm is the one place gamification does the most damage:
+
+1. **Never scored, never streaked.** Mindfulness minutes enter no score, no streak, no
+   readiness input, no trend gate. A session is a fact in the ledger, nothing more.
+   *Why: attaching a chain to a calming practice converts it into an obligation — the
+   opposite of the practice.*
+2. **No duration targets, no escalation.** The app never suggests "try 10 minutes
+   today" or grows a goal over time. Protocols state their published structure
+   (4-7-8, box, coherent 5.5) and stop there.
+3. **Quiet copy only.** No affirmations, no "well done", no nature metaphors. The
+   timer's own no-cheerleading law applies verbatim; completion states a fact
+   ("6 min · 4-7-8") in mono, like any other receipt row.
+4. **Breath-hold caution stated once, plainly.** Any protocol with a retention phase
+   carries a one-line srcnote: not while driving, standing, or in water; stop if
+   dizzy. Stated as fact, not as medical advice; no protocol with retention is ever
+   suggested by the app — the user picks.
+5. **Reminders opt-in and neutral.** If a mindfulness reminder ever ships it follows
+   the Week-in-Review pattern: fixed factual copy, no guilt framing ("You missed…"
+   is banned), off by default.
+
 ## 6. Forbidden
 
 Rings/circular gauges · mascots, emoji in UI copy, motivational cheerleading ("You're crushing it!") · XP/levels/coins/badges-as-currency · big rounded card diaries (MFP-style) · dashboard-as-forced-home · upsells inside onboarding, countdown timers, pre-selected annual plans, ads to paying users · bright color without semantic meaning · AI summaries that displace data · localStorage in web builds.

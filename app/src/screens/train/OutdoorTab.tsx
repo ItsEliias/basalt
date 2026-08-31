@@ -21,7 +21,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   usualLoop, INTERVAL_WALKS, phaseAt, walkTotalSeconds, WALK_DONE_CUE,
   listShoesWithKm, addShoe, setShoeThreshold, retireShoe, shoeStatusLine, SHOE_GUIDANCE,
-  type RouteCluster, type IntervalWalk, type ShoeWithKm,
+  distanceToRouteM, stepDeviation, DEVIATION_ALERT_M,
+  type RouteCluster, type IntervalWalk, type ShoeWithKm, type DeviationState,
 } from '@basalt/training';
 import * as Haptics from 'expo-haptics';
 import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed } from '../../lib/walkTrackingService';
@@ -55,6 +56,8 @@ export function OutdoorTab() {
   const [loopError, setLoopError] = useState<string | null>(null);
   const [voiceSplits, setVoiceSplits] = useState(false);
   const [glance, setGlance] = useState(false);
+  const [routeNudge, setRouteNudge] = useState(false);
+  const deviationRef = useRef<DeviationState>({ off: false });
   const lastAnnouncedKm = useRef(0);
   const [guided, setGuided] = useState<IntervalWalk | null>(null);
   const [shoes, setShoes] = useState<ShoeWithKm[]>([]);
@@ -327,6 +330,18 @@ export function OutdoorTab() {
     }
   }, [tracking, guided, guidedPos]);
 
+  // Haptic route nudge — off by default, only meaningful with a generated
+  // loop on screen. One buzz per excursion (published 50 m / 25 m
+  // hysteresis in the engine); GPS keeps recording either way.
+  useEffect(() => {
+    if (!tracking || !routeNudge || !loop || mode.kind !== 'tracking') return;
+    const d = distanceToRouteM({ lat: mode.last.lat, lng: mode.last.lng }, loop.points);
+    if (stepDeviation(deviationRef.current, d)) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracking, routeNudge, loop, mode]);
+
   return (
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {tracking ? <KeepAwakeWhileTracking /> : null}
@@ -395,7 +410,19 @@ export function OutdoorTab() {
                   {`${(loop.lengthM / 1000).toFixed(2)} km loop — you asked for ${(loop.requestedM / 1000).toFixed(0)} km`}
                 </Text>
                 <SrcNote>{loop.note}</SrcNote>
-                <Pressable onPress={() => setLoop(null)}>
+                <Pressable
+                  onPress={() => {
+                    deviationRef.current = { off: false };
+                    setRouteNudge(!routeNudge);
+                  }}
+                >
+                  <Text style={styles.shareLink}>
+                    {routeNudge
+                      ? `ROUTE NUDGE ON — ONE BUZZ WHEN >${DEVIATION_ALERT_M} M OFF THIS LOOP · TAP TO TURN OFF`
+                      : `ROUTE NUDGE OFF · TAP TO BUZZ WHEN >${DEVIATION_ALERT_M} M OFF THIS LOOP`}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => { setLoop(null); setRouteNudge(false); }}>
                   <Text style={styles.shareLink}>DISMISS</Text>
                 </Pressable>
               </>

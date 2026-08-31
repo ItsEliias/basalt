@@ -30,3 +30,4 @@ export * from './race-plans';
 export * from './race-plans-service';
 export * from './shoes';
 export * from './weekly-volume';
+export * from './route-deviation';
