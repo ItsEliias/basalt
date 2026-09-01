@@ -33,3 +33,4 @@ export * from './weekly-volume';
 export * from './route-deviation';
 export * from './training-max';
 export * from './tempo';
+export * from './tile-cache';

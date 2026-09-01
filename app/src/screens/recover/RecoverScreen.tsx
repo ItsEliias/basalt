@@ -15,6 +15,7 @@ import { runHealthSync } from '../../lib/healthSync';
 import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, napCreditLine, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
 import { ProgressPhotosCard } from './ProgressPhotos';
 import { CycleCard } from './CycleCard';
+import { PpgDebugSheet } from './PpgDebugSheet';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
   FASTING_DISCLAIMER, type Fast,
@@ -64,6 +65,7 @@ function VitalsTab() {
   const [sleepNeed, setSleepNeed] = useState<SleepNeedReport | null>(null);
   const [needMathOpen, setNeedMathOpen] = useState(false);
   const [deviation, setDeviation] = useState<DeviationReport | null>(null);
+  const [ppgOpen, setPpgOpen] = useState(false);
 
   useEffect(() => {
     if (!fastingEnabled) return;
@@ -431,6 +433,14 @@ function VitalsTab() {
       {/* ── Cycle — opt-in, facts vs labelled estimates ────────────── */}
       <CycleCard />
 
+      {/* ── Camera-HRV tuning bench — dev builds only for now ──────── */}
+      {__DEV__ ? (
+        <Pressable onPress={() => setPpgOpen(true)} hitSlop={8}>
+          <Text style={styles.devLink}>CAMERA HRV — TUNING BENCH (DEV)</Text>
+        </Pressable>
+      ) : null}
+      <PpgDebugSheet open={ppgOpen} onClose={() => setPpgOpen(false)} />
+
       {/* ── Vitals tiles — real-or-hidden ──────────────────────────── */}
       <TileGrid>
         {vitals?.hrv != null ? (
@@ -700,6 +710,7 @@ const styles = StyleSheet.create({
   pacerLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.98, color: color.ink2 },
   pacerCount: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 18, letterSpacing: 1 },
   needLine: { fontSize: 14, color: color.ink, lineHeight: 21, marginTop: 4 },
+  devLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
   debtLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, color: color.mute, marginTop: 6 },
   protocolTap: { marginTop: 4 },
 });

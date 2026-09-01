@@ -49,6 +49,7 @@ const BASALT_TABLES = [
   'basalt_race_plans',
   'basalt_shoes',
   'basalt_cycle_entries',
+  'basalt_ppg_calibration',
   'basalt_pair_days',
 ];
 
