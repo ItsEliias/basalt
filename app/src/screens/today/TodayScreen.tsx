@@ -15,7 +15,7 @@ import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
-import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles,
+import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
@@ -126,6 +126,7 @@ export function TodayScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const [microWallOpen, setMicroWallOpen] = useState(false);
   // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
   const layout = profile?.todayLayout ?? 'ledger';
 
@@ -406,13 +407,27 @@ export function TodayScreen() {
       {/* ── Micronutrients — only with source data ─────────────────── */}
       {micros.length > 0 && !hidden.has('micros') ? (
         <Card>
-          <ReceiptHeader label="Micronutrients" summary="from logged foods" />
+          <Pressable onPress={() => setMicroWallOpen(!microWallOpen)} hitSlop={8}>
+            <ReceiptHeader
+              label="Micronutrients"
+              summary={microWallOpen ? 'every sourced nutrient · tap to fold' : `from logged foods · tap for all ${micros.length}`}
+            />
+          </Pressable>
           <View style={{ marginTop: 8 }}>
-            {micros.slice(0, 8).map((m) => (
-              <MicroRow key={m.name} name={m.name} pct={m.pct} />
-            ))}
+            {!microWallOpen
+              ? micros.slice(0, 8).map((m) => <MicroRow key={m.name} name={m.name} pct={m.pct} />)
+              : microDetail(data?.entries ?? []).map((m) => (
+                  <View key={m.name}>
+                    <MicroRow name={m.name} pct={m.pct} />
+                    <Text style={styles.microMeta}>
+                      {(m.amount !== null && m.unit ? `${m.amount} ${m.unit} · ` : '') +
+                        `${m.fromEntries} ${m.fromEntries === 1 ? 'entry' : 'entries'} carried source data` +
+                        (m.amount === null ? ' · amounts in mixed units — % only' : '')}
+                    </Text>
+                  </View>
+                ))}
           </View>
-          <SrcNote>Only nutrients with source data are shown — no estimates presented as fact</SrcNote>
+          <SrcNote>Only nutrients with source data are shown — no estimates presented as fact · an absent nutrient means absent data, never zero</SrcNote>
         </Card>
       ) : null}
 
@@ -456,6 +471,7 @@ export function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  microMeta: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.4, color: color.faint, marginTop: -2, marginBottom: 6 },
   scroll: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   targetRatio: { fontFamily: mono, fontSize: 12, color: color.ink2 },

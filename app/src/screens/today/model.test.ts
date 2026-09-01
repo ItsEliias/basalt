@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupEntriesByMeal, heroModel, sessionMeta, microTotals, entryMeta, todayTileSpecs, filterTiles, sectionForTile, HIDEABLE_SECTIONS,
+import { groupEntriesByMeal, heroModel, sessionMeta, microTotals, entryMeta, todayTileSpecs, filterTiles, sectionForTile, HIDEABLE_SECTIONS, microDetail,
 } from './model';
 import type { FoodEntryRow } from '@basalt/nutrition';
 import type { TargetsRecord } from '@basalt/core-data';
@@ -188,5 +188,36 @@ describe('tile hide/show — omission only', () => {
 
   it('the registry never contains the hero', () => {
     expect(HIDEABLE_SECTIONS.map((s2) => s2.key as string)).not.toContain('energy');
+  });
+});
+
+describe('microDetail — the full wall, real-or-hidden per nutrient', () => {
+  const entry = (micros: any) => ({ micros } as any);
+
+  it('sums amounts only while units agree; disagreement keeps pct, drops amount', () => {
+    const d = microDetail([
+      entry({ Iron: { amount: 4, unit: 'mg', pctTarget: 22 } }),
+      entry({ Iron: { amount: 2.5, unit: 'mg', pctTarget: 14 } }),
+      entry({ 'Vitamin D': { amount: 5, unit: 'µg', pctTarget: 25 } }),
+      entry({ 'Vitamin D': { amount: 200, unit: 'IU', pctTarget: 25 } }),
+    ]);
+    const iron = d.find((x) => x.name === 'Iron')!;
+    expect(iron).toEqual({ name: 'Iron', pct: 36, amount: 6.5, unit: 'mg', fromEntries: 2 });
+    const vd = d.find((x) => x.name === 'Vitamin D')!;
+    expect(vd.pct).toBe(50);
+    expect(vd.amount).toBeNull();
+    expect(vd.unit).toBeNull();
+  });
+
+  it('a nutrient with no source data is simply not a row', () => {
+    expect(microDetail([entry(null), entry({ Zinc: { pctTarget: 10 } })]).map((x) => x.name)).toEqual(['Zinc']);
+  });
+
+  it('sorts by coverage, never pads with zeros', () => {
+    const d = microDetail([
+      entry({ A: { pctTarget: 5 }, B: { pctTarget: 80 } }),
+    ]);
+    expect(d.map((x) => x.name)).toEqual(['B', 'A']);
+    expect(d.some((x) => x.pct === 0)).toBe(false);
   });
 });
