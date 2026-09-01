@@ -14,6 +14,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { WalkMap } from './WalkMap';
+import { fetchWeatherLine, WEATHER_ATTRIBUTION } from '../../lib/weather';
 import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
 import * as Speech from 'expo-speech';
 import { Share } from 'react-native';
@@ -64,6 +65,7 @@ export function OutdoorTab() {
   const [shoes, setShoes] = useState<ShoeWithKm[]>([]);
   const [activeShoeId, setActiveShoeId] = useState<string | null>(null);
   const [newShoe, setNewShoe] = useState('');
+  const [weather, setWeather] = useState<string | null>(null);
   const guidedLastIndex = useRef(-1);
   const guidedDone = useRef(false);
   const [beacon, setBeacon] = useState<{ id: string; expiresAt: string } | null>(null);
@@ -169,6 +171,7 @@ export function OutdoorTab() {
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+      void fetchWeatherLine(pos.coords.latitude, pos.coords.longitude).then(setWeather);
       setMode({
         kind: 'ready',
         last: {
@@ -463,6 +466,12 @@ export function OutdoorTab() {
         {mode.kind === 'ready' ? (
           <>
             <ReceiptHeader label="Ready" summary={`GPS ±${Math.round(mode.last.accuracy)} m`} />
+            {weather ? (
+              <>
+                <Text style={styles.weatherLine}>{weather}</Text>
+                <SrcNote>{WEATHER_ATTRIBUTION}</SrcNote>
+              </>
+            ) : null}
             <CTA label="Start walk" onPress={() => void start()} />
           </>
         ) : null}
@@ -689,6 +698,7 @@ const styles = StyleSheet.create({
   shoeAddRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   glanceBlock: { paddingVertical: 10, gap: 6 },
   glanceValue: { fontFamily: mono, fontSize: 40, letterSpacing: 0.5, color: color.ink, fontVariant: ['tabular-nums'] },
+  weatherLine: { fontFamily: mono, fontSize: 12, letterSpacing: 0.6, color: color.ink2, paddingVertical: 6 },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
   loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
   loopChip: {
