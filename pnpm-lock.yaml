@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  react-native-vision-camera@4.7.3:
+    hash: 2f0415e0781ebaa263ad77e66d1406eda06073f5bb3718fa79d939537e2ff3cd
+    path: patches/react-native-vision-camera@4.7.3.patch
+
 importers:
 
   .:
@@ -199,8 +204,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-vision-camera:
-        specifier: 4.7.2
-        version: 4.7.2(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+        specifier: 4.7.3
+        version: 4.7.3(patch_hash=2f0415e0781ebaa263ad77e66d1406eda06073f5bb3718fa79d939537e2ff3cd)(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-worklets-core:
         specifier: 1.6.3
         version: 1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -2852,8 +2857,8 @@ packages:
       react: '>=18.0.0'
       react-native: '>=0.76.0'
 
-  react-native-vision-camera@4.7.2:
-    resolution: {integrity: sha512-C+5PvlSunN6I4aYplSask+v3jfhgduZumIVw6H6lG+Afpf8boIcG3uFSsSfVgj+hxI7fx6qM6bsciEhzgxEUYg==}
+  react-native-vision-camera@4.7.3:
+    resolution: {integrity: sha512-g1/neOyjSqn1kaAa2FxI/qp5KzNvPcF0bnQw6NntfbxH6tm0+8WFZszlgb5OV+iYlB6lFUztCbDtyz5IpL47OA==}
     peerDependencies:
       '@shopify/react-native-skia': '*'
       react: '*'
@@ -6451,7 +6456,7 @@ snapshots:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
 
-  react-native-vision-camera@4.7.2(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+  react-native-vision-camera@4.7.3(patch_hash=2f0415e0781ebaa263ad77e66d1406eda06073f5bb3718fa79d939537e2ff3cd)(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)

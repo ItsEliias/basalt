@@ -5,3 +5,5 @@ packages:
 # pnpm v10 blocks postinstall scripts by default; esbuild backs vitest.
 onlyBuiltDependencies:
   - esbuild
+patchedDependencies:
+  react-native-vision-camera@4.7.3: patches/react-native-vision-camera@4.7.3.patch
