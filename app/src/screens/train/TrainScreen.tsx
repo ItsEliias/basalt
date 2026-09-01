@@ -441,6 +441,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
       {ex.suggestion ? (
         <Text style={styles.suggestion}>
           {suggestionText(ex.suggestion)}
+          {ex.tmLine ? ` · ${ex.tmLine} (TM = 90% of your best e1RM, moves only by full 2.5 kg steps)` : ''}
           {ex.suggestion.kind !== 'first_time' ? ' · a suggestion, never a mandate' : ''}
         </Text>
       ) : null}

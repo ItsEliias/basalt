@@ -6,7 +6,7 @@ import {
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
   collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
   removeSessionExercise, startSessionFromTemplate, getExerciseById,
-  getActiveProgram, periodize, phaseFor, weekIndexFor,
+  getActiveProgram, periodize, phaseFor, weekIndexFor, trainingMax, prescribeFromTm,
   type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange, type TimerMode,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent, type Program,
 } from '@basalt/training';
@@ -36,6 +36,8 @@ export type SessionExerciseState = {
   supersetGroup: number | null;
   /** Best e1RM across ALL prior history for the quiet PR mark. */
   historyBestE1rm: number | null;
+  /** "72.5 kg = 85% of TM 85 kg" — the %TM expression of the same suggestion. */
+  tmLine: string | null;
   /** Timed exercises carry a guided timer instead of a reps table. */
   timed: boolean;
   guided: GuidedState | null;
@@ -327,6 +329,12 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           restSeconds: (prev.ok && prev.data?.restSeconds) || 120,
           supersetGroup: null,
           historyBestE1rm: history.bestE1rm,
+          tmLine: (() => {
+            const tm = trainingMax(history.bestE1rm);
+            if (tm === null || !program || !suggestion || timed || suggestion.kind === 'first_time') return null;
+            const ph = phaseFor(weekIndexFor(program.startedOn, new Date()));
+            return prescribeFromTm(tm, ph.phase, ph.weekInPhase).mathLine;
+          })(),
           repPrs: history.repPrs,
           timed,
           guided: timed ? createGuidedTimer({ leadInS: 10, workS: 50, restS: 20, sets: 4 }) : null,
