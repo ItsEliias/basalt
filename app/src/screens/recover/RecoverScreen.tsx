@@ -594,7 +594,7 @@ function MindTab() {
             <Text style={styles.pacerLabel}>{running ? phase.label.toUpperCase() : 'READY'}</Text>
           </View>
           <Text style={styles.pacerCount}>
-            {running ? `${phase.remaining} · FOLLOW THE RING` : `${cycleSeconds(protocol)} S CYCLE`}
+            {running ? `${phase.remaining} · FOLLOW THE SQUARE` : `${cycleSeconds(protocol)} S CYCLE`}
           </Text>
           {/* Running-state invariant: a glance must show the session is
               progressing, not just which phase it's in. */}
@@ -603,7 +603,7 @@ function MindTab() {
           ) : null}
         </View>
         <ChipRow
-          options={['5 min', '10 min', '15 min', '20 min']}
+          options={['1 min', '2 min', '3 min', '4 min', '5 min']}
           value={`${minutes} min`}
           onChange={(v) => setMinutes(parseInt(v, 10))}
         />
@@ -686,14 +686,16 @@ const styles = StyleSheet.create({
   weightRateFaint: { fontFamily: mono, fontSize: 11, color: color.faint },
   pacer: { alignItems: 'center', paddingVertical: 26 },
   pacerRing: {
-    width: 150, height: 150, borderRadius: 75,
+    width: 150, height: 150, borderRadius: 2,
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2,
     alignItems: 'center', justifyContent: 'center',
   },
   pacerFill: {
-    position: 'absolute', width: 150, height: 150, borderRadius: 75,
+    // A scaling SQUARE with a hairline-adjacent stroke — the contract-legal
+    // pacer shape (no rings, no glow; spec §6 + the V3.1 item-2 brief).
+    position: 'absolute', width: 150, height: 150, borderRadius: 2,
     backgroundColor: 'rgba(94,114,228,.10)',
-    borderWidth: 1.5, borderColor: color.recovery,
+    borderWidth: 1, borderColor: color.recovery,
   },
   pacerLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.98, color: color.ink2 },
   pacerCount: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 18, letterSpacing: 1 },

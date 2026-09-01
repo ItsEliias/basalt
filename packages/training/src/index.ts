@@ -32,3 +32,4 @@ export * from './shoes';
 export * from './weekly-volume';
 export * from './route-deviation';
 export * from './training-max';
+export * from './tempo';
