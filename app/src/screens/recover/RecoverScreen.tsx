@@ -16,6 +16,7 @@ import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed,
 import { ProgressPhotosCard } from './ProgressPhotos';
 import { CycleCard } from './CycleCard';
 import { PpgDebugSheet } from './PpgDebugSheet';
+import { MobilityCard } from './MobilityCard';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
   FASTING_DISCLAIMER, type Fast,
@@ -645,6 +646,9 @@ function MindTab() {
           <SrcNote>This protocol holds the breath — not while driving, standing, or in water; stop if dizzy</SrcNote>
         ) : null}
       </Card>
+
+      {/* ── Mobility — three routines, assessment reorders only ────── */}
+      <MobilityCard />
 
       <Card>
         <ReceiptHeader
