@@ -31,3 +31,7 @@ export * from './race-plans-service';
 export * from './shoes';
 export * from './weekly-volume';
 export * from './route-deviation';
+export * from './training-max';
+export * from './tempo';
+export * from './tile-cache';
+export * from './mobility';

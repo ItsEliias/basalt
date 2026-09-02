@@ -14,6 +14,10 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { WalkMap } from './WalkMap';
+import { fetchWeatherLine, WEATHER_ATTRIBUTION } from '../../lib/weather';
+import { cacheRouteTiles, getRouteCacheInfo, deleteRoutePack, offlineTilesAvailable, type RouteCacheInfo } from '../../lib/tileCache';
+import { tileCachePolicyNote, mbText } from '@basalt/training';
+import { WALK_TILES } from '../../lib/tileCache';
 import { ShareSheet, WalkShareCard } from '../../components/ShareCards';
 import * as Speech from 'expo-speech';
 import { Share } from 'react-native';
@@ -64,6 +68,8 @@ export function OutdoorTab() {
   const [shoes, setShoes] = useState<ShoeWithKm[]>([]);
   const [activeShoeId, setActiveShoeId] = useState<string | null>(null);
   const [newShoe, setNewShoe] = useState('');
+  const [weather, setWeather] = useState<string | null>(null);
+  const [cacheInfo, setCacheInfo] = useState<Map<string, RouteCacheInfo>>(new Map());
   const guidedLastIndex = useRef(-1);
   const guidedDone = useRef(false);
   const [beacon, setBeacon] = useState<{ id: string; expiresAt: string } | null>(null);
@@ -140,7 +146,15 @@ export function OutdoorTab() {
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadRecent = useCallback(() => {
-    void listRecentWalks(supabase, 8).then((r) => r.ok && setRecent(r.data));
+    void listRecentWalks(supabase, 8).then((r) => {
+      if (!r.ok) return;
+      setRecent(r.data);
+      for (const w of r.data) {
+        void getRouteCacheInfo(w.id).then((info) =>
+          setCacheInfo((m) => new Map(m).set(w.id, info)),
+        );
+      }
+    });
   }, []);
   useEffect(() => loadRecent(), [loadRecent]);
 
@@ -169,6 +183,7 @@ export function OutdoorTab() {
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+      void fetchWeatherLine(pos.coords.latitude, pos.coords.longitude).then(setWeather);
       setMode({
         kind: 'ready',
         last: {
@@ -256,6 +271,13 @@ export function OutdoorTab() {
       shoeId: activeShoeId,
     });
     loadShoes();
+    // Offline corridor tiles — cached on save when the provider allows it
+    // (Stadia key configured); the dev tiles refuse and the srcnote says so.
+    if (saved.ok && offlineTilesAvailable()) {
+      void cacheRouteTiles(saved.data.id, s.simplified).then((info) =>
+        setCacheInfo((m) => new Map(m).set(saved.data.id, info)),
+      );
+    }
 
     setMode({
       kind: 'summary',
@@ -463,6 +485,12 @@ export function OutdoorTab() {
         {mode.kind === 'ready' ? (
           <>
             <ReceiptHeader label="Ready" summary={`GPS ±${Math.round(mode.last.accuracy)} m`} />
+            {weather ? (
+              <>
+                <Text style={styles.weatherLine}>{weather}</Text>
+                <SrcNote>{WEATHER_ATTRIBUTION}</SrcNote>
+              </>
+            ) : null}
             <CTA label="Start walk" onPress={() => void start()} />
           </>
         ) : null}
@@ -625,6 +653,34 @@ export function OutdoorTab() {
               {openWalkId === w.id && w.route ? (
                 <>
                   <WalkMap route={w.route} height={170} />
+                  {(() => {
+                    const info = cacheInfo.get(w.id) ?? { state: 'none' as const };
+                    if (!offlineTilesAvailable()) {
+                      return <SrcNote>{tileCachePolicyNote(WALK_TILES.url)}</SrcNote>;
+                    }
+                    if (info.state === 'cached') {
+                      return (
+                        <Pressable onPress={() => void deleteRoutePack(w.id).then(loadRecent)} hitSlop={8}>
+                          <SrcNote>{`Offline tiles cached for this route · ${mbText(info.bytes)} · tap to remove`}</SrcNote>
+                        </Pressable>
+                      );
+                    }
+                    if (info.state === 'downloading') return <SrcNote>Caching offline tiles for this route…</SrcNote>;
+                    if (info.state === 'refused') return <SrcNote>{`Offline tiles not cached — ${info.reason}`}</SrcNote>;
+                    return (
+                      <Pressable
+                        onPress={() => {
+                          setCacheInfo((m) => new Map(m).set(w.id, { state: 'downloading' }));
+                          void cacheRouteTiles(w.id, w.route!).then((res) =>
+                            setCacheInfo((m) => new Map(m).set(w.id, res)),
+                          );
+                        }}
+                        hitSlop={8}
+                      >
+                        <SrcNote>{`No offline tiles for this route · tap to cache (≤40 MB, zooms 13–15) · ${tileCachePolicyNote(WALK_TILES.url)}`}</SrcNote>
+                      </Pressable>
+                    );
+                  })()}
                   <Pressable onPress={() => setShareWalk(w)}>
                     <Text style={styles.shareLink}>SHARE AS IMAGE →</Text>
                   </Pressable>
@@ -689,6 +745,7 @@ const styles = StyleSheet.create({
   shoeAddRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   glanceBlock: { paddingVertical: 10, gap: 6 },
   glanceValue: { fontFamily: mono, fontSize: 40, letterSpacing: 0.5, color: color.ink, fontVariant: ['tabular-nums'] },
+  weatherLine: { fontFamily: mono, fontSize: 12, letterSpacing: 0.6, color: color.ink2, paddingVertical: 6 },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
   loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
   loopChip: {

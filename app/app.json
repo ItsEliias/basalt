@@ -103,6 +103,13 @@
           "isBackgroundEnabled": false,
           "bluetoothAlwaysPermission": "Basalt uses Bluetooth to read weigh-ins from your smart scale — only when you ask it to."
         }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Basalt uses the camera to scan barcodes, estimate meals from photos, and (if you choose) measure HRV with your fingertip over the lens.",
+          "enableMicrophonePermission": false
+        }
       ]
     ]
   }

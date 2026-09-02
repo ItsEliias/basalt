@@ -381,6 +381,13 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
             { value: `${ex.guided.config.leadInS} s`, label: 'lead-in' },
           ]}
         />
+        <Pressable onPress={() => session.toggleTempo(ex.sessionExerciseId)} hitSlop={8}>
+          <Text style={styles.timedLink}>
+            {ex.tempoOn
+              ? 'TEMPO 3-1-1 ON — HAPTIC BEATS DURING WORK · TAP TO TURN OFF'
+              : 'TEMPO 3-1-1 OFF · TAP FOR HAPTIC BEATS DURING WORK'}
+          </Text>
+        </Pressable>
         {(ex.guided.phase === 'idle' || ex.guided.phase === 'finished') ? (
           <ChipRow
             options={['Custom', 'EMOM', 'Tabata', 'Circuit']}
@@ -441,6 +448,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
       {ex.suggestion ? (
         <Text style={styles.suggestion}>
           {suggestionText(ex.suggestion)}
+          {ex.tmLine ? ` · ${ex.tmLine} (TM = 90% of your best e1RM, moves only by full 2.5 kg steps)` : ''}
           {ex.suggestion.kind !== 'first_time' ? ' · a suggestion, never a mandate' : ''}
         </Text>
       ) : null}

@@ -13,12 +13,18 @@
 //     surplus nights repay debt; you cannot bank sleep below zero debt.
 //   · Nights with no persisted sleep are ABSENT from the sums (absence is
 //     not zero sleep); the debt line names how many nights it could see.
+//   · Nap credit (V3.1): a day's LONGEST session is the night; additional
+//     sessions up to 3 h are naps and CREDIT the day's slept total; extra
+//     sessions longer than 3 h merge into the night (split sleep). The
+//     nightly-need median is computed from NIGHTS ONLY — naps repay debt,
+//     they never shrink what a night is expected to be.
 //
 // Sleep stages are display-only by product law (spec §5 amendment №5):
 // nothing in this module reads stages, and nothing ever may.
 
 export const SLEEP_NEED_RULES = {
   defaultNeedMin: 480,
+  napMaxMin: 180,
   minNightsForPersonal: 14,
   personalWindowNights: 28,
   clampMin: 420,
@@ -61,6 +67,23 @@ export function personalSleepNeed(recentNightsMin: number[]): SleepNeed {
   };
 }
 
+/**
+ * Split one day's sessions into night vs nap minutes. Longest session =
+ * the night; additional sessions ≤ napMaxMin are naps; longer extras
+ * merge into the night (split sleep).
+ */
+export function classifyDaySleep(sessionMins: number[]): { nightMin: number; napMin: number } {
+  const real = sessionMins.filter((m) => m > 0).sort((a, b) => b - a);
+  if (real.length === 0) return { nightMin: 0, napMin: 0 };
+  let nightMin = real[0]!;
+  let napMin = 0;
+  for (const m of real.slice(1)) {
+    if (m <= SLEEP_NEED_RULES.napMaxMin) napMin += m;
+    else nightMin += m;
+  }
+  return { nightMin: Math.round(nightMin), napMin: Math.round(napMin) };
+}
+
 /** Strain adjustment for one night: heavy prior day → +30 min need. */
 export function strainAdjustedNeed(
   baseNeedMin: number,
@@ -97,9 +120,15 @@ export function sleepDebt(nights: { sleptMin: number; needMin: number }[]): Slee
   };
 }
 
-/** "You got 6:50 of the 8:10 your body needed." */
-export function lastNightLine(sleptMin: number, needMin: number): string {
-  return `You got ${hm(sleptMin)} of the ${hm(needMin)} your body needed`;
+/** "You got 6:50 of the 8:10 your body needed." (+ the nap credit, stated) */
+export function lastNightLine(sleptMin: number, needMin: number, napMin = 0): string {
+  const base = `You got ${hm(sleptMin)} of the ${hm(needMin)} your body needed`;
+  return napMin > 0 ? `${base} — nap ${hm(napMin)} credited` : base;
+}
+
+/** "need 7:50 − nap 0:40 = 7:10 remaining" — the math-sheet nap row. */
+export function napCreditLine(needMin: number, napMin: number): string {
+  return `need ${hm(needMin)} − nap ${hm(napMin)} = ${hm(Math.max(0, needMin - napMin))} remaining`;
 }
 
 export function debtLine(debt: SleepDebt): string {

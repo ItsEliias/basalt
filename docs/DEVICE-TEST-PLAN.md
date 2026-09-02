@@ -135,3 +135,40 @@ Legend: each line is a checkbox; note failures inline with device + Android vers
 - [ ] Vitals-deviation card only when ≥2 vitals sit outside their 30-day range (hard to
       stage honestly — verify absence on a normal day)
 - [ ] Monthly notification (1st, 18:00 — or reschedule device clock) opens Trends
+
+## Appendix — V3.1 morning batch (2026-09-01). Needs the vision-camera rebuild
+(one new native pair: `react-native-vision-camera` + `react-native-worklets-core`).
+
+### 19 · Breathing pacer + tempo metronome
+- [ ] Pacer is a SQUARE (no circle anywhere), scales with breath, haptic on each phase change
+- [ ] Session lengths 1–5 min; running state shows elapsed-of-total; logs with the pattern named
+- [ ] 4-7-8 and box show the breath-hold caution srcnote
+- [ ] Tempo 3-1-1 toggle on a timed exercise: heavy/light/medium beats during WORK only;
+      survives app restart per-exercise; a screen-off catch-up never machine-guns haptics
+
+### 20 · Sleep card additions
+- [ ] Nap day: "need X − nap Y = Z remaining" math row; nap credited in the debt but the
+      need median unchanged
+- [ ] Bedtime window line appears once 14 nights + 7 wakes exist; formula in the math sheet
+- [ ] "Bedtime varies ±X min" line with the MAD math; a midnight-crossing week isn't ±700
+
+### 21 · Weather + formulas page
+- [ ] Check GPS → weather line + Open-Meteo srcnote; airplane mode → no line, no crash
+- [ ] basalt.itseliias.com/formulas renders on the phone; spot-check three numbers against the app
+
+### 22 · Camera HRV bench (H1)
+- [ ] Waveform shows a pulse within ~5 s of a good finger placement
+- [ ] Clean seated read: PASS with plausible RMSSD; log against watch → Δ in the table
+- [ ] Deliberate bad reads (pressure/movement/standing) → DISCARDED with named reasons
+- [ ] Mean |Δ| over ≥3 clean pairs decides ship-on vs ship-off-behind-flag
+
+### 23 · Offline tiles (H2)
+- [ ] CARTO (no key): walk map shows the caching-off srcnote; airplane mode → route line only
+- [ ] With a Stadia key in .env: cache a route (MB shown ≤40), airplane mode → tiles render
+      along the corridor; blank outside it; tap-to-remove works
+
+### 24 · Mobility (H3)
+- [ ] Three routines run end-to-end; totals match their names exactly
+- [ ] Haptic at every transition/hold change; usable fully silent, screen stays awake
+- [ ] Bilateral stretches do both sides; transitions never under 10 s
+- [ ] Assessment reorders stretch order only; completed routine logs; partial never logs

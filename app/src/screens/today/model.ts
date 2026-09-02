@@ -213,6 +213,52 @@ export function microTotals(entries: FoodEntryRow[]): MicroTotal[] {
     .sort((a, b) => b.pct - a.pct);
 }
 
+// Micronutrient DETAIL (V3.1 stretch) — the full wall behind the top-8
+// card. Same law, more rows: a nutrient exists only where source data
+// exists; amounts sum only when every contributing entry agrees on the
+// unit — mixed units keep the %-of-target and omit the amount rather
+// than inventing a conversion.
+export type MicroDetail = {
+  name: string;
+  pct: number;
+  /** Summed amount + unit — null when contributing units disagree. */
+  amount: number | null;
+  unit: string | null;
+  /** How many of the day's entries carried source data for this nutrient. */
+  fromEntries: number;
+};
+
+export function microDetail(entries: FoodEntryRow[]): MicroDetail[] {
+  const acc = new Map<string, { pct: number; amount: number; unit: string | null; mixed: boolean; n: number }>();
+  for (const e of entries) {
+    if (!e.micros) continue;
+    for (const [name, v] of Object.entries(e.micros)) {
+      if (typeof v?.pctTarget !== 'number' || !isFinite(v.pctTarget)) continue;
+      const cur = acc.get(name) ?? { pct: 0, amount: 0, unit: null, mixed: false, n: 0 };
+      cur.pct += v.pctTarget;
+      cur.n += 1;
+      if (typeof v.amount === 'number' && isFinite(v.amount) && v.unit) {
+        if (cur.unit === null && !cur.mixed) cur.unit = v.unit;
+        if (cur.unit === v.unit) cur.amount += v.amount;
+        else { cur.mixed = true; cur.unit = null; }
+      } else {
+        cur.mixed = true;
+        cur.unit = null;
+      }
+      acc.set(name, cur);
+    }
+  }
+  return Array.from(acc.entries())
+    .map(([name, c]) => ({
+      name,
+      pct: Math.round(c.pct),
+      amount: c.mixed || c.unit === null ? null : Math.round(c.amount * 10) / 10,
+      unit: c.mixed ? null : c.unit,
+      fromEntries: c.n,
+    }))
+    .sort((a, b) => b.pct - a.pct);
+}
+
 // ── Tile hide/show (V3 Phase 5) ─────────────────────────────────────
 // Hiding is OMISSION: a hidden section renders nothing at all — never a
 // ghost, never a locked placeholder. The energy hero is the day's anchor

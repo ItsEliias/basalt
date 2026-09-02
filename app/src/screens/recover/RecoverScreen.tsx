@@ -12,9 +12,11 @@ import { healthService, labelForPackage, type SleepSessionSummary } from '@basal
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
+import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, napCreditLine, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
 import { ProgressPhotosCard } from './ProgressPhotos';
 import { CycleCard } from './CycleCard';
+import { PpgDebugSheet } from './PpgDebugSheet';
+import { MobilityCard } from './MobilityCard';
 import {
   getActiveFast, startFast, endFast, listRecentFasts, stageFor, fastElapsed,
   FASTING_DISCLAIMER, type Fast,
@@ -64,6 +66,7 @@ function VitalsTab() {
   const [sleepNeed, setSleepNeed] = useState<SleepNeedReport | null>(null);
   const [needMathOpen, setNeedMathOpen] = useState(false);
   const [deviation, setDeviation] = useState<DeviationReport | null>(null);
+  const [ppgOpen, setPpgOpen] = useState(false);
 
   useEffect(() => {
     if (!fastingEnabled) return;
@@ -386,6 +389,12 @@ function VitalsTab() {
               <Text style={styles.needLine}>{sleepNeed.lastNight.line}</Text>
             ) : null}
             <Text style={styles.debtLine}>{sleepNeed.debtText}</Text>
+            {sleepNeed.window ? (
+              <Text style={styles.debtLine}>{sleepNeed.window.line}</Text>
+            ) : null}
+            {sleepNeed.consistency ? (
+              <Text style={styles.debtLine}>{sleepNeed.consistency.line}</Text>
+            ) : null}
           </Pressable>
           {needMathOpen ? (
             <>
@@ -399,7 +408,10 @@ function VitalsTab() {
                 <ReceiptRow
                   key={n.date}
                   name={n.date.slice(5)}
-                  meta={n.strained ? 'heavy prior day · +30 min need' : 'need per your median'}
+                  meta={[
+                    n.strained ? 'heavy prior day · +30 min need' : 'need per your median',
+                    n.napMin > 0 ? napCreditLine(n.needMin, n.napMin) : null,
+                  ].filter(Boolean).join(' · ')}
                   value={`${Math.floor(n.sleptMin / 60)}:${String(n.sleptMin % 60).padStart(2, '0')} / ${Math.floor(n.needMin / 60)}:${String(n.needMin % 60).padStart(2, '0')}`}
                   unit=""
                   last={i === arr.length - 1}
@@ -407,14 +419,28 @@ function VitalsTab() {
               ))}
             </>
           ) : null}
+          {needMathOpen && sleepNeed.window ? (
+            <SrcNote>{`${sleepNeed.window.formulaLine} · anchored to your own median wake (nothing in the ledger carries a clock time) · a suggestion, never an alarm`}</SrcNote>
+          ) : null}
+          {needMathOpen && sleepNeed.consistency ? (
+            <SrcNote>{sleepNeed.consistency.mathLine}</SrcNote>
+          ) : null}
           <SrcNote>
-            Need = median of your own recent nights (published default until 14 exist) · a P75-heavy training day adds 30 min · debt sums the last 14 nights, surplus repays · absent nights are absent, never zeros
+            Need = median of your own recent nights (published default until 14 exist) · a P75-heavy training day adds 30 min · naps up to 3 h credit the day, never the median · debt sums the last 14 nights, surplus repays · absent nights are absent, never zeros
           </SrcNote>
         </Card>
       ) : null}
 
       {/* ── Cycle — opt-in, facts vs labelled estimates ────────────── */}
       <CycleCard />
+
+      {/* ── Camera-HRV tuning bench — dev builds only for now ──────── */}
+      {__DEV__ ? (
+        <Pressable onPress={() => setPpgOpen(true)} hitSlop={8}>
+          <Text style={styles.devLink}>CAMERA HRV — TUNING BENCH (DEV)</Text>
+        </Pressable>
+      ) : null}
+      <PpgDebugSheet open={ppgOpen} onClose={() => setPpgOpen(false)} />
 
       {/* ── Vitals tiles — real-or-hidden ──────────────────────────── */}
       <TileGrid>
@@ -579,7 +605,7 @@ function MindTab() {
             <Text style={styles.pacerLabel}>{running ? phase.label.toUpperCase() : 'READY'}</Text>
           </View>
           <Text style={styles.pacerCount}>
-            {running ? `${phase.remaining} · FOLLOW THE RING` : `${cycleSeconds(protocol)} S CYCLE`}
+            {running ? `${phase.remaining} · FOLLOW THE SQUARE` : `${cycleSeconds(protocol)} S CYCLE`}
           </Text>
           {/* Running-state invariant: a glance must show the session is
               progressing, not just which phase it's in. */}
@@ -588,7 +614,7 @@ function MindTab() {
           ) : null}
         </View>
         <ChipRow
-          options={['5 min', '10 min', '15 min', '20 min']}
+          options={['1 min', '2 min', '3 min', '4 min', '5 min']}
           value={`${minutes} min`}
           onChange={(v) => setMinutes(parseInt(v, 10))}
         />
@@ -620,6 +646,9 @@ function MindTab() {
           <SrcNote>This protocol holds the breath — not while driving, standing, or in water; stop if dizzy</SrcNote>
         ) : null}
       </Card>
+
+      {/* ── Mobility — three routines, assessment reorders only ────── */}
+      <MobilityCard />
 
       <Card>
         <ReceiptHeader
@@ -671,18 +700,21 @@ const styles = StyleSheet.create({
   weightRateFaint: { fontFamily: mono, fontSize: 11, color: color.faint },
   pacer: { alignItems: 'center', paddingVertical: 26 },
   pacerRing: {
-    width: 150, height: 150, borderRadius: 75,
+    width: 150, height: 150, borderRadius: 2,
     borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2,
     alignItems: 'center', justifyContent: 'center',
   },
   pacerFill: {
-    position: 'absolute', width: 150, height: 150, borderRadius: 75,
+    // A scaling SQUARE with a hairline-adjacent stroke — the contract-legal
+    // pacer shape (no rings, no glow; spec §6 + the V3.1 item-2 brief).
+    position: 'absolute', width: 150, height: 150, borderRadius: 2,
     backgroundColor: 'rgba(94,114,228,.10)',
-    borderWidth: 1.5, borderColor: color.recovery,
+    borderWidth: 1, borderColor: color.recovery,
   },
   pacerLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.98, color: color.ink2 },
   pacerCount: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 18, letterSpacing: 1 },
   needLine: { fontSize: 14, color: color.ink, lineHeight: 21, marginTop: 4 },
+  devLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
   debtLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, color: color.mute, marginTop: 6 },
   protocolTap: { marginTop: 4 },
 });

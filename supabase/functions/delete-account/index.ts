@@ -27,6 +27,7 @@ const BASALT_TABLES = [
   'basalt_daily_logs',
   'basalt_hydration_logs',
   'basalt_mindfulness_sessions',
+  'basalt_mobility_sessions',
   'basalt_walks',
   'basalt_step_logs',
   'basalt_vitals',
@@ -49,6 +50,7 @@ const BASALT_TABLES = [
   'basalt_race_plans',
   'basalt_shoes',
   'basalt_cycle_entries',
+  'basalt_ppg_calibration',
   'basalt_pair_days',
 ];
 

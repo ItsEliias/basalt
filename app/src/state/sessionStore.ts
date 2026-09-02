@@ -6,11 +6,13 @@ import {
   createGuidedTimer, startGuidedTimer, stopGuidedTimer, tickMany as guidedTickMany,
   collapseSensory, describe as guidedDescribe, suggestNext, setExerciseFeedback, repPrMatrix,
   removeSessionExercise, startSessionFromTemplate, getExerciseById,
-  getActiveProgram, periodize, phaseFor, weekIndexFor,
+  getActiveProgram, periodize, phaseFor, weekIndexFor, trainingMax, prescribeFromTm,
+  tempoBeatAt, tempoText,
   type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange, type TimerMode,
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent, type Program,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // The active training session — lives in a store (not screen state) so
 // timers and typed values survive tab switches. One 1 Hz interval drives
@@ -36,6 +38,10 @@ export type SessionExerciseState = {
   supersetGroup: number | null;
   /** Best e1RM across ALL prior history for the quiet PR mark. */
   historyBestE1rm: number | null;
+  /** "72.5 kg = 85% of TM 85 kg" — the %TM expression of the same suggestion. */
+  tmLine: string | null;
+  /** Tempo metronome (V3.1): off by default, remembered per exercise. */
+  tempoOn: boolean;
   /** Timed exercises carry a guided timer instead of a reps table. */
   timed: boolean;
   guided: GuidedState | null;
@@ -82,6 +88,7 @@ type SessionState = {
   giveFeedback: (sessionExerciseId: string, feedback: ExerciseFeedback) => Promise<void>;
   /** Apply a confirmed Adapt proposal. Exercises with logged sets arrive as 'keep'. */
   applyAdapt: (changes: AdaptChange<Exercise>[]) => Promise<void>;
+  toggleTempo: (sessionExerciseId: string) => void;
 };
 
 let interval: ReturnType<typeof setInterval> | null = null;
@@ -327,7 +334,14 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
           restSeconds: (prev.ok && prev.data?.restSeconds) || 120,
           supersetGroup: null,
           historyBestE1rm: history.bestE1rm,
+          tmLine: (() => {
+            const tm = trainingMax(history.bestE1rm);
+            if (tm === null || !program || !suggestion || timed || suggestion.kind === 'first_time') return null;
+            const ph = phaseFor(weekIndexFor(program.startedOn, new Date()));
+            return prescribeFromTm(tm, ph.phase, ph.weekInPhase).mathLine;
+          })(),
           repPrs: history.repPrs,
+          tempoOn: (await AsyncStorage.getItem(`basalt.tempo:${exercise.id}`)) === 'on',
           timed,
           guided: timed ? createGuidedTimer({ leadInS: 10, workS: 50, restS: 20, sets: 4 }) : null,
           suggestion,
@@ -506,6 +520,18 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     }
   },
 
+  toggleTempo: (sessionExerciseId: string) => {
+    const ex = get().exercises.find((e) => e.sessionExerciseId === sessionExerciseId);
+    if (!ex) return;
+    const next = !ex.tempoOn;
+    set({
+      exercises: get().exercises.map((e) =>
+        e.sessionExerciseId === sessionExerciseId ? { ...e, tempoOn: next } : e,
+      ),
+    });
+    void AsyncStorage.setItem(`basalt.tempo:${ex.exercise.id}`, next ? 'on' : 'off');
+  },
+
   _tick: (elapsedS = 1) => {
     const s = get();
     // Rest timer.
@@ -526,6 +552,15 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
         if (!e.guided || e.guided.phase === 'idle' || e.guided.phase === 'finished') return e;
         const { state, events } = guidedTickMany(e.guided, elapsedS);
         applyGuidedEvents(elapsedS > 1 ? collapseSensory(events) : events, e);
+        // Tempo metronome — beats only during WORK, only at 1 Hz (a
+        // catch-up replays time, not a haptic burst), phase-boundary
+        // haptics distinct by direction: heavy down, light pause, medium up.
+        if (e.tempoOn && elapsedS === 1 && state.phase === 'work') {
+          const beat = tempoBeatAt(state.config.workS - state.remaining);
+          if (beat === 'down') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          else if (beat === 'pause') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          else if (beat === 'up') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
         return { ...e, guided: state };
       }),
     }));
