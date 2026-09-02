@@ -1,5 +1,5 @@
 import { PermissionsAndroid, Platform } from 'react-native';
-import notifee, { AndroidImportance } from '@notifee/react-native';
+import notifee, { AndroidImportance, AndroidForegroundServiceType } from '@notifee/react-native';
 import { setTimerServiceHooks } from '../state/sessionStore';
 import { acquireForegroundService, releaseForegroundService } from './foregroundServiceCoordinator';
 
@@ -66,6 +66,12 @@ async function showOrUpdate(label: string): Promise<void> {
       android: {
         channelId: CHANNEL_ID,
         asForegroundService: true,
+        // Explicit type, always: notifee otherwise starts the service with
+        // the manifest's UNION of declared types (health|location), and the
+        // location half demands location permission — the timer would crash
+        // the whole app for any user who declined location. Found live when
+        // the emulator (no location grant) died starting a set timer.
+        foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_HEALTH],
         ongoing: true,
         onlyAlertOnce: true,
         pressAction: { id: 'default' },
