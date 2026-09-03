@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   react-native-vision-camera@4.7.3:
-    hash: cec169001aabe015797e0cafa4304277c7ef703b2762a226267a168346f2f171
+    hash: ta3b5nlee54mehvlf5tdnlge7i
     path: patches/react-native-vision-camera@4.7.3.patch
 
 importers:
@@ -62,6 +62,9 @@ importers:
       '@expo-google-fonts/archivo-black':
         specifier: ^0.4.1
         version: 0.4.1
+      '@expo-google-fonts/baloo-2':
+        specifier: ^0.4.1
+        version: 0.4.2
       '@expo-google-fonts/barlow':
         specifier: ^0.4.1
         version: 0.4.1
@@ -71,18 +74,27 @@ importers:
       '@expo-google-fonts/cormorant-garamond':
         specifier: ^0.4.1
         version: 0.4.1
+      '@expo-google-fonts/fredoka':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo-google-fonts/ibm-plex-mono':
         specifier: ^0.4.1
         version: 0.4.1
       '@expo-google-fonts/jost':
         specifier: ^0.4.2
         version: 0.4.2
+      '@expo-google-fonts/lilita-one':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo-google-fonts/manrope':
         specifier: ^0.4.2
         version: 0.4.2
       '@expo-google-fonts/nunito':
         specifier: ^0.4.2
         version: 0.4.2
+      '@expo-google-fonts/poppins':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@maplibre/maplibre-react-native':
         specifier: ^11.3.6
         version: 11.3.6(@types/geojson@7946.0.16)(@types/react@19.2.18)(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -205,7 +217,7 @@ importers:
         version: 5.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-vision-camera:
         specifier: 4.7.3
-        version: 4.7.3(patch_hash=cec169001aabe015797e0cafa4304277c7ef703b2762a226267a168346f2f171)(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+        version: 4.7.3(patch_hash=ta3b5nlee54mehvlf5tdnlge7i)(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-worklets-core:
         specifier: 1.6.3
         version: 1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -1033,6 +1045,9 @@ packages:
   '@expo-google-fonts/archivo@0.4.2':
     resolution: {integrity: sha512-FLhI4/ZVIFSHHxx15Z7Rr4QX/4ZrJozEebBEFSdHSRRwULGCuSIpbb3dz56Hslux6LZEnJ1mVpZ6CyVpUzLwIg==}
 
+  '@expo-google-fonts/baloo-2@0.4.2':
+    resolution: {integrity: sha512-uvrw1I+sP72PY8xROJQ6CMiGHu9+WJCdi72Q+OiWpQ3sKsIRyIEXimDfgUnkk2vpWVej0JX9fLc87iDmjKE86A==}
+
   '@expo-google-fonts/barlow-condensed@0.4.1':
     resolution: {integrity: sha512-9yuXU1MpI4Dw/8rR4pj2EXcT4/31H5+DrrT47auF8IzD9r7SZPRoNVq8clRq7zxOTh7v1gJk3pBhydDVf2x/dA==}
 
@@ -1042,17 +1057,26 @@ packages:
   '@expo-google-fonts/cormorant-garamond@0.4.1':
     resolution: {integrity: sha512-e8J4Cn13K1txygamg50n3odLUsYP7Ck28XOGobMi7uDsWvFmp/jgK0qcALqJTlmi9NczSWUNdERxcLauHCBa/Q==}
 
+  '@expo-google-fonts/fredoka@0.4.1':
+    resolution: {integrity: sha512-px3uHDidG1RI7mMAjfKQktK9yZoVn/Uvqgp1G/Zkd6ZN9flXFxhUoPDRZdcCj2knFvkKmlvOx96SD3j4fxq7ig==}
+
   '@expo-google-fonts/ibm-plex-mono@0.4.1':
     resolution: {integrity: sha512-/yYz1mPZq8Nd4tSiH0SBDPEdJUqiOGBwVgSrQvLuw7SPh6C7ezBzmi6eFyHY4QaQwjHDmOLSBKsxzq8ZDFXVAg==}
 
   '@expo-google-fonts/jost@0.4.2':
     resolution: {integrity: sha512-3iFG70tU53VEt+SRz6ItDUH7S8xBv/m2NNfE3aVRfpZgdLus8HmE1Bjib9iAni/nr0hqT06pfL56ahHjCR6uiw==}
 
+  '@expo-google-fonts/lilita-one@0.4.1':
+    resolution: {integrity: sha512-/qkaTVWNivWLsdJvPUZ/XNr/azhKEUCE0OYrBZMj33ErtdHJCfuUh69XKm1FhoOTNVjNtyEvEUB0uerModvbEQ==}
+
   '@expo-google-fonts/manrope@0.4.2':
     resolution: {integrity: sha512-BZsKe8d9BJrVnIQIZcTS7/Kac0TbXnqs/+8EBSiQxrmK6GoCO6eTkmr50D1weIk/EoF20pTmAkpWICnovATr/g==}
 
   '@expo-google-fonts/nunito@0.4.2':
     resolution: {integrity: sha512-1KCWphw/I2ugqfs9iRHUCkPTnomNgGPtF4AvqVquoEKxr0EL+mcLNLgeixsslbaSFevRR6/KJAE3sc8g0VaY0Q==}
+
+  '@expo-google-fonts/poppins@0.4.1':
+    resolution: {integrity: sha512-LiX5oEryJqDt3UmWwr4oqf11hGMz/JEffkkNcZ3UtGwyoMFzXmBmTwcrAWrEttxypxmLNmPykDg+CY2VjKve9A==}
 
   '@expo/cli@56.1.24':
     resolution: {integrity: sha512-zWx4kHuZQrq1yz/uF6ADeXVvzG8N2gUj/Zf7eF6L8eALvEeX0uCBDmpdo5Yj/fY4sLo1N2VEH62StDRqnnSOxg==}
@@ -1454,42 +1478,36 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-musl@1.2.5':
     resolution: {integrity: sha512-xMvZgnbZg4YVnR/AX2b3oOPDTFYJvUVaJg5FedA/LuvexAtXibZQej4cnTkw3rjsJ/ggUROB64TdtETiim+FYA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-linux-ppc64-gnu@1.2.5':
     resolution: {integrity: sha512-GRjeqTUDHTo5GwntsLaAMcBahG3nlpjftXWZLN73HiYQlhwEowvarFgQnRnQZtIp4keXX7quXFbG38uPZBa2EA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.2.5':
     resolution: {integrity: sha512-vLNTR45F2Uwc8AufkNXPmB4VliaXs+FvcheEogIzOXzO4l+LzieXF5A/TWxLy5HtqpsRCHUfd0lPVrrdgXdLHQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.2.5':
     resolution: {integrity: sha512-Mgj59/HTuYeK9Gz2MA+mBWKnHsAgkBSec15ZMb1st3oIfFbX7gCjOae7GydHhzcyQi9Z/7M1QuN9bR3oFqF0jQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-musl@1.2.5':
     resolution: {integrity: sha512-mY8AP0/ichsbhAxGnLa3d3+MwV0EfgrPND2bplI3Ym8T6R2pJ0N87bvrKVwNXmdy3jnr6eQBecdqx/HMknBmpA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-openharmony-arm64@1.2.5':
     resolution: {integrity: sha512-8SLssA2oweAxyRgDp789ACfRb/3P+zNRJpzZxSizxF9m8NUDQ4+3xjo8ttjhVGGw6Qxb70oZiEtIjaKikCO7Yw==}
@@ -2553,28 +2571,24 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.33.0:
     resolution: {integrity: sha512-yiO5ROMuYQgXbC60yjZU5CYSFZGKXL0HFATXt9mHJn1+zW55oCtMI9NfcVhYLMFDL7gV7oBPon/EmMMGg2OvtQ==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-linux-x64-gnu@1.33.0:
     resolution: {integrity: sha512-ar+Ju7LmcN0Jo4FpL4hpFybwNG9/3A/Br5KW2n2jyODg3MEZXaDYADdemoNS+BDNfMgKvylJLj4S5tyRActuAg==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-x64-musl@1.33.0:
     resolution: {integrity: sha512-RYiYbkokw0trfKqqzfF55lginwEPrD3OJDfTuJzFs1MK6iFnDenaz1fqLLtX4ITG3OktJQXOeTaw1awrBAlZPw==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-win32-arm64-msvc@1.33.0:
     resolution: {integrity: sha512-1K+MPfLSFVpphzpdbfkhlWk6wBrTObBzS2T6db10PNOZgR9GoVsAWzwNyuhUYYbTp23j+4RrncfujZ4uAzXvwA==}
@@ -4363,19 +4377,27 @@ snapshots:
 
   '@expo-google-fonts/archivo@0.4.2': {}
 
+  '@expo-google-fonts/baloo-2@0.4.2': {}
+
   '@expo-google-fonts/barlow-condensed@0.4.1': {}
 
   '@expo-google-fonts/barlow@0.4.1': {}
 
   '@expo-google-fonts/cormorant-garamond@0.4.1': {}
 
+  '@expo-google-fonts/fredoka@0.4.1': {}
+
   '@expo-google-fonts/ibm-plex-mono@0.4.1': {}
 
   '@expo-google-fonts/jost@0.4.2': {}
 
+  '@expo-google-fonts/lilita-one@0.4.1': {}
+
   '@expo-google-fonts/manrope@0.4.2': {}
 
   '@expo-google-fonts/nunito@0.4.2': {}
+
+  '@expo-google-fonts/poppins@0.4.1': {}
 
   '@expo/cli@56.1.24(@expo/dom-webview@56.0.6)(expo-constants@56.0.24(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)))(expo-font@56.0.7(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(expo@56.0.20)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.7.3)':
     dependencies:
@@ -6814,7 +6836,7 @@ snapshots:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
 
-  react-native-vision-camera@4.7.3(patch_hash=cec169001aabe015797e0cafa4304277c7ef703b2762a226267a168346f2f171)(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+  react-native-vision-camera@4.7.3(patch_hash=ta3b5nlee54mehvlf5tdnlge7i)(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)

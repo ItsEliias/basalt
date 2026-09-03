@@ -41,8 +41,9 @@ export type ProfileRecord = {
   textScale: 'system' | 'plus1' | 'plus2';
   /** Settings → Display. Comfortable (+4dp row/card padding) is the default for new installs. */
   density: 'comfortable' | 'compact';
-  /** Settings → Display. Six contrast-verified palettes (packages/ui/src/theme/themes) — 'minimal' for new and existing installs until changed. */
-  theme: 'minimal' | 'humanist' | 'athletic' | 'brutalist' | 'depth' | 'atelier';
+  /** Settings → Display. Contrast-verified palettes (packages/ui/src/theme/themes) — 'minimal' for new and existing installs until changed. V3.4 added the five expressive themes. */
+  theme: 'minimal' | 'humanist' | 'athletic' | 'brutalist' | 'depth' | 'atelier'
+       | 'clay' | 'sticker' | 'gummy' | 'soft' | 'candyRings';
   /** Settings → Display. Today only in v1 (docs/basalt-layouts.md) — 'ledger' for new and existing installs until changed. */
   todayLayout: 'ledger' | 'tiles';
 };

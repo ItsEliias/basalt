@@ -35,12 +35,14 @@ export function useContainerStyle(theme: Theme): object[] {
   const borderWidth =
     theme.shape.elevation === 'none' ? 0 :
     theme.shape.elevation === 'hardShadow' ? theme.shape.borderWidth.thick :
+    theme.shape.elevation === 'halo' ? theme.shape.borderWidth.thick :
     theme.shape.elevation === 'blur' ? theme.shape.borderWidth.hairline :
+    theme.shape.elevation === 'softShadow' || theme.shape.elevation === 'clay' || theme.shape.elevation === 'gloss' ? 0 :
     theme.shape.borderWidth.thin;
   const border = borderWidth > 0
     ? {
         borderWidth,
-        borderColor: theme.shape.elevation === 'hardShadow'
+        borderColor: theme.shape.elevation === 'hardShadow' || theme.shape.elevation === 'halo'
           ? theme.surfaces.borderStrong
           : isGlass && theme.shape.glassBorder
             ? theme.shape.glassBorder
@@ -52,17 +54,39 @@ export function useContainerStyle(theme: Theme): object[] {
   const hardShadow = theme.shape.elevation === 'hardShadow'
     ? { shadowColor: theme.surfaces.borderStrong, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 }
     : null;
-  return [base, border, hardShadow].filter(Boolean) as object[];
+  // V3.4 theme-scoped elevations, geometry from elevationParams. RN draws
+  // one shadow per view: the dark drop is real; the light inner highlight
+  // of clay/gloss is the sheen overlay Card/Tile render on top.
+  const p = theme.shape.elevationParams;
+  const softDrop = p && (theme.shape.elevation === 'softShadow' || theme.shape.elevation === 'clay' || theme.shape.elevation === 'gloss')
+    ? {
+        shadowColor: '#000000',
+        shadowOffset: { width: theme.shape.elevation === 'gloss' ? 0 : Math.round(p.offset * 0.6), height: p.offset },
+        shadowOpacity: p.alpha,
+        shadowRadius: Math.max(2, p.blur * 0.55),
+        elevation: 8,
+      }
+    : null;
+  return [base, border, hardShadow, softDrop].filter(Boolean) as object[];
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+/** The clay/gloss top sheen — the "inner highlight" half of those looks. */
+export function elevationSheen(theme: Theme): { height: `${number}%`; opacity: number } | null {
+  if (theme.shape.elevation === 'clay') return { height: '45%', opacity: 0.5 };
+  if (theme.shape.elevation === 'gloss') return { height: '34%', opacity: 0.22 };
+  return null;
+}
+
+export function Card({ children, style, lead }: { children: ReactNode; style?: StyleProp<ViewStyle>; lead?: boolean }) {
   const { theme, density } = useTheme();
   const blurTarget = useBlurTarget();
   const containerStyle = useContainerStyle(theme);
+  const tilt = theme.shape.tilt;
   const cardStyle = [
     styles.card,
     ...containerStyle,
     { borderRadius: theme.shape.radius.md, padding: space.card + DENSITY_PAD[density] },
+    tilt !== 0 ? { transform: [{ rotate: `${tilt}deg` }] } : null,
     style,
   ];
   // Depth's glass cards need a REAL backdrop blur — of the GroundGlow behind
@@ -83,7 +107,58 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
       </BlurView>
     );
   }
-  return <View style={cardStyle}>{children}</View>;
+
+  const sheen = elevationSheen(theme);
+  const gradient = lead ? theme.surfaces.gradient : undefined;
+  const halo = theme.shape.elevation === 'halo' ? theme.shape.elevationParams : undefined;
+  const inner =
+    sheen || gradient ? (
+      <View style={[cardStyle, { overflow: 'hidden' }]}>
+        {gradient ? (
+          // Two stacked fills approximate the angle-agnostic card gradient
+          // without a native gradient dependency (react-native-svg stays
+          // reserved for data drawings).
+          <>
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: gradient.to }]} />
+            <View pointerEvents="none" style={[styles.gradientTop, { backgroundColor: gradient.from }]} />
+          </>
+        ) : null}
+        {sheen ? (
+          <View
+            pointerEvents="none"
+            style={[styles.sheen, { height: sheen.height, opacity: sheen.opacity, borderRadius: theme.shape.radius.md }]}
+          />
+        ) : null}
+        {children}
+      </View>
+    ) : (
+      <View style={cardStyle}>{children}</View>
+    );
+
+  if (halo?.haloWidth) {
+    // Die-cut sticker: a white ring outside the card border, then a hard
+    // offset shadow — both from elevationParams, no theme branch.
+    return (
+      <View
+        style={[
+          styles.haloRing,
+          {
+            borderRadius: theme.shape.radius.md + halo.haloWidth,
+            padding: halo.haloWidth,
+            shadowColor: theme.surfaces.borderStrong,
+            shadowOffset: { width: halo.offset, height: halo.offset },
+            shadowOpacity: halo.alpha,
+            shadowRadius: 0,
+            elevation: 4,
+          },
+          tilt !== 0 ? { transform: [{ rotate: `${tilt}deg` }] } : null,
+        ]}
+      >
+        <View style={[cardStyle, { transform: undefined, marginTop: 0 }]}>{children}</View>
+      </View>
+    );
+  }
+  return inner;
 }
 
 export function MicroLabel({ children, faint, style }: { children: ReactNode; faint?: boolean; style?: StyleProp<TextStyle> }) {
@@ -283,6 +358,9 @@ export function Rule({ style }: { style?: StyleProp<ViewStyle> }) {
 }
 
 const styles = StyleSheet.create({
+  sheen: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#FFFFFF' },
+  gradientTop: { position: 'absolute', top: 0, left: 0, right: 0, height: '55%' },
+  haloRing: { backgroundColor: '#FFFFFF', marginTop: 12 },
   card: {
     borderWidth: StyleSheet.hairlineWidth,
     padding: space.card,

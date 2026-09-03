@@ -31,7 +31,7 @@ export function TileGridThemed({ children }: { children: ReactNode }) {
  * "· 0 over" the Tile itself would otherwise have no way to suppress.
  */
 export function Tile({
-  span, label, value, unit, source, over, overSuffix, empty, emptyMessage, onPress,
+  span, label, value, unit, source, over, overSuffix, empty, emptyMessage, onPress, domain,
 }: {
   span: TileSpan;
   label: string;
@@ -45,6 +45,10 @@ export function Tile({
   empty?: boolean;
   emptyMessage?: string;
   onPress?: () => void;
+  /** Domain hint: when the theme declares fill.domainGround, this tile
+   *  renders on its pastel ground with the paired on-colour (theme-scoped
+   *  expression — themes without grounds are untouched). */
+  domain?: 'protein' | 'carbs' | 'fat' | 'recovery';
 }) {
   const { theme } = useTheme();
   const blurTarget = useBlurTarget();
@@ -57,26 +61,31 @@ export function Tile({
   const labelWeight = String(theme.typography.weight.medium) as TextStyle['fontWeight'];
   const align = theme.shape.align === 'center' ? 'center' : 'left';
   const suffix = overSuffix ?? '';
+  const ground = domain && theme.fill.domainGround ? theme.fill.domainGround[domain] : null;
+  const groundOn = domain && theme.fill.domainGroundOn ? theme.fill.domainGroundOn[domain] : null;
+  const labelColor = groundOn ?? theme.text.mute;
+  const valueColor = groundOn ?? (over ? theme.text.fat : theme.text.ink);
+  const faintColor = groundOn ?? theme.text.faint;
 
   const content = empty ? (
     <>
-      <Text style={[styles.label, { color: theme.text.mute, textAlign: align, fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label }]}>
+      <Text style={[styles.label, { color: labelColor, textAlign: align, fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label }]}>
         {theme.typography.labelCase === 'upper' ? label.toUpperCase() : label}
       </Text>
       {/* Real-or-hidden: the theme's own emptyState voice, never a zero.
           'ruled'/'boxed' still read as quiet prose here — the tile's own
           container already supplies the visual weight those styles add
           elsewhere; a tile doesn't need a second one. */}
-      <Text style={[styles.empty, { color: theme.text.faint, textAlign: align, fontFamily: dataFont, fontWeight: dataWeight }]}>{emptyMessage}</Text>
+      <Text style={[styles.empty, { color: faintColor, textAlign: align, fontFamily: dataFont, fontWeight: dataWeight }]}>{emptyMessage}</Text>
     </>
   ) : (
     <>
       <View style={[styles.head, { justifyContent: align === 'center' ? 'center' : 'space-between' }]}>
-        <Text style={[styles.label, { color: theme.text.mute, fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label }]}>
+        <Text style={[styles.label, { color: labelColor, fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label }]}>
           {theme.typography.labelCase === 'upper' ? label.toUpperCase() : label}
         </Text>
         {source && align !== 'center' ? (
-          <Text style={[styles.source, { color: theme.text.faint, fontFamily: dataFont, fontWeight: dataWeight }]}>
+          <Text style={[styles.source, { color: faintColor, fontFamily: dataFont, fontWeight: dataWeight }]}>
             {theme.typography.labelCase === 'upper' ? source.toUpperCase() : source}
           </Text>
         ) : null}
@@ -87,7 +96,7 @@ export function Tile({
           {
             fontFamily: displayFont,
             fontWeight: displayWeight,
-            color: over ? theme.text.fat : theme.text.ink,
+            color: valueColor,
             textAlign: align,
             fontSize: span === 'full' ? theme.typography.scale.hero : theme.typography.scale.xl,
           },
@@ -95,10 +104,10 @@ export function Tile({
         maxFontSizeMultiplier={1.3}
       >
         {value}
-        {unit ? <Text style={[styles.unit, { color: theme.text.mute, fontFamily: dataFont, fontWeight: dataWeight }]}> {unit}</Text> : null}
+        {unit ? <Text style={[styles.unit, { color: labelColor, fontFamily: dataFont, fontWeight: dataWeight }]}> {unit}</Text> : null}
       </Text>
       {suffix ? (
-        <Text style={[styles.suffix, { color: theme.text.fat, fontFamily: dataFont, fontWeight: dataWeight, textAlign: align }]}>{suffix.trim()}</Text>
+        <Text style={[styles.suffix, { color: groundOn ?? theme.text.fat, fontFamily: dataFont, fontWeight: dataWeight, textAlign: align }]}>{suffix.trim()}</Text>
       ) : null}
     </>
   );
@@ -112,6 +121,7 @@ export function Tile({
         { borderRadius: theme.shape.radius.md, minHeight: theme.expression.rowMinHeight + 34, flexBasis: span === 'full' ? '100%' : '47%' },
         isGlass ? { overflow: 'hidden' } : null,
         !isGlass ? containerStyle : null,
+        ground ? { backgroundColor: ground } : null,
       ]}
       onPress={onPress}
       hitSlop={onPress ? 4 : undefined}

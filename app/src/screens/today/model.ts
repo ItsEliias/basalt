@@ -121,6 +121,8 @@ export type TileSpec = {
   over?: boolean;
   empty?: boolean;
   emptyMessage?: string;
+  /** Domain hint for themes that declare pastel domain grounds (V3.4). */
+  domain?: 'protein' | 'carbs' | 'fat' | 'recovery';
 };
 
 /**
@@ -131,6 +133,8 @@ export type TileSpec = {
  * entirely, not shown empty. Pure so the fixed set can be tested without
  * rendering — the screen only assembles the raw values.
  */
+export type TileDomain = 'protein' | 'carbs' | 'fat' | 'recovery';
+
 export function todayTileSpecs(input: {
   hero: HeroModel | null;
   hideNumbers: boolean;
@@ -165,7 +169,7 @@ export function todayTileSpecs(input: {
   // 2 — Protein, half, hide if no target set (not an empty state: absent).
   if (input.targets && !input.hideNumbers) {
     tiles.push({
-      key: 'protein', span: 'half', label: 'Protein',
+      key: 'protein', span: 'half', label: 'Protein', domain: 'protein',
       value: String(Math.round(input.totals.protein)),
       unit: `of ${Math.round(input.targets.proteinG)} g`,
     });
@@ -182,7 +186,7 @@ export function todayTileSpecs(input: {
   if (input.sleepHours !== null) {
     const h = Math.floor(input.sleepHours);
     const m = Math.round((input.sleepHours - h) * 60);
-    tiles.push({ key: 'sleep', span: 'half', label: 'Sleep', value: `${h}:${String(m).padStart(2, '0')}` });
+    tiles.push({ key: 'sleep', span: 'half', label: 'Sleep', domain: 'recovery', value: `${h}:${String(m).padStart(2, '0')}` });
   } else {
     tiles.push({ key: 'sleep', span: 'half', label: 'Sleep', empty: true, emptyMessage: 'No sleep source connected.' });
   }
@@ -192,7 +196,7 @@ export function todayTileSpecs(input: {
   if (input.hydrationEnabled) {
     if (input.waterMl > 0) {
       tiles.push({
-        key: 'water', span: 'half', label: 'Water',
+        key: 'water', span: 'half', label: 'Water', domain: 'recovery',
         value: Math.round(input.waterMl).toLocaleString('en-US'),
         unit: `/ ${Math.round(input.waterTargetMl).toLocaleString('en-US')} ml`,
       });

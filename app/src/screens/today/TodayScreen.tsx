@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
@@ -245,6 +245,7 @@ export function TodayScreen() {
               over={t.over}
               empty={t.empty}
               emptyMessage={t.emptyMessage}
+              domain={t.domain}
             />
           ))}
         </TileGridThemed>
@@ -259,7 +260,7 @@ export function TodayScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
-      <Card>
+      <Card lead>
         {heroMode === 'qualitative' ? (
           <>
             <MicroLabel>Food</MicroLabel>
@@ -272,6 +273,40 @@ export function TodayScreen() {
           </>
         ) : null}
         {hero && heroMode === 'numeric' ? (
+          theme.shape.meter === 'ring' && targets && data ? (
+            <>
+              <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
+              <View style={styles.ringRow}>
+                <HeroRings
+                  rings={[
+                    { fraction: Math.min(1, data.totals.calories / Math.max(1, targets.calories)), fill: theme.fill.accent },
+                    { fraction: Math.min(1, data.totals.protein / Math.max(1, targets.proteinG)), fill: theme.fill.protein },
+                    { fraction: Math.min(1, data.totals.carbs / Math.max(1, targets.carbsG)), fill: theme.fill.carbs },
+                  ]}
+                  centerValue={groupInt(hero.remaining)}
+                  centerLabel={hero.over ? 'kcal over' : 'left'}
+                />
+                <RingKey
+                  items={[
+                    { fill: theme.fill.accent, name: 'Energy', value: `${Math.round((data.totals.calories / Math.max(1, targets.calories)) * 100)}%` },
+                    { fill: theme.fill.protein, name: 'Protein', value: `${Math.round(data.totals.protein)}/${Math.round(targets.proteinG)}` },
+                    { fill: theme.fill.carbs, name: 'Carbs', value: `${Math.round(data.totals.carbs)}/${Math.round(targets.carbsG)}` },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+            </>
+          ) : theme.shape.meter === 'dial' ? (
+            <>
+              <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
+              <HeroDial
+                fraction={targets && data ? Math.min(1, data.totals.calories / Math.max(1, targets.calories)) : 0}
+                value={groupInt(hero.remaining)}
+                label={hero.over ? 'kcal over' : 'kcal left'}
+              />
+              <Text style={[styles.heroSub, styles.heroSubCentered, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+            </>
+          ) : (
           <>
             <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
             <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
@@ -284,6 +319,7 @@ export function TodayScreen() {
               ]}
             />
           </>
+          )
         ) : heroMode === 'no-targets' ? (
           <>
             <MicroLabel>Energy</MicroLabel>
@@ -470,6 +506,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   targetRatio: { fontFamily: mono, fontSize: 12 },
   targetOf: {},
+  ringRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10 },
+  heroSubCentered: { textAlign: 'center' },
   heroSub: { fontFamily: mono, fontSize: 11.5, marginTop: 10 },
   entryThumb: { width: 30, height: 30, borderRadius: 7 },
   undo: {

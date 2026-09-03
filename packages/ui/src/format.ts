@@ -121,6 +121,7 @@ const FONT_FAMILY_PREFIXES: Record<string, string> = {
  */
 export function resolveFontFamily(name: string, weight: number): string {
   if (name === 'Archivo Black') return 'ArchivoBlack_400Regular';
+  if (name === 'Lilita One') return 'LilitaOne_400Regular'; // single shipped weight
   const prefix = FONT_FAMILY_PREFIXES[name] ?? name.replace(/\s+/g, '');
   const weightName = FONT_WEIGHT_NAMES[weight] ?? FONT_WEIGHT_NAMES[400];
   return `${prefix}_${weight}${weightName}`;

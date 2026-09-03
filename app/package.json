@@ -67,7 +67,11 @@
     "react-native-view-shot": "^5.1.1",
     "react-native-vision-camera": "4.7.3",
     "react-native-worklets-core": "1.6.3",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "@expo-google-fonts/baloo-2": "^0.4.1",
+    "@expo-google-fonts/lilita-one": "^0.4.1",
+    "@expo-google-fonts/poppins": "^0.4.1",
+    "@expo-google-fonts/fredoka": "^0.4.1"
   },
   "devDependencies": {
     "@babel/plugin-proposal-nullish-coalescing-operator": "^7.18.6",

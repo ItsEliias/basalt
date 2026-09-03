@@ -13,11 +13,15 @@ const ids = Object.keys(THEMES) as ThemeId[];
 describe('theme contract conformance', () => {
   it.each(ids)('%s implements every contract key', (id) => {
     const t = THEMES[id];
-    expect(Object.keys(t.surfaces).sort()).toEqual(
+    // Required keys are pinned exactly; the V3.4 theme-scoped tokens
+    // (surfaces.gradient, fill.domainGround/On) are optional declarations.
+    const OPTIONAL_SURFACE = new Set(['gradient']);
+    const OPTIONAL_FILL = new Set(['domainGround', 'domainGroundOn']);
+    expect(Object.keys(t.surfaces).filter((k) => !OPTIONAL_SURFACE.has(k)).sort()).toEqual(
       ['bg', 'border', 'borderStrong', 'surface', 'surface2']);
     expect(Object.keys(t.text).sort()).toEqual(
       ['accent', 'carbs', 'faint', 'fat', 'ink', 'ink2', 'mute', 'protein', 'recovery', 'warn']);
-    expect(Object.keys(t.fill).sort()).toEqual(
+    expect(Object.keys(t.fill).filter((k) => !OPTIONAL_FILL.has(k)).sort()).toEqual(
       ['accent', 'accentOn', 'carbs', 'faint', 'fat', 'mark', 'markOn', 'protein', 'recovery', 'warnBg']);
     expect(Object.keys(t.typography.scale).length).toBe(8);
     expect(t.shape.container).toBeDefined();
@@ -52,7 +56,9 @@ describe('contrast invariants', () => {
     // accentOn/markOn are text drawn ON the fill, not marks meant to read
     // against the app's background surfaces — they're checked against their
     // own fill below, in "every on-colour is readable on its own fill".
-    const skip = new Set(['accentOn', 'markOn', 'warnBg']);
+    // domainGround/On are pair-checked in their own test — a pastel ground
+    // is a surface, not a mark on the app background.
+    const skip = new Set(['accentOn', 'markOn', 'warnBg', 'domainGround', 'domainGroundOn']);
     for (const s of SURFACES) {
       for (const [key, value] of Object.entries(t.fill)) {
         if (skip.has(key)) continue;
