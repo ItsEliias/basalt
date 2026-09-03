@@ -4,15 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Card, SrcNote, ReceiptHeader, ReceiptRow, CTA, ChipRow, ObChipLabel, BodyFigure, EmptyState,
-  color, mono, mmss, ScaledText as Text,
-} from '@basalt/ui';
+import { Card, SrcNote, ReceiptHeader, ReceiptRow, CTA, ChipRow, ObChipLabel, BodyFigure, EmptyState, mono, mmss, ScaledText as Text } from '@basalt/ui';
 import {
   MOBILITY_ROUTINES, ASSESSED_POSITIONS, mobilityTimeline, timelineTotalS,
   type MobilityRoutine, type MobilityPhase, type MobilityAssessment,
 } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Mobility v1 (V3.1 H3) — three fixed routines, silent-capable, haptic
 // phase changes, the body-map figure as the visual language (no photos,
@@ -22,6 +20,7 @@ import { supabase } from '../../lib/supabase';
 const ASSESS_KEY = 'basalt.mobilityAssessment';
 
 export function MobilityCard() {
+  const { theme } = useTheme();
   const [assessment, setAssessment] = useState<MobilityAssessment>({});
   const [assessOpen, setAssessOpen] = useState(false);
   const [active, setActive] = useState<MobilityRoutine | null>(null);
@@ -55,7 +54,7 @@ export function MobilityCard() {
       ))}
 
       <Pressable onPress={() => setAssessOpen(!assessOpen)} hitSlop={8}>
-        <Text style={styles.link}>
+        <Text style={[styles.link, { color: theme.text.faint }]}>
           {assessOpen ? 'HIDE SELF-ASSESSMENT' : 'SELF-ASSESSMENT — OPTIONAL, REORDERS EMPHASIS ONLY'}
         </Text>
       </Pressable>
@@ -92,6 +91,7 @@ function MobilityRunner({ routine, assessment, onClose }: {
   assessment: MobilityAssessment;
   onClose: () => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [phases, setPhases] = useState<MobilityPhase[]>([]);
   const [idx, setIdx] = useState(0);
@@ -157,8 +157,8 @@ function MobilityRunner({ routine, assessment, onClose }: {
     <Modal visible={routine !== null} transparent animationType="fade" onRequestClose={onClose}>
       {routine ? <KeepAwakeWhileOpen /> : null}
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface }, { paddingBottom: 16 + insets.bottom }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.border }]} />
         <ScrollView style={{ maxHeight: 600 }}>
           <ReceiptHeader label={routine?.name ?? ''} summary={`${mmss(Math.max(0, elapsedS))} of ${mmss(totalS)}`} />
           {phase ? (
@@ -168,12 +168,12 @@ function MobilityRunner({ routine, assessment, onClose }: {
                   intensity={Object.fromEntries(phase.stretch.regions.map((reg) => [reg, 1]))}
                 />
               </View>
-              <Text style={styles.phaseName}>
+              <Text style={[styles.phaseName, { color: theme.text.ink }]}>
                 {phase.kind === 'transition' ? 'GET INTO POSITION' : phase.stretch.name.toUpperCase()}
                 {phase.side ? ` — ${phase.side.toUpperCase()}` : ''}
               </Text>
-              <Text style={styles.phaseClock}>{mmss(Math.max(0, remaining))}</Text>
-              <Text style={styles.cue}>{phase.stretch.cue}</Text>
+              <Text style={[styles.phaseClock, { color: theme.text.ink }]}>{mmss(Math.max(0, remaining))}</Text>
+              <Text style={[styles.cue, { color: theme.text.ink2 }]}>{phase.stretch.cue}</Text>
               {!done ? (
                 <CTA
                   label={running ? 'Pause' : startRef.current ? 'Resume' : 'Begin'}
@@ -192,7 +192,7 @@ function MobilityRunner({ routine, assessment, onClose }: {
             </>
           ) : (
             <Pressable onPress={onClose} hitSlop={8}>
-              <Text style={styles.link}>STOP — NOTHING LOGS UNDER A FULL ROUTINE</Text>
+              <Text style={[styles.link, { color: theme.text.faint }]}>STOP — NOTHING LOGS UNDER A FULL ROUTINE</Text>
             </Pressable>
           )}
           <SrcNote>Vibration marks every change — sound never required · transitions hold the published 10 s floor · the figure shows the regions each stretch serves</SrcNote>
@@ -204,10 +204,10 @@ function MobilityRunner({ routine, assessment, onClose }: {
 
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
-  sheet: { backgroundColor: color.surface, borderTopLeftRadius: 14, borderTopRightRadius: 14, paddingHorizontal: 16, paddingTop: 8 },
-  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: color.border, marginBottom: 8 },
-  link: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
-  phaseName: { fontFamily: mono, fontSize: 13, letterSpacing: 1.4, color: color.ink, textAlign: 'center', marginTop: 10 },
-  phaseClock: { fontFamily: mono, fontSize: 40, letterSpacing: 1, color: color.ink, textAlign: 'center', fontVariant: ['tabular-nums'], marginVertical: 4 },
-  cue: { fontSize: 13, color: color.ink2, textAlign: 'center', lineHeight: 19, paddingHorizontal: 20, marginBottom: 8 },
+  sheet: { borderTopLeftRadius: 14, borderTopRightRadius: 14, paddingHorizontal: 16, paddingTop: 8 },
+  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 8 },
+  link: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 10 },
+  phaseName: { fontFamily: mono, fontSize: 13, letterSpacing: 1.4, textAlign: 'center', marginTop: 10 },
+  phaseClock: { fontFamily: mono, fontSize: 40, letterSpacing: 1, textAlign: 'center', fontVariant: ['tabular-nums'], marginVertical: 4 },
+  cue: { fontSize: 13, textAlign: 'center', lineHeight: 19, paddingHorizontal: 20, marginBottom: 8 },
 });

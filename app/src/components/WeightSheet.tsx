@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, SrcNote, ScaledText as Text } from '@basalt/ui';
+import { mono, CTA, ObInput, SrcNote, ScaledText as Text } from '@basalt/ui';
 import { addWeightEntry } from '@basalt/core-data';
 import { writeThroughOutbox } from '../lib/outbox';
 import { bleAvailable, startScaleRead, type ScaleSession } from '../lib/bleScale';
 import { supabase } from '../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Quick weight log — the ledger's TDEE loop feeds on these.
 
@@ -16,6 +17,7 @@ export function WeightSheet({
   onClose: () => void;
   onLogged: () => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [kg, setKg] = useState('');
   const [busy, setBusy] = useState(false);
@@ -81,8 +83,8 @@ export function WeightSheet({
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-          <View style={styles.grab} />
+        <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+          <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
           <ObInput
             placeholder="Weight (kg)"
             keyboardType="decimal-pad"
@@ -92,7 +94,7 @@ export function WeightSheet({
           />
           {bleAvailable() ? (
             <Pressable onPress={() => void readScale()} hitSlop={8}>
-              <Text style={[styles.scaleLink, scaleState === 'reading' && styles.scaleLive]}>
+              <Text style={[styles.scaleLink, { color: theme.text.faint }, scaleState === 'reading' && { color: theme.text.ink }]}>
                 {scaleState === 'reading' ? 'LISTENING FOR YOUR SCALE — STEP ON · TAP TO STOP' : 'READ FROM A BLUETOOTH SCALE'}
               </Text>
             </Pressable>
@@ -109,15 +111,12 @@ export function WeightSheet({
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
-  scaleLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, textAlign: 'center', paddingVertical: 10 },
-  scaleLive: { color: color.ink },
+  grab: { width: 34, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
+  scaleLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, textAlign: 'center', paddingVertical: 10 },
 });

@@ -4,12 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
-import {
-  CTA, SrcNote, ReceiptHeader, ReceiptRow, ObInput, Stepper, EmptyState,
-  color, mono, ScaledText as Text,
-} from '@basalt/ui';
+import { CTA, SrcNote, ReceiptHeader, ReceiptRow, ObInput, Stepper, EmptyState, mono, ScaledText as Text } from '@basalt/ui';
 import { getRecipeDetail, mergeTimelines, atText, type CookRecipe } from '@basalt/nutrition';
 import { supabase } from '../../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Cooking mode — several recipes, one merged timeline, everything
 // finishing together. Times come ONLY from steps that state them; the
@@ -29,6 +27,7 @@ export function CookingSheet({ open, recipeIds, onClose }: {
   recipeIds: string[];
   onClose: () => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [recipes, setRecipes] = useState<CookRecipe[] | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -81,8 +80,8 @@ export function CookingSheet({ open, recipeIds, onClose }: {
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       {open ? <KeepAwakeWhileOpen /> : null}
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface }, { paddingBottom: 16 + insets.bottom }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.border }]} />
         <ScrollView style={{ maxHeight: 580 }} keyboardShouldPersistTaps="handled">
           <ReceiptHeader
             label="Cooking mode"
@@ -132,12 +131,12 @@ export function CookingSheet({ open, recipeIds, onClose }: {
                     onPlus={() => setTimer(i, { minutes: Math.min(180, t.minutes + 1) })}
                   />
                   <Pressable onPress={() => setTimer(i, { endsAt: Date.now() + t.minutes * 60000, fired: false })} hitSlop={10}>
-                    <Text style={styles.timerLink}>START {t.minutes}m</Text>
+                    <Text style={[styles.timerLink, { color: theme.text.faint }]}>START {t.minutes}m</Text>
                   </Pressable>
                 </>
               ) : (
                 <Pressable onPress={() => setTimer(i, { endsAt: null })} hitSlop={10}>
-                  <Text style={[styles.timerLink, styles.timerLive]}>{remain(t)} · STOP</Text>
+                  <Text style={[styles.timerLink, { color: theme.text.ink }]}>{remain(t)} · STOP</Text>
                 </Pressable>
               )}
             </View>
@@ -154,14 +153,12 @@ export function CookingSheet({ open, recipeIds, onClose }: {
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     paddingHorizontal: 16,
     paddingTop: 8,
   },
-  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: color.border, marginBottom: 8 },
+  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 8 },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
-  timerLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, paddingVertical: 10 },
-  timerLive: { color: color.ink },
+  timerLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 10 },
 });

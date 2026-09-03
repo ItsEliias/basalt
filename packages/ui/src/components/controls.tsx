@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
-import { color, radius } from '../tokens';
+import { radius } from '../tokens';
 import { mono } from '../typography';
 import { useTheme, resolveTypeface } from '../theme';
 
@@ -134,13 +134,14 @@ export function SubNav({ items, active, onChange }: {
 export function SearchBar({ placeholder, value, onChangeText }: {
   placeholder: string; value?: string; onChangeText?: (t: string) => void;
 }) {
+  const { theme } = useTheme();
   return (
-    <View style={styles.search}>
-      <Text style={styles.searchGlyph}>⌕</Text>
+    <View style={[styles.search, { backgroundColor: theme.surfaces.surface, borderColor: theme.surfaces.border }]}>
+      <Text style={[styles.searchGlyph, { color: theme.text.faint }]}>⌕</Text>
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, { color: theme.text.ink }]}
         placeholder={placeholder}
-        placeholderTextColor={color.faint}
+        placeholderTextColor={theme.text.faint}
         value={value}
         onChangeText={onChangeText}
       />
@@ -151,21 +152,23 @@ export function SearchBar({ placeholder, value, onChangeText }: {
 export function Stepper({ value, unit, onMinus, onPlus }: {
   value: string; unit?: string; onMinus: () => void; onPlus: () => void;
 }) {
+  const { theme } = useTheme();
   return (
-    <View style={styles.stepper}>
-      <Pressable onPress={onMinus} style={styles.stepBtn} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}><Text style={styles.stepBtnText}>−</Text></Pressable>
-      <Text style={styles.stepVal}>{value}{unit ? ` ${unit}` : ''}</Text>
-      <Pressable onPress={onPlus} style={styles.stepBtn} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}><Text style={styles.stepBtnText}>+</Text></Pressable>
+    <View style={[styles.stepper, { borderColor: theme.surfaces.borderStrong }]}>
+      <Pressable onPress={onMinus} style={[styles.stepBtn, { backgroundColor: theme.surfaces.surface2 }]} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}><Text style={[styles.stepBtnText, { color: theme.text.ink2 }]}>−</Text></Pressable>
+      <Text style={[styles.stepVal, { color: theme.text.ink }]}>{value}{unit ? ` ${unit}` : ''}</Text>
+      <Pressable onPress={onPlus} style={[styles.stepBtn, { backgroundColor: theme.surfaces.surface2 }]} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}><Text style={[styles.stepBtnText, { color: theme.text.ink2 }]}>+</Text></Pressable>
     </View>
   );
 }
 
 /** Dashed "new item" row (`.newrow`). */
 export function NewRow({ label, onPress }: { label: string; onPress?: () => void }) {
+  const { theme } = useTheme();
   return (
-    <Pressable onPress={onPress} style={styles.newRow}>
-      <Text style={styles.newRowText}>{label.toUpperCase()}</Text>
-      <Text style={styles.newRowPlus}>+</Text>
+    <Pressable onPress={onPress} style={[styles.newRow, { borderColor: theme.surfaces.borderStrong }]}>
+      <Text style={[styles.newRowText, { color: theme.text.ink2 }]}>{label.toUpperCase()}</Text>
+      <Text style={[styles.newRowPlus, { color: theme.text.faint }]}>+</Text>
     </Pressable>
   );
 }
@@ -205,38 +208,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: color.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
     borderRadius: radius.timer,
     paddingHorizontal: 14,
     marginTop: 12,
   },
-  searchGlyph: { color: color.faint, fontSize: 14 },
-  searchInput: { flex: 1, fontFamily: mono, fontSize: 11, color: color.ink, paddingVertical: 11, letterSpacing: 0.44 },
+  searchGlyph: { fontSize: 14 },
+  searchInput: { flex: 1, fontFamily: mono, fontSize: 11, paddingVertical: 11, letterSpacing: 0.44 },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border2,
     borderRadius: radius.timer,
     overflow: 'hidden',
   },
-  stepBtn: { width: 38, height: 34, backgroundColor: color.surface2, alignItems: 'center', justifyContent: 'center' },
-  stepBtnText: { color: color.ink2, fontSize: 16, fontFamily: mono },
-  stepVal: { fontFamily: mono, fontSize: 14, minWidth: 74, textAlign: 'center', color: color.ink },
+  stepBtn: { width: 38, height: 34, alignItems: 'center', justifyContent: 'center' },
+  stepBtnText: { fontSize: 16, fontFamily: mono },
+  stepVal: { fontFamily: mono, fontSize: 14, minWidth: 74, textAlign: 'center' },
   newRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: color.border2,
     borderRadius: radius.card,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginTop: 12,
   },
-  newRowText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.32, color: color.ink2 },
-  newRowPlus: { fontFamily: mono, fontSize: 14, color: color.faint },
+  newRowText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.32 },
+  newRowPlus: { fontFamily: mono, fontSize: 14 },
 });

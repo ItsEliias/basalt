@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ObInput,
-  color, mono, ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ObInput, mono, ScaledText as Text } from '@basalt/ui';
 import {
   getMyPair, createPair, joinPair, endPair, loadCoop,
   COOP_DOT_RULE, type Pair, type CoopReport,
 } from '@basalt/analytics';
 import { supabase } from '../../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // 1-v-1 co-op — showing up, side by side. Dots are the only thing that
 // crosses (engine-pinned: no comparisons, no points, no cheerleading).
 
 export function CoopCard() {
+  const { theme } = useTheme();
   const [pair, setPair] = useState<Pair | null | undefined>(undefined);
   const [report, setReport] = useState<CoopReport | null>(null);
   const [claimText, setClaimText] = useState('');
@@ -65,7 +64,7 @@ export function CoopCard() {
             }}
             hitSlop={8}
           >
-            <Text style={styles.link}>CREATE A CODE FOR YOUR PERSON</Text>
+            <Text style={[styles.link, { color: theme.text.faint }]}>CREATE A CODE FOR YOUR PERSON</Text>
           </Pressable>
           <View style={styles.claimRow}>
             <ObInput
@@ -85,7 +84,7 @@ export function CoopCard() {
               hitSlop={10}
               disabled={!claimText.trim()}
             >
-              <Text style={styles.link}>JOIN</Text>
+              <Text style={[styles.link, { color: theme.text.faint }]}>JOIN</Text>
             </Pressable>
           </View>
         </>
@@ -93,8 +92,8 @@ export function CoopCard() {
 
       {pair && !pair.bId ? (
         <>
-          <View style={styles.codeBox}>
-            <Text style={styles.codeText}>{pair.inviteCode}</Text>
+          <View style={[styles.codeBox, { borderColor: theme.surfaces.border }]}>
+            <Text style={[styles.codeText, { color: theme.text.ink }]}>{pair.inviteCode}</Text>
           </View>
           <SrcNote>Waiting for your person — single use, expires in 48 h · hold below to cancel</SrcNote>
         </>
@@ -103,10 +102,10 @@ export function CoopCard() {
       {pair && pair.bId && report ? (
         <>
           <View style={styles.dotBlock}>
-            <Text style={styles.dotLabel}>YOU</Text>
-            <Text style={styles.dots}>{dotRow('mine')}</Text>
-            <Text style={styles.dotLabel}>THEM</Text>
-            <Text style={styles.dots}>{dotRow('theirs')}</Text>
+            <Text style={[styles.dotLabel, { color: theme.text.faint }]}>YOU</Text>
+            <Text style={[styles.dots, { color: theme.text.ink }]}>{dotRow('mine')}</Text>
+            <Text style={[styles.dotLabel, { color: theme.text.faint }]}>THEM</Text>
+            <Text style={[styles.dots, { color: theme.text.ink }]}>{dotRow('theirs')}</Text>
           </View>
           <SrcNote>{`${report.mineLine} · ${report.theirsLine} — last 14 days, oldest left`}</SrcNote>
           <SrcNote>{COOP_DOT_RULE}</SrcNote>
@@ -119,7 +118,7 @@ export function CoopCard() {
           onLongPress={() => void endPair(supabase, pair.id).then(() => { setReport(null); setOpenSetup(false); refresh(); })}
           hitSlop={8}
         >
-          <Text style={styles.link}>HOLD TO END THE PAIR — DOTS STOP CROSSING IMMEDIATELY</Text>
+          <Text style={[styles.link, { color: theme.text.faint }]}>HOLD TO END THE PAIR — DOTS STOP CROSSING IMMEDIATELY</Text>
         </Pressable>
       ) : null}
       {message ? <SrcNote>{message}</SrcNote> : null}
@@ -128,11 +127,11 @@ export function CoopCard() {
 }
 
 const styles = StyleSheet.create({
-  link: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
+  link: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 10 },
   claimRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  codeBox: { borderWidth: StyleSheet.hairlineWidth, borderColor: color.border, borderRadius: 8, paddingVertical: 14, marginTop: 8, alignItems: 'center' },
-  codeText: { fontFamily: mono, fontSize: 22, letterSpacing: 6, color: color.ink },
+  codeBox: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingVertical: 14, marginTop: 8, alignItems: 'center' },
+  codeText: { fontFamily: mono, fontSize: 22, letterSpacing: 6 },
   dotBlock: { paddingVertical: 8, gap: 2 },
-  dotLabel: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1.2, color: color.faint },
-  dots: { fontFamily: mono, fontSize: 13, letterSpacing: 2, color: color.ink, marginBottom: 6 },
+  dotLabel: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1.2 },
+  dots: { fontFamily: mono, fontSize: 13, letterSpacing: 2, marginBottom: 6 },
 });

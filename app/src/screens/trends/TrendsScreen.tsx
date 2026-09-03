@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays,
-  color, mono, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
   activeDaysFor, currentAndLongest, monthCells, loadWeekReview, loadDailySeries, computeCorrelations,
   loadMonthlyBehavior, type MonthlyBehaviorReport,
@@ -132,14 +128,14 @@ export function TrendsScreen() {
           </EmptyState>
         ) : (
           <>
-            <Text style={styles.lede}>{review.lede}</Text>
+            <Text style={[styles.lede, { color: theme.text.ink }]}>{review.lede}</Text>
             {review.stats.length > 0 ? (
               <View style={styles.wstatRow}>
                 {/* Hide-numbers quieting happens in the composer itself, not here. */}
                 {review.stats.map((s) => (
                   <View key={s.k} style={styles.wstat}>
-                    <Text style={styles.wstatK}>{s.k}</Text>
-                    <Text style={styles.wstatV}>{s.v}</Text>
+                    <Text style={[styles.wstatK, { color: theme.text.ink2 }]}>{s.k}</Text>
+                    <Text style={[styles.wstatV, { color: theme.text.ink }]}>{s.v}</Text>
                   </View>
                 ))}
               </View>
@@ -148,7 +144,7 @@ export function TrendsScreen() {
         )}
         {review?.lede ? (
           <Pressable onPress={() => setShareWeek(true)}>
-            <Text style={styles.shareLink}>SHARE AS IMAGE →</Text>
+            <Text style={[styles.shareLink, { color: theme.text.faint }]}>SHARE AS IMAGE →</Text>
           </Pressable>
         ) : null}
         <SrcNote>Written from your data · no cheerleading · one gap named per week</SrcNote>
@@ -200,7 +196,7 @@ export function TrendsScreen() {
               meta={new Date(r.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
               value={String(r.e1rm)}
               unit="kg e1RM"
-              valueColor={i === 0 ? color.carbs : undefined}
+              valueColor={i === 0 ? theme.text.carbs : undefined}
               last={i === records.length - 1}
             />
           ))
@@ -220,7 +216,7 @@ export function TrendsScreen() {
           {big3.bench ? <ReceiptRow name="Bench" meta={big3.bench.name} value={String(big3.bench.e1rm)} unit="kg" /> : null}
           {big3.deadlift ? <ReceiptRow name="Deadlift" meta={big3.deadlift.name} value={String(big3.deadlift.e1rm)} unit="kg" /> : null}
           {big3.total !== null ? (
-            <ReceiptRow name="Total" meta="all three present — no partial totals" value={String(big3.total)} unit="kg" valueColor={color.carbs} last />
+            <ReceiptRow name="Total" meta="all three present — no partial totals" value={String(big3.total)} unit="kg" valueColor={theme.text.carbs} last />
           ) : (
             <SrcNote>No total until all three lifts have history — partial totals are fiction</SrcNote>
           )}
@@ -279,7 +275,7 @@ export function TrendsScreen() {
             </EmptyState>
           ) : (
             <>
-              <Text style={styles.lede}>{monthly.lede}</Text>
+              <Text style={[styles.lede, { color: theme.text.ink }]}>{monthly.lede}</Text>
               {monthly.factorLines.map((line) => (
                 <SrcNote key={line}>{line}</SrcNote>
               ))}
@@ -335,12 +331,12 @@ export function TrendsScreen() {
       {year && year.lede ? (
         <Card>
           <ReceiptHeader label="Year in review" summary="composed from your ledger" />
-          <Text style={styles.lede}>{year.lede}</Text>
+          <Text style={[styles.lede, { color: theme.text.ink }]}>{year.lede}</Text>
           <View style={styles.wstatRow}>
             {year.stats.map((s) => (
               <View key={s.k} style={styles.wstat}>
-                <Text style={styles.wstatK}>{s.k}</Text>
-                <Text style={styles.wstatV}>{s.v}</Text>
+                <Text style={[styles.wstatK, { color: theme.text.ink2 }]}>{s.k}</Text>
+                <Text style={[styles.wstatV, { color: theme.text.ink }]}>{s.v}</Text>
               </View>
             ))}
           </View>
@@ -348,7 +344,7 @@ export function TrendsScreen() {
         </Card>
       ) : null}
 
-      <Text style={styles.footer}>
+      <Text style={[styles.footer, { color: theme.text.faint }]}>
         EVERYTHING ON THIS SCREEN IS COMPUTED FROM YOUR LEDGER OR ABSENT — NOTHING HERE
         WILL EVER BE A MOCK
       </Text>
@@ -386,19 +382,19 @@ export function TrendsScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: color.bg },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   footer: {
-    fontFamily: mono, fontSize: 10.5, color: color.faint, letterSpacing: 0.38,
+    fontFamily: mono, fontSize: 10.5, letterSpacing: 0.38,
     lineHeight: 16, marginTop: 14, paddingHorizontal: 4,
   },
-  lede: { fontSize: 13.5, color: color.ink, lineHeight: 20, marginBottom: 12 },
+  lede: { fontSize: 13.5, lineHeight: 20, marginBottom: 12 },
   wstatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 12 },
   wstat: { minWidth: 68 },
   wstatK: {
-    fontFamily: mono, fontSize: 11, color: color.ink2, letterSpacing: 0.38,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.38,
     textTransform: 'uppercase', marginBottom: 2,
   },
-  wstatV: { fontFamily: mono, fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },
-  shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
+  wstatV: { fontFamily: mono, fontSize: 15, fontVariant: ['tabular-nums'] },
+  shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, paddingTop: 8 },
 });

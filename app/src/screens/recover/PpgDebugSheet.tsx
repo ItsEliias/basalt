@@ -2,12 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Circle } from 'react-native-svg';
-import {
-  CTA, SrcNote, ReceiptHeader, ReceiptRow, ObInput, EmptyState,
-  color, mono, ScaledText as Text,
-} from '@basalt/ui';
+import { CTA, SrcNote, ReceiptHeader, ReceiptRow, ObInput, EmptyState, mono, ScaledText as Text } from '@basalt/ui';
 import { analyzePpg, PPG_RULES, type PpgResult, type PpgSample } from '@basalt/analytics';
 import { supabase } from '../../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Camera-PPG debug screen (V3.1 H1) — the tuning bench, not the product.
 // Raw waveform + detected peaks + every quality metric, and a calibration
@@ -37,6 +35,7 @@ type CalRow = {
 };
 
 export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<'idle' | 'capturing' | 'done'>('idle');
   const [elapsed, setElapsed] = useState(0);
@@ -144,8 +143,8 @@ export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface }, { paddingBottom: 16 + insets.bottom }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.border }]} />
         <ScrollView style={{ maxHeight: 600 }} keyboardShouldPersistTaps="handled">
           <ReceiptHeader label="Camera HRV — tuning bench" summary="dev only · numbers earn trust here first" />
 
@@ -165,9 +164,9 @@ export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () =>
               ) : (
                 <>
                   <PpgCamera onSample={onSample} />
-                  <Text style={styles.liveLine}>{`CAPTURING · ${elapsed}s / ${PPG_RULES.targetDurationS}s · ${samplesRef.current.length} frames`}</Text>
+                  <Text style={[styles.liveLine, { color: theme.text.ink }]}>{`CAPTURING · ${elapsed}s / ${PPG_RULES.targetDurationS}s · ${samplesRef.current.length} frames`}</Text>
                   <Svg width="100%" height={90} viewBox="0 0 320 90">
-                    <Polyline points={wavePoints(liveTail, 320, 90)} fill="none" stroke={color.recovery} strokeWidth={1.5} />
+                    <Polyline points={wavePoints(liveTail, 320, 90)} fill="none" stroke={theme.fill.recovery} strokeWidth={1.5} />
                   </Svg>
                   <CTA label="Stop early" onPress={finishCapture} />
                 </>
@@ -176,7 +175,7 @@ export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () =>
               {phase === 'done' && result ? (
                 <>
                   <Svg width="100%" height={110} viewBox="0 0 320 110">
-                    <Polyline points={wavePoints(result.signal.slice(-900), 320, 110)} fill="none" stroke={color.ink2} strokeWidth={1} />
+                    <Polyline points={wavePoints(result.signal.slice(-900), 320, 110)} fill="none" stroke={theme.fill.mark} strokeWidth={1} />
                     {(() => {
                       const sig = result.signal.slice(-900);
                       if (sig.length < 2) return null;
@@ -185,7 +184,7 @@ export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () =>
                       return result.peaksMs
                         .filter((p) => p >= t0 && p <= t1)
                         .map((p, i) => (
-                          <Circle key={i} cx={((p - t0) / Math.max(1, t1 - t0)) * 320} cy={8} r={2} fill={color.recovery} />
+                          <Circle key={i} cx={((p - t0) / Math.max(1, t1 - t0)) * 320} cy={8} r={2} fill={theme.fill.recovery} />
                         ));
                     })()}
                   </Svg>
@@ -195,7 +194,7 @@ export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () =>
                     name="Quality"
                     meta={`SNR ${result.quality.snr} · ${result.quality.cleanRr} clean beats · ${Math.round(result.quality.artifactFrac * 100)}% artifacts · ${result.quality.fps} fps · ${result.quality.durationS}s`}
                     value={result.quality.ok ? 'PASS' : 'FAIL'}
-                    valueColor={result.quality.ok ? color.carbs : color.faint}
+                    valueColor={result.quality.ok ? theme.text.carbs : theme.text.faint}
                     last
                   />
                   <View style={styles.watchRow}>
@@ -207,7 +206,7 @@ export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () =>
                       style={{ flex: 1 }}
                     />
                     <Pressable onPress={() => void saveRow()} hitSlop={10}>
-                      <Text style={styles.link}>LOG PAIR</Text>
+                      <Text style={[styles.link, { color: theme.text.faint }]}>LOG PAIR</Text>
                     </Pressable>
                   </View>
                   <CTA label="Take another" onPress={startCapture} />
@@ -290,10 +289,10 @@ function PpgCamera({ onSample }: { onSample: (t: number, v: number) => void }) {
 
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
-  sheet: { backgroundColor: color.surface, borderTopLeftRadius: 14, borderTopRightRadius: 14, paddingHorizontal: 16, paddingTop: 8 },
-  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: color.border, marginBottom: 8 },
+  sheet: { borderTopLeftRadius: 14, borderTopRightRadius: 14, paddingHorizontal: 16, paddingTop: 8 },
+  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 8 },
   cameraBox: { height: 60, borderRadius: 8, overflow: 'hidden', marginVertical: 6, backgroundColor: '#000' },
-  liveLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.8, color: color.ink, textAlign: 'center', paddingVertical: 6 },
+  liveLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.8, textAlign: 'center', paddingVertical: 6 },
   watchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
-  link: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, paddingVertical: 10 },
+  link: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 10 },
 });

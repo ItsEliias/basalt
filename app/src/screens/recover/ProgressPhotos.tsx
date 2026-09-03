@@ -3,11 +3,12 @@ import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, color, mono, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, mono, ScaledText as Text } from '@basalt/ui';
 import {
   addProgressPhoto, listProgressPhotos, signedProgressUrls, type ProgressPhoto, type ProgressPose,
 } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Progress photo vault — private bucket, ghost-overlay alignment against
 // the previous photo of the same pose, side-by-side compare. Photos are
@@ -16,6 +17,7 @@ import { supabase } from '../../lib/supabase';
 const POSES: ProgressPose[] = ['front', 'side', 'back'];
 
 export function ProgressPhotosCard() {
+  const { theme } = useTheme();
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [urls, setUrls] = useState<Map<string, string>>(new Map());
   const [pose, setPose] = useState<ProgressPose>('front');
@@ -45,8 +47,8 @@ export function ProgressPhotosCard() {
         onChange={(v) => setPose(v.split(' ')[0] as ProgressPose)} />
       {latest && urls.get(latest.storagePath) ? (
         <View style={styles.previewRow}>
-          <Image source={{ uri: urls.get(latest.storagePath)! }} style={styles.preview} />
-          <Text style={styles.previewMeta}>
+          <Image source={{ uri: urls.get(latest.storagePath)! }} style={[styles.preview, { backgroundColor: theme.surfaces.surface2 }]} />
+          <Text style={[styles.previewMeta, { color: theme.text.ink2 }]}>
             {`latest · ${new Date(latest.takenAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}\n${ofPose.length} ${ofPose.length === 1 ? 'photo' : 'photos'} of this pose`}
           </Text>
         </View>
@@ -56,7 +58,7 @@ export function ProgressPhotosCard() {
       <CTA label={`Capture ${pose}`} onPress={() => setCapturing(true)} />
       {ofPose.length >= 2 ? (
         <Pressable onPress={() => setComparing(true)}>
-          <Text style={styles.link}>COMPARE FIRST ↔ LATEST →</Text>
+          <Text style={[styles.link, { color: theme.text.faint }]}>COMPARE FIRST ↔ LATEST →</Text>
         </Pressable>
       ) : null}
       <SrcNote>{`Alignment guides + a ghost of your previous ${pose} photo · angle tags · stored privately, shown only to you via short-lived links`}</SrcNote>
@@ -74,14 +76,14 @@ export function ProgressPhotosCard() {
 
       <Modal visible={comparing} transparent animationType="fade" onRequestClose={() => setComparing(false)}>
         <Pressable style={styles.dim} onPress={() => setComparing(false)} />
-        <View style={styles.compareSheet}>
-          <Text style={styles.sheetTitle}>{pose.toUpperCase()} — FIRST vs LATEST</Text>
+        <View style={[styles.compareSheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }]}>
+          <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>{pose.toUpperCase()} — FIRST vs LATEST</Text>
           <View style={styles.compareRow}>
             {[earliest, latest].map((p, i) =>
               p && urls.get(p.storagePath) ? (
                 <View key={p.id} style={{ flex: 1 }}>
-                  <Image source={{ uri: urls.get(p.storagePath)! }} style={styles.compareImg} />
-                  <Text style={styles.compareDate}>
+                  <Image source={{ uri: urls.get(p.storagePath)! }} style={[styles.compareImg, { backgroundColor: theme.surfaces.surface2 }]} />
+                  <Text style={[styles.compareDate, { color: theme.text.mute }]}>
                     {new Date(p.takenAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </Text>
                 </View>
@@ -103,6 +105,7 @@ function CaptureSheet({ open, pose, ghostUrl, onClose, onCaptured }: {
   onClose: () => void;
   onCaptured: () => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [camRef, setCamRef] = useState<CameraView | null>(null);
@@ -154,17 +157,17 @@ function CaptureSheet({ open, pose, ghostUrl, onClose, onCaptured }: {
           <View style={[styles.hGuide, { top: '58%' }]} />
         </View>
         <View style={[styles.captureHud, { top: insets.top + 12 }]}>
-          <Text style={styles.hudText}>{pose.toUpperCase()} · {ghostUrl ? 'GHOST = YOUR PREVIOUS PHOTO' : 'FIRST PHOTO OF THIS POSE'}</Text>
+          <Text style={[styles.hudText, { color: theme.text.ink }]}>{pose.toUpperCase()} · {ghostUrl ? 'GHOST = YOUR PREVIOUS PHOTO' : 'FIRST PHOTO OF THIS POSE'}</Text>
         </View>
         <View style={[styles.captureBar, { paddingBottom: 18 + insets.bottom }]}>
           <Pressable onPress={onClose}>
-            <Text style={styles.hudText}>CANCEL</Text>
+            <Text style={[styles.hudText, { color: theme.text.ink }]}>CANCEL</Text>
           </Pressable>
           <Pressable onPress={() => void shoot()} disabled={busy}>
-            <View style={[styles.shutter, busy && { opacity: 0.4 }]} />
+            <View style={[styles.shutter, { borderColor: theme.fill.mark }, busy && { opacity: 0.4 }]} />
           </Pressable>
           <Pressable onPress={() => setFacing(facing === 'front' ? 'back' : 'front')}>
-            <Text style={styles.hudText}>FLIP</Text>
+            <Text style={[styles.hudText, { color: theme.text.ink }]}>FLIP</Text>
           </Pressable>
         </View>
       </View>
@@ -175,25 +178,24 @@ function CaptureSheet({ open, pose, ghostUrl, onClose, onCaptured }: {
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   previewRow: { flexDirection: 'row', gap: 14, alignItems: 'center', marginTop: 10 },
-  preview: { width: 72, height: 96, borderRadius: 10, backgroundColor: color.surface2 },
-  previewMeta: { fontFamily: mono, fontSize: 11.5, color: color.ink2, lineHeight: 16, letterSpacing: 0.3 },
-  link: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
-  sheetTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
-  compareSheet: {
-    backgroundColor: color.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border2,
+  preview: { width: 72, height: 96, borderRadius: 10 },
+  previewMeta: { fontFamily: mono, fontSize: 11.5, lineHeight: 16, letterSpacing: 0.3 },
+  link: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 10 },
+  sheetTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
+  compareSheet: { borderTopWidth: StyleSheet.hairlineWidth,
     borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 34,
   },
   compareRow: { flexDirection: 'row', gap: 12, marginTop: 14 },
-  compareImg: { width: '100%', aspectRatio: 3 / 4, borderRadius: 10, backgroundColor: color.surface2 },
-  compareDate: { fontFamily: mono, fontSize: 11, color: color.mute, textAlign: 'center', marginTop: 6 },
+  compareImg: { width: '100%', aspectRatio: 3 / 4, borderRadius: 10 },
+  compareDate: { fontFamily: mono, fontSize: 11, textAlign: 'center', marginTop: 6 },
   captureRoot: { flex: 1, backgroundColor: '#000' },
   vGuide: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(244,245,246,0.5)' },
   hGuide: { position: 'absolute', left: '12%', right: '12%', height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(244,245,246,0.5)' },
   captureHud: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  hudText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.ink, backgroundColor: 'rgba(15,17,21,0.55)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, overflow: 'hidden' },
+  hudText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, backgroundColor: 'rgba(15,17,21,0.55)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, overflow: 'hidden' },
   captureBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingTop: 14,
   },
-  shutter: { width: 62, height: 62, borderRadius: 31, borderWidth: 4, borderColor: color.ink, backgroundColor: 'rgba(244,245,246,0.25)' },
+  shutter: { width: 62, height: 62, borderRadius: 31, borderWidth: 4, backgroundColor: 'rgba(244,245,246,0.25)' },
 });

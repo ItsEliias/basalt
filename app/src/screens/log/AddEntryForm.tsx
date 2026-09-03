@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote, ScaledText as Text } from '@basalt/ui';
+import { mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote, ScaledText as Text } from '@basalt/ui';
 import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { FoodEntryInput, MealType } from '@basalt/nutrition';
+import { useTheme } from '@basalt/ui';
 
 // Editable-before-save — the AI rule generalized: capture → editable
 // suggestion → confirm. Barcode results, search hits and manual adds all
@@ -35,6 +36,7 @@ export function AddEntryForm({
   trayCalories?: number;
   trayCount?: number;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<DraftEntry | null>(draft);
   const [busy, setBusy] = useState(false);
@@ -65,8 +67,8 @@ export function AddEntryForm({
     <Modal visible={draft !== null} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.dim} onPress={onCancel} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
-          <View style={styles.grab} />
+        <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 16 + insets.bottom }]}>
+          <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
           <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
             <ObInput
               placeholder="Food name"
@@ -108,26 +110,26 @@ export function AddEntryForm({
               {state.pendingPhotoB64 ? (
                 <Image
                   source={{ uri: `data:image/jpeg;base64,${state.pendingPhotoB64}` }}
-                  style={styles.photoThumb}
+                  style={[styles.photoThumb, { backgroundColor: theme.surfaces.surface2 }]}
                 />
               ) : null}
               <Pressable onPress={() => void pickPhoto('camera')}>
-                <Text style={styles.photoAction}>CAMERA</Text>
+                <Text style={[styles.photoAction, { color: theme.text.mute }]}>CAMERA</Text>
               </Pressable>
               <Pressable onPress={() => void pickPhoto('gallery')}>
-                <Text style={styles.photoAction}>GALLERY</Text>
+                <Text style={[styles.photoAction, { color: theme.text.mute }]}>GALLERY</Text>
               </Pressable>
               {state.pendingPhotoB64 ? (
                 <Pressable onPress={() => setState((s) => (s ? { ...s, pendingPhotoB64: null } : s))}>
-                  <Text style={styles.photoAction}>REMOVE</Text>
+                  <Text style={[styles.photoAction, { color: theme.text.mute }]}>REMOVE</Text>
                 </Pressable>
               ) : null}
             </View>
-            {state.conflictNote ? <Text style={styles.conflict}>{state.conflictNote.toUpperCase()}</Text> : null}
+            {state.conflictNote ? <Text style={[styles.conflict, { color: theme.text.fat }]}>{state.conflictNote.toUpperCase()}</Text> : null}
             {state.sourceNote ? <SrcNote>{state.sourceNote}</SrcNote> : null}
             {/* Live-total keypad: the tray total updates as you type. */}
             {onAddToTray && trayCount > 0 ? (
-              <Text style={styles.trayLive}>
+              <Text style={[styles.trayLive, { color: theme.text.mute }]}>
                 {`TRAY AFTER ADD · ${trayCount + 1} ITEMS · ${Math.round(trayCalories + (state.calories || 0)).toLocaleString('en-US')} KCAL`}
               </Text>
             ) : null}
@@ -151,7 +153,7 @@ export function AddEntryForm({
               }}
               hitSlop={8}
             >
-              <Text style={styles.trayAction}>ADD TO TRAY · KEEP LOGGING</Text>
+              <Text style={[styles.trayAction, { color: theme.text.ink2 }]}>ADD TO TRAY · KEEP LOGGING</Text>
             </Pressable>
           ) : null}
         </View>
@@ -161,9 +163,10 @@ export function AddEntryForm({
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (t: string) => void }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label.toUpperCase()}</Text>
+      <Text style={[styles.fieldLabel, { color: theme.text.faint }]}>{label.toUpperCase()}</Text>
       <ObInput keyboardType="decimal-pad" value={value} onChangeText={onChange} placeholder="0" style={styles.fieldInput} />
     </View>
   );
@@ -172,29 +175,27 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
-  photoThumb: { width: 44, height: 44, borderRadius: 7, backgroundColor: color.surface2 },
-  photoAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, paddingVertical: 8 },
+  photoThumb: { width: 44, height: 44, borderRadius: 7 },
+  photoAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 8 },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
+  grab: { width: 34, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
   row: { flexDirection: 'row', gap: 10 },
   field: { flex: 1 },
-  fieldLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
+  fieldLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, marginTop: 12, marginBottom: -4 },
   fieldInput: { marginTop: 8 },
   conflict: {
-    fontFamily: mono, fontSize: 11, letterSpacing: 0.38, color: color.fat,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.38,
     lineHeight: 15, marginTop: 12,
   },
-  trayLive: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, marginTop: 12 },
+  trayLive: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, marginTop: 12 },
   trayAction: {
-    fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.ink2,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.9,
     textAlign: 'center', paddingVertical: 12,
   },
 });

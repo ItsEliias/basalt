@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, Chip, ObInput, ObChipLabel, color, mono, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, Chip, ObInput, ObChipLabel, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import { saveTemplate, type TemplateLocation } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -56,9 +56,9 @@ export function TemplateBuilder({ onClose, onSaved }: { onClose: () => void; onS
     <View style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 12 }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
         <View style={styles.head}>
-          <Text style={styles.title}>New template</Text>
+          <Text style={[styles.title, { color: theme.text.ink }]}>New template</Text>
           <Pressable onPress={onClose} hitSlop={10}>
-            <Text style={styles.close}>CLOSE</Text>
+            <Text style={[styles.close, { color: theme.text.faint }]}>CLOSE</Text>
           </Pressable>
         </View>
 
@@ -78,9 +78,9 @@ export function TemplateBuilder({ onClose, onSaved }: { onClose: () => void; onS
               <EmptyState>No exercises yet — add the first one below.</EmptyState>
             ) : (
               exercises.map((e, i) => (
-                <View key={`${e.exerciseId ?? e.exerciseName}-${i}`} style={styles.exRow}>
+                <View key={`${e.exerciseId ?? e.exerciseName}-${i}`} style={[styles.exRow, { borderBottomColor: theme.surfaces.border }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.exName}>{e.exerciseName}</Text>
+                    <Text style={[styles.exName, { color: theme.text.ink }]}>{e.exerciseName}</Text>
                     <View style={styles.targetRow}>
                       <NumField label="Sets" value={e.targetSets} onChange={(v) => updateExercise(i, { targetSets: Math.max(1, v) })} />
                       <NumField label="Reps" value={e.targetReps ?? 0} onChange={(v) => updateExercise(i, { targetReps: v || null })} />
@@ -88,13 +88,13 @@ export function TemplateBuilder({ onClose, onSaved }: { onClose: () => void; onS
                     </View>
                   </View>
                   <Pressable onPress={() => setExercises((prev) => prev.filter((_, idx) => idx !== i))} hitSlop={10}>
-                    <Text style={styles.remove}>REMOVE</Text>
+                    <Text style={[styles.remove, { color: theme.text.faint }]}>REMOVE</Text>
                   </Pressable>
                 </View>
               ))
             )}
             <Pressable onPress={() => setPickerOpen(true)}>
-              <Text style={styles.addExercise}>+ ADD EXERCISE</Text>
+              <Text style={[styles.addExercise, { color: theme.text.mute }]}>+ ADD EXERCISE</Text>
             </Pressable>
           </Card>
 
@@ -125,9 +125,10 @@ export function TemplateBuilder({ onClose, onSaved }: { onClose: () => void; onS
 }
 
 function NumField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const { theme } = useTheme();
   return (
     <View style={{ flex: 1 }}>
-      <Text style={styles.numLabel}>{label.toUpperCase()}</Text>
+      <Text style={[styles.numLabel, { color: theme.text.faint }]}>{label.toUpperCase()}</Text>
       <ObInput
         keyboardType="decimal-pad"
         value={value ? String(value) : ''}
@@ -142,15 +143,15 @@ function NumField({ label, value, onChange }: { label: string; value: number; on
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.bg },
+  root: { flex: 1 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16 },
-  title: { fontSize: 21, fontWeight: '650' as any, letterSpacing: -0.21, color: color.ink },
-  close: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint },
+  title: { fontSize: 21, fontWeight: '650' as any, letterSpacing: -0.21 },
+  close: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
   locRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  exRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  exName: { fontSize: 14, color: color.ink, marginBottom: 6 },
+  exRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  exName: { fontSize: 14, marginBottom: 6 },
   targetRow: { flexDirection: 'row', gap: 8 },
-  numLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, marginTop: 8, marginBottom: -4 },
-  remove: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingTop: 4 },
-  addExercise: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute, paddingVertical: 12, textAlign: 'center' },
+  numLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, marginTop: 8, marginBottom: -4 },
+  remove: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, paddingTop: 4 },
+  addExercise: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, paddingVertical: 12, textAlign: 'center' },
 });

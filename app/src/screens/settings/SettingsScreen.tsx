@@ -3,13 +3,7 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel,
-  ChipRow, ChipGroup, kgText, groupInt,
-  THEME_IDS, THEMES, type ThemeId,
-  color, mono, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup, kgText, groupInt, THEME_IDS, THEMES, type ThemeId, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { ImportSheet } from './ImportSheet';
 import { SharingSection } from './SharingSection';
@@ -233,7 +227,7 @@ export function SettingsScreen() {
               profile?.useMetric === false ? 'imperial' : 'metric',
             ].filter(Boolean).join(' · ') || 'not set yet'}
             value="edit →"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
           />
         </Pressable>
         <Pressable onPress={() => setEdit('goals')} hitSlop={8}>
@@ -245,7 +239,7 @@ export function SettingsScreen() {
                 : 'none set'
             }
             value="change →"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
           />
         </Pressable>
         <ReceiptRow
@@ -265,7 +259,7 @@ export function SettingsScreen() {
               [...(profile?.dietaryFlags ?? []), ...(profile?.dietPatterns ?? [])].join(' · ') || 'none set'
             }
             value="edit →"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
           />
         </Pressable>
         <Pressable onPress={() => setEdit('training')} hitSlop={8}>
@@ -277,7 +271,7 @@ export function SettingsScreen() {
                 : 'not set'
             }
             value="edit →"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
             last
           />
         </Pressable>
@@ -303,7 +297,7 @@ export function SettingsScreen() {
             name="Hide the numbers"
             meta="log-only mode: everything is still recorded and exported — calories and macros just aren't shown. For anyone the numbers aren't kind to."
             value={profile?.hideNumbers ? 'on' : 'off'}
-            valueColor={profile?.hideNumbers ? color.carbs : color.faint}
+            valueColor={profile?.hideNumbers ? theme.text.carbs : theme.text.faint}
             last
           />
         </Pressable>
@@ -313,7 +307,7 @@ export function SettingsScreen() {
             name="Fasting timer"
             meta="a window timer with documented stages — information, not medical advice. Off unless you want it."
             value={profile?.fastingEnabled ? 'on' : 'off'}
-            valueColor={profile?.fastingEnabled ? color.carbs : color.faint}
+            valueColor={profile?.fastingEnabled ? theme.text.carbs : theme.text.faint}
             last
           />
         </Pressable>
@@ -323,7 +317,7 @@ export function SettingsScreen() {
             name="Personal monthly challenge"
             meta="a private target computed from your own baseline — no leaderboards, no badges, off unless you want it"
             value={profile?.challengeEnabled ? 'on' : 'off'}
-            valueColor={profile?.challengeEnabled ? color.carbs : color.faint}
+            valueColor={profile?.challengeEnabled ? theme.text.carbs : theme.text.faint}
             last
           />
         </Pressable>
@@ -332,9 +326,9 @@ export function SettingsScreen() {
           <ReceiptRow
             name="Sunday 18:00 notification"
             meta={weekNotifNote ?? 'a fixed prompt — never data in the notification itself'}
-            metaAccent={weekNotifNote ? color.fat : undefined}
+            metaAccent={weekNotifNote ? theme.text.fat : undefined}
             value={weekNotif === null ? '…' : weekNotif ? 'on' : 'off'}
-            valueColor={weekNotif ? color.carbs : color.faint}
+            valueColor={weekNotif ? theme.text.carbs : theme.text.faint}
           />
         </Pressable>
         <Pressable onPress={() => void toggleMonthNotif()} disabled={busy !== null || monthNotif === null} hitSlop={8}>
@@ -342,7 +336,7 @@ export function SettingsScreen() {
             name="Monthly behavior report — 1st, 18:00"
             meta="same rule: a fixed prompt, the report composes in Trends"
             value={monthNotif === null ? '…' : monthNotif ? 'on' : 'off'}
-            valueColor={monthNotif ? color.carbs : color.faint}
+            valueColor={monthNotif ? theme.text.carbs : theme.text.faint}
           />
         </Pressable>
         <Pressable
@@ -357,7 +351,7 @@ export function SettingsScreen() {
             name="Vitals-deviation alert"
             meta="off by default · at most one a day, only when ≥2 vitals sit outside your own 30-day range · an observation, never a diagnosis"
             value={illnessNotif === null ? '…' : illnessNotif ? 'on' : 'off'}
-            valueColor={illnessNotif ? color.carbs : color.faint}
+            valueColor={illnessNotif ? theme.text.carbs : theme.text.faint}
             last
           />
         </Pressable>
@@ -432,7 +426,7 @@ export function SettingsScreen() {
             name={busy === 'basalt-export.json' ? 'Exporting…' : 'Export everything — JSON'}
             meta="every table, one file, one tap"
             value="→"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
           />
         </Pressable>
         <Pressable onPress={() => void exportCsv()} disabled={busy !== null} hitSlop={8}>
@@ -440,7 +434,7 @@ export function SettingsScreen() {
             name={busy === 'basalt-export.csv' ? 'Exporting…' : 'Export everything — CSV'}
             meta="sectioned per table, spreadsheet-ready"
             value="→"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
           />
         </Pressable>
         <Pressable
@@ -460,7 +454,7 @@ export function SettingsScreen() {
             name={busy === 'doctor' ? 'Building…' : 'Doctor report — PDF'}
             meta="last 30 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
             value="→"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
           />
         </Pressable>
         <Pressable onPress={() => setIncludePhotos(!includePhotos)} hitSlop={8}>
@@ -468,7 +462,7 @@ export function SettingsScreen() {
             name="Include progress-photo records"
             meta="off by default — the vault stays out of exports unless you say so (records only; the photos themselves stay in private storage)"
             value={includePhotos ? 'on' : 'off'}
-            valueColor={includePhotos ? color.carbs : color.faint}
+            valueColor={includePhotos ? theme.text.carbs : theme.text.faint}
           />
         </Pressable>
         <Pressable onPress={() => void exportZip()} disabled={busy !== null} hitSlop={8}>
@@ -476,7 +470,7 @@ export function SettingsScreen() {
             name={busy === 'basalt-export.zip' ? 'Exporting…' : 'Export everything — CSV archive'}
             meta="one file per table, zipped · README lists every table incl. empty ones"
             value="→"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
           />
         </Pressable>
         <Pressable onPress={() => setImportOpen(true)} disabled={busy !== null} hitSlop={8}>
@@ -484,7 +478,7 @@ export function SettingsScreen() {
             name="Import training history"
             meta="Strong, Hevy, generic CSV, or a Basalt export · dry-run preview before anything commits"
             value="→"
-            valueColor={color.faint}
+            valueColor={theme.text.faint}
             last
           />
         </Pressable>
@@ -502,9 +496,9 @@ export function SettingsScreen() {
           <ReceiptRow
             name="Delete account & all data"
             meta="type-to-confirm · removes every table row, then the sign-in record"
-            metaAccent={color.fat}
+            metaAccent={theme.text.fat}
             value="→"
-            valueColor={color.fat}
+            valueColor={theme.text.fat}
             last
           />
         </Pressable>
@@ -525,8 +519,8 @@ export function SettingsScreen() {
 
       {/* ── Delete confirm ─────────────────────────────────────────── */}
       <EditSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} bottomInset={insets.bottom}>
-        <Text style={styles.deleteTitle}>Delete account & all data</Text>
-        <Text style={styles.deleteBody}>
+        <Text style={[styles.deleteTitle, { color: theme.text.fat }]}>Delete account & all data</Text>
+        <Text style={[styles.deleteBody, { color: theme.text.ink2 }]}>
           This removes every row in every table — food, sessions, sets, water, weight, sleep, targets,
           profile — and then the sign-in record itself where nothing else depends on it. There is no
           undo and no grace period. Type DELETE to confirm.
@@ -545,11 +539,12 @@ export function SettingsScreen() {
 function EditSheet({ open, onClose, children, bottomInset }: {
   open: boolean; onClose: () => void; children: React.ReactNode; bottomInset: number;
 }) {
+  const { theme } = useTheme();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + bottomInset }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + bottomInset }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
         <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
       </View>
     </Modal>
@@ -659,19 +654,17 @@ type EditorProps = {
 };
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: color.bg },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
-  deleteTitle: { fontSize: 16, fontWeight: '600', color: color.fat, marginTop: 6 },
-  deleteBody: { fontSize: 13, lineHeight: 20, color: color.ink2, marginTop: 10 },
+  grab: { width: 34, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
+  deleteTitle: { fontSize: 16, fontWeight: '600', marginTop: 6 },
+  deleteBody: { fontSize: 13, lineHeight: 20, marginTop: 10 },
 });

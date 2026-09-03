@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CTA, ChipRow, ReceiptRow, SrcNote, color, mono, ScaledText as Text } from '@basalt/ui';
+import { CTA, ChipRow, ReceiptRow, SrcNote, mono, ScaledText as Text } from '@basalt/ui';
 import {
   adaptSession, adaptSummary, getExercises,
   type AdaptChange, type AdaptMode, type Exercise,
 } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useSessionStore } from '../../state/sessionStore';
+import { useTheme } from '@basalt/ui';
 
 // Adapt Session — propose, show every change with its why, apply only on
 // confirm. Exercises with logged sets are never touched (the engine
@@ -21,6 +22,7 @@ const MODES: { label: string; mode: AdaptMode | 'exclude' }[] = [
 ];
 
 export function AdaptSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const session = useSessionStore();
   const [picking, setPicking] = useState<'mode' | 'muscle' | 'confirm'>('mode');
@@ -62,8 +64,8 @@ export function AdaptSheet({ open, onClose }: { open: boolean; onClose: () => vo
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={reset}>
       <Pressable style={styles.dim} onPress={reset} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-        <Text style={styles.title}>ADAPT SESSION</Text>
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={[styles.title, { color: theme.text.mute }]}>ADAPT SESSION</Text>
 
         {picking === 'mode' ? (
           <>
@@ -77,7 +79,7 @@ export function AdaptSheet({ open, onClose }: { open: boolean; onClose: () => vo
                   else void propose(m.mode);
                 }}
               >
-                <ReceiptRow name={busy ? '…' : m.label} value="→" valueColor={color.faint} />
+                <ReceiptRow name={busy ? '…' : m.label} value="→" valueColor={theme.text.faint} />
               </Pressable>
             ))}
             <SrcNote>Proposes changes first — nothing is applied until you confirm</SrcNote>
@@ -86,7 +88,7 @@ export function AdaptSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
         {picking === 'muscle' ? (
           <>
-            <Text style={styles.label}>LEAVE ALONE TODAY</Text>
+            <Text style={[styles.label, { color: theme.text.mute }]}>LEAVE ALONE TODAY</Text>
             <ChipRow
               options={muscles}
               onChange={(muscle) => void propose({ kind: 'exclude_muscle', muscle })}
@@ -103,7 +105,7 @@ export function AdaptSheet({ open, onClose }: { open: boolean; onClose: () => vo
                   name={c.action === 'swap' ? `${nameFor(c.id)} → ${c.replacement?.name}` : nameFor(c.id)}
                   meta={c.why}
                   value={c.action.toUpperCase()}
-                  valueColor={c.action === 'keep' ? color.faint : c.action === 'drop' ? color.fat : color.carbs}
+                  valueColor={c.action === 'keep' ? theme.text.faint : c.action === 'drop' ? theme.text.fat : theme.text.carbs}
                   last={i === proposal.length - 1}
                 />
               ))}
@@ -129,14 +131,12 @@ export function AdaptSheet({ open, onClose }: { open: boolean; onClose: () => vo
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 18,
   },
-  title: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
-  label: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, color: color.mute, marginTop: 14 },
+  title: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
+  label: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, marginTop: 14 },
 });

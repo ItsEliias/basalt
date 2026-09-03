@@ -4,7 +4,6 @@ import {
   tileCachingAllowed, routeBounds, packNameForWalk, buildWalkMapStyle,
   TILE_CACHE_RULES, DEV_TILES, type TileConfig, type RoutePt,
 } from '@basalt/training';
-import { color } from '@basalt/ui';
 
 // Corridor tile cache for saved walks (V3.1 H2). Provider-gated by the
 // pure policy module; the pack downloads through MapLibre's offline
@@ -51,7 +50,9 @@ export async function cacheRouteTiles(walkId: string, route: RoutePt[]): Promise
 
   const info: RouteCacheInfo = { state: 'downloading' };
   await setInfo(walkId, info);
-  const style = buildWalkMapStyle(route, { bg: color.bg, accent: color.carbs }, WALK_TILES);
+  // This style exists only to enumerate the tile URLs for the pack download —
+  // its colours never render. Literals keep the static palette out of libs.
+  const style = buildWalkMapStyle(route, { bg: '#000000', accent: '#ffffff' }, WALK_TILES);
 
   return new Promise((resolve) => {
     let settled = false;

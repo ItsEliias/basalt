@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule,
-  MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag,
-  TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow,
-  TileGridThemed, Tile,
-  color, mono, groupInt, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
@@ -239,7 +232,7 @@ export function TodayScreen() {
       <ScrollView
         style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
         <TileGridThemed>
           {filterTiles(tileSpecs, hidden).map((t) => (
@@ -263,14 +256,14 @@ export function TodayScreen() {
     <ScrollView
       style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={color.mute} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
       <Card>
         {heroMode === 'qualitative' ? (
           <>
             <MicroLabel>Food</MicroLabel>
-            <Text style={styles.heroSub}>
+            <Text style={[styles.heroSub, { color: theme.text.mute }]}>
               {data && data.entries.length > 0
                 ? `Logged — ${data.entries.length} ${data.entries.length === 1 ? 'item' : 'items'} today`
                 : 'Nothing logged yet today'}
@@ -280,14 +273,14 @@ export function TodayScreen() {
         ) : null}
         {hero && heroMode === 'numeric' ? (
           <>
-            <KV label="Energy remaining" right={<Text style={styles.targetRatio}><Text style={styles.targetOf}>target</Text> {hero.targetText}</Text>} />
+            <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
             <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
-            <Text style={styles.heroSub}>{hero.subParts.join(' · ')}</Text>
+            <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
             <SegmentedStack
               segments={[
-                { fraction: hero.stack[0]?.fraction ?? 0, fill: color.protein },
-                { fraction: hero.stack[1]?.fraction ?? 0, fill: color.carbs },
-                { fraction: hero.stack[2]?.fraction ?? 0, fill: color.fat },
+                { fraction: hero.stack[0]?.fraction ?? 0, fill: theme.fill.protein },
+                { fraction: hero.stack[1]?.fraction ?? 0, fill: theme.fill.carbs },
+                { fraction: hero.stack[2]?.fraction ?? 0, fill: theme.fill.fat },
               ]}
             />
           </>
@@ -304,10 +297,10 @@ export function TodayScreen() {
       {/* ── Macros + caps ──────────────────────────────────────────── */}
       {targets && data && !hideNumbers && !hidden.has('macros') ? (
         <Card>
-          <MacroRow name="Protein" dot={color.protein} value={data.totals.protein} target={targets.proteinG} />
-          <MacroRow name="Carbohydrate" dot={color.carbs} value={data.totals.carbs} target={targets.carbsG} />
-          <MacroRow name="Fat" dot={color.fat} value={data.totals.fat} target={targets.fatG} />
-          <MacroRow name="Fibre" dot={color.faint} value={data.totals.fiber} target={targets.fiberG} />
+          <MacroRow name="Protein" dot={theme.fill.protein} value={data.totals.protein} target={targets.proteinG} />
+          <MacroRow name="Carbohydrate" dot={theme.fill.carbs} value={data.totals.carbs} target={targets.carbsG} />
+          <MacroRow name="Fat" dot={theme.fill.fat} value={data.totals.fat} target={targets.fatG} />
+          <MacroRow name="Fibre" dot={theme.fill.faint} value={data.totals.fiber} target={targets.fiberG} />
           {targets.sugarCapG !== null || targets.sodiumCapMg !== null ? (
             <>
               <Rule />
@@ -337,7 +330,7 @@ export function TodayScreen() {
                         : '—'
                   }
                   unit="kcal"
-                  valueColor={b.state === 'eaten' ? undefined : color.faint}
+                  valueColor={b.state === 'eaten' ? undefined : theme.text.faint}
                 />
               ))}
               <SrcNote>{budgets.note}</SrcNote>
@@ -376,13 +369,13 @@ export function TodayScreen() {
                       name={e.foodName}
                       thumb={
                         e.photoPath && photoUrls.get(e.photoPath) ? (
-                          <Image source={{ uri: photoUrls.get(e.photoPath)! }} style={styles.entryThumb} />
+                          <Image source={{ uri: photoUrls.get(e.photoPath)! }} style={[styles.entryThumb, { backgroundColor: theme.surfaces.surface2 }]} />
                         ) : undefined
                       }
                       meta={hideNumbers ? 'hold to remove' : `${entryMeta(e)} · hold to remove`}
                       value={hideNumbers ? '✓' : groupInt(e.calories)}
                       unit={hideNumbers ? undefined : 'kcal'}
-                      valueColor={hideNumbers ? color.faint : undefined}
+                      valueColor={hideNumbers ? theme.text.faint : undefined}
                       last={i === s.entries.length - 1}
                     />
                   </Pressable>
@@ -420,7 +413,7 @@ export function TodayScreen() {
               : microDetail(data?.entries ?? []).map((m) => (
                   <View key={m.name}>
                     <MicroRow name={m.name} pct={m.pct} />
-                    <Text style={styles.microMeta}>
+                    <Text style={[styles.microMeta, { color: theme.text.faint }]}>
                       {(m.amount !== null && m.unit ? `${m.amount} ${m.unit} · ` : '') +
                         `${m.fromEntries} ${m.fromEntries === 1 ? 'entry' : 'entries'} carried source data` +
                         (m.amount === null ? ' · amounts in mixed units — % only' : '')}
@@ -465,22 +458,22 @@ export function TodayScreen() {
         )}
       </TileGrid>
       {hidden.has('water') ? null : (
-        <Text onPress={onUndoWater} style={styles.undo}>UNDO LAST WATER</Text>
+        <Text onPress={onUndoWater} style={[styles.undo, { color: theme.text.faint }]}>UNDO LAST WATER</Text>
       )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  microMeta: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.4, color: color.faint, marginTop: -2, marginBottom: 6 },
-  scroll: { flex: 1, backgroundColor: color.bg },
+  microMeta: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.4, marginTop: -2, marginBottom: 6 },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
-  targetRatio: { fontFamily: mono, fontSize: 12, color: color.ink2 },
-  targetOf: { color: color.faint },
-  heroSub: { fontFamily: mono, fontSize: 11.5, color: color.mute, marginTop: 10 },
-  entryThumb: { width: 30, height: 30, borderRadius: 7, backgroundColor: color.surface2 },
+  targetRatio: { fontFamily: mono, fontSize: 12 },
+  targetOf: {},
+  heroSub: { fontFamily: mono, fontSize: 11.5, marginTop: 10 },
+  entryThumb: { width: 30, height: 30, borderRadius: 7 },
   undo: {
-    fontFamily: mono, fontSize: 11, letterSpacing: 0.95, color: color.faint,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.95,
     textAlign: 'center', marginTop: 14, paddingVertical: 4,
   },
 });

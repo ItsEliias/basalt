@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Stepper,
-  ChipRow, ObInput, ObChipLabel, NewRow, approxValue, groupInt,
-  color, mono, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Stepper, ChipRow, ObInput, ObChipLabel, NewRow, approxValue, groupInt, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
   importRecipeFromUrl, draftFromImport, saveRecipe, listRecipes, getRecipeDetail, deleteRecipe,
   confirmRecipeMacros, logRecipeServing, addToGroceryList, ingredientConflicts,
@@ -246,7 +241,7 @@ export function RecipesTab() {
         <Card>
           <ReceiptHeader label="Imported — edit before save" summary="~ until you confirm macros" />
           {draft.sourceImageUrl ? (
-            <Image source={{ uri: draft.sourceImageUrl }} style={styles.draftCover} />
+            <Image source={{ uri: draft.sourceImageUrl }} style={[styles.draftCover, { backgroundColor: theme.surfaces.surface2 }]} />
           ) : null}
           <ObInput placeholder="Title" value={draft.title} onChangeText={(title) => setDraft({ ...draft, title })} />
           <ObChipLabel>{`Serves ${draft.serves} · per-serve macros (from the source, unconfirmed)`}</ObChipLabel>
@@ -271,7 +266,7 @@ export function RecipesTab() {
             }
           }} />
           <Pressable onPress={() => setDraft(null)}>
-            <Text style={styles.cancel}>DISCARD IMPORT</Text>
+            <Text style={[styles.cancel, { color: theme.text.faint }]}>DISCARD IMPORT</Text>
           </Pressable>
         </Card>
       </ScrollView>
@@ -285,21 +280,21 @@ export function RecipesTab() {
     return (
       <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <Pressable onPress={() => setDetail(null)}>
-          <Text style={styles.back}>← RECIPES</Text>
+          <Text style={[styles.back, { color: theme.text.mute }]}>← RECIPES</Text>
         </Pressable>
         <Card>
-          {detailPhotoUrl ? <Image source={{ uri: detailPhotoUrl }} style={styles.detailCover} /> : null}
+          {detailPhotoUrl ? <Image source={{ uri: detailPhotoUrl }} style={[styles.detailCover, { backgroundColor: theme.surfaces.surface2 }]} /> : null}
           <View style={styles.detailHead}>
-            <Text style={styles.detailTitle}>{detail.title}</Text>
-            {detail.totalTimeMin ? <Text style={styles.detailMeta}>{`${detail.totalTimeMin} MIN`}</Text> : null}
+            <Text style={[styles.detailTitle, { color: theme.text.ink }]}>{detail.title}</Text>
+            {detail.totalTimeMin ? <Text style={[styles.detailMeta, { color: theme.text.faint }]}>{`${detail.totalTimeMin} MIN`}</Text> : null}
           </View>
           {conflicts.length > 0 ? (
-            <Text style={styles.conflict}>
+            <Text style={[styles.conflict, { color: theme.text.fat }]}>
               {conflicts.map((c) => `${c.ingredient} — ${c.flag}`).join(' · ').toUpperCase()}
             </Text>
           ) : null}
           <View style={styles.servesRow}>
-            <Text style={styles.microLabel}>MAKES</Text>
+            <Text style={[styles.microLabel, { color: theme.text.mute }]}>MAKES</Text>
             <Stepper
               value={`${serves} serves`}
               onMinus={() => setServes((s) => Math.max(1, s - 1))}
@@ -307,8 +302,8 @@ export function RecipesTab() {
             />
           </View>
           <View style={styles.perServe}>
-            <Text style={styles.microLabel}>PER SERVE</Text>
-            <Text style={styles.perServeText}>
+            <Text style={[styles.microLabel, { color: theme.text.mute }]}>PER SERVE</Text>
+            <Text style={[styles.perServeText, { color: theme.text.ink2 }]}>
               {`${approxValue(detail.caloriesPerServe, detail.macrosConfirmed)} kcal · P ${Math.round(detail.proteinPerServe)} · C ${Math.round(detail.carbsPerServe)} · F ${Math.round(detail.fatPerServe)}`}
             </Text>
           </View>
@@ -333,16 +328,16 @@ export function RecipesTab() {
             return (
               <Pressable
                 key={ing.id}
-                style={styles.checkRow}
+                style={[styles.checkRow, { borderBottomColor: theme.surfaces.border }]}
                 onPress={() => {
                   const next = new Set(checked);
                   if (done) next.delete(i); else next.add(i);
                   setChecked(next);
                 }}
               >
-                <View style={[styles.box, done && styles.boxDone]}>{done ? <Text style={styles.boxTick}>✓</Text> : null}</View>
-                <Text style={[styles.qty, done && styles.strike]}>{fmtQty(scaled, ing.unit)}</Text>
-                <Text style={[styles.ing, done && styles.strike]}>{ing.name}</Text>
+                <View style={[styles.box, { borderColor: theme.surfaces.borderStrong }, done && { backgroundColor: theme.surfaces.surface2, borderColor: theme.fill.faint }]}>{done ? <Text style={[styles.boxTick, { color: theme.text.mute }]}>✓</Text> : null}</View>
+                <Text style={[styles.qty, { color: theme.text.ink2 }, done && [styles.strike, { color: theme.text.faint }]]}>{fmtQty(scaled, ing.unit)}</Text>
+                <Text style={[styles.ing, { color: theme.text.ink }, done && [styles.strike, { color: theme.text.faint }]]}>{ing.name}</Text>
               </Pressable>
             );
           })}
@@ -364,9 +359,9 @@ export function RecipesTab() {
           <Card>
             <ReceiptHeader label="Method" summary={`${detail.steps.length} steps`} />
             {detail.steps.map((step, i) => (
-              <View key={i} style={styles.stepRow}>
-                <Text style={styles.stepNum}>{String(i + 1).padStart(2, '0')}</Text>
-                <Text style={styles.stepText}>{step}</Text>
+              <View key={i} style={[styles.stepRow, { borderBottomColor: theme.surfaces.border }]}>
+                <Text style={[styles.stepNum, { color: theme.text.faint }]}>{String(i + 1).padStart(2, '0')}</Text>
+                <Text style={[styles.stepText, { color: theme.text.ink2 }]}>{step}</Text>
               </View>
             ))}
           </Card>
@@ -405,13 +400,13 @@ export function RecipesTab() {
       <CTA label={importing ? 'Importing…' : 'Import from URL'} disabled={importing || !importUrl.trim()} onPress={() => void runImport()} />
       <View style={styles.scanRow}>
         <Pressable onPress={() => void scanRecipe('camera')} hitSlop={8} disabled={importing}>
-          <Text style={styles.scanLink}>SCAN A RECIPE — CAMERA</Text>
+          <Text style={[styles.scanLink, { color: theme.text.faint }]}>SCAN A RECIPE — CAMERA</Text>
         </Pressable>
         <Pressable onPress={() => void scanRecipe('gallery')} hitSlop={8} disabled={importing}>
-          <Text style={styles.scanLink}>GALLERY</Text>
+          <Text style={[styles.scanLink, { color: theme.text.faint }]}>GALLERY</Text>
         </Pressable>
       </View>
-      {importError ? <Text style={styles.conflict}>{importError.toUpperCase()}</Text> : null}
+      {importError ? <Text style={[styles.conflict, { color: theme.text.fat }]}>{importError.toUpperCase()}</Text> : null}
       <SrcNote>JSON-LD import · TikTok/Instagram/YouTube links go through an AI-structured draft, source link kept · a scanned page is transcribed, never invented — unreadable parts named, macros estimated only when the page prints none · everything editable before save</SrcNote>
 
       {/* ── What's on hand — proposals from the user's list only ────── */}
@@ -424,7 +419,7 @@ export function RecipesTab() {
           multiline
         />
         <CTA label={ideasBusy ? 'Proposing…' : 'Propose recipes'} disabled={ideasBusy || !onHandText.trim()} onPress={() => void runIdeas()} />
-        {ideasError ? <Text style={styles.conflict}>{ideasError.toUpperCase()}</Text> : null}
+        {ideasError ? <Text style={[styles.conflict, { color: theme.text.fat }]}>{ideasError.toUpperCase()}</Text> : null}
         {ideas && ideas.length > 0
           ? ideas.map((i, idx) => (
               <Pressable key={i.name} onPress={() => ideaToDraft(i)} hitSlop={8}>
@@ -455,7 +450,7 @@ export function RecipesTab() {
         />
         {filtered.length > 1 ? (
           <Pressable onPress={() => { setCookSelect(!cookSelect); setCookIds(new Set()); }} hitSlop={8}>
-            <Text style={styles.scanLink}>{cookSelect ? 'CANCEL COOK TOGETHER' : 'COOK TOGETHER — MERGED TIMELINE'}</Text>
+            <Text style={[styles.scanLink, { color: theme.text.faint }]}>{cookSelect ? 'CANCEL COOK TOGETHER' : 'COOK TOGETHER — MERGED TIMELINE'}</Text>
           </Pressable>
         ) : null}
         {recipesFailed ? (
@@ -488,7 +483,7 @@ export function RecipesTab() {
                   name={cookSelect && cookIds.has(r.id) ? `✓ ${r.title}` : r.title}
                   thumb={
                     r.coverPath && photoUrls.get(r.coverPath) ? (
-                      <Image source={{ uri: photoUrls.get(r.coverPath)! }} style={styles.rowThumb} />
+                      <Image source={{ uri: photoUrls.get(r.coverPath)! }} style={[styles.rowThumb, { backgroundColor: theme.surfaces.surface2 }]} />
                     ) : undefined
                   }
                   meta={[
@@ -529,9 +524,10 @@ export function RecipesTab() {
 }
 
 function NumField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const { theme } = useTheme();
   return (
     <View style={{ flex: 1 }}>
-      <Text style={styles.numLabel}>{label.toUpperCase()}</Text>
+      <Text style={[styles.numLabel, { color: theme.text.faint }]}>{label.toUpperCase()}</Text>
       <ObInput
         keyboardType="decimal-pad"
         value={value ? String(value) : ''}
@@ -547,33 +543,32 @@ function NumField({ label, value, onChange }: { label: string; value: number; on
 
 const styles = StyleSheet.create({
   scanRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
-  scanLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
-  scroll: { flex: 1, backgroundColor: color.bg },
+  scanLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, paddingVertical: 8 },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   importRow: { flexDirection: 'row' },
-  back: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute, paddingTop: 12, paddingHorizontal: 4 },
+  back: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, paddingTop: 12, paddingHorizontal: 4 },
   detailHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
-  detailTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.15, color: color.ink, flexShrink: 1 },
-  detailMeta: { fontFamily: mono, fontSize: 11.5, color: color.faint, letterSpacing: 0.6 },
-  conflict: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 10, letterSpacing: 0.38, lineHeight: 15 },
+  detailTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.15, flexShrink: 1 },
+  detailMeta: { fontFamily: mono, fontSize: 11.5, letterSpacing: 0.6 },
+  conflict: { fontFamily: mono, fontSize: 11, marginTop: 10, letterSpacing: 0.38, lineHeight: 15 },
   servesRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
   perServe: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 14 },
-  perServeText: { fontFamily: mono, fontSize: 12, color: color.ink2, fontVariant: ['tabular-nums'] },
-  microLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2, color: color.mute },
-  checkRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  box: { width: 14, height: 14, borderWidth: 1, borderColor: color.border2, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
-  boxDone: { backgroundColor: color.surface2, borderColor: color.faint },
-  boxTick: { fontSize: 11, color: color.mute, lineHeight: 11 },
-  qty: { fontFamily: mono, fontSize: 12, color: color.ink2, minWidth: 74, fontVariant: ['tabular-nums'] },
-  ing: { fontSize: 14, color: color.ink, flexShrink: 1 },
-  strike: { color: color.faint, textDecorationLine: 'line-through' },
-  stepRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  stepNum: { fontFamily: mono, fontSize: 11, color: color.faint, position: 'relative', top: 3 },
-  stepText: { fontSize: 14, lineHeight: 21, color: color.ink2, flexShrink: 1 },
+  perServeText: { fontFamily: mono, fontSize: 12, fontVariant: ['tabular-nums'] },
+  microLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2 },
+  checkRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  box: { width: 14, height: 14, borderWidth: 1, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  boxTick: { fontSize: 11, lineHeight: 11 },
+  qty: { fontFamily: mono, fontSize: 12, minWidth: 74, fontVariant: ['tabular-nums'] },
+  ing: { fontSize: 14, flexShrink: 1 },
+  strike: { textDecorationLine: 'line-through' },
+  stepRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  stepNum: { fontFamily: mono, fontSize: 11, position: 'relative', top: 3 },
+  stepText: { fontSize: 14, lineHeight: 21, flexShrink: 1 },
   macroRow: { flexDirection: 'row', gap: 8 },
-  rowThumb: { width: 30, height: 30, borderRadius: 7, backgroundColor: color.surface2 },
-  draftCover: { width: '100%', height: 160, borderRadius: 10, backgroundColor: color.surface2, marginTop: 12 },
-  detailCover: { width: '100%', height: 180, borderRadius: 10, backgroundColor: color.surface2, marginBottom: 12 },
-  numLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, marginTop: 12, marginBottom: -4 },
-  cancel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 12 },
+  rowThumb: { width: 30, height: 30, borderRadius: 7 },
+  draftCover: { width: '100%', height: 160, borderRadius: 10, marginTop: 12 },
+  detailCover: { width: '100%', height: 180, borderRadius: 10, marginBottom: 12 },
+  numLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, marginTop: 12, marginBottom: -4 },
+  cancel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, textAlign: 'center', paddingVertical: 12 },
 });

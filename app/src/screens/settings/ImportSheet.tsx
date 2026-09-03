@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  color, mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote, EmptyState,
-  ReceiptHeader, ReceiptRow, ScaledText as Text,
-} from '@basalt/ui';
+import { mono, CTA, ObInput, ObChipLabel, ChipRow, SrcNote, EmptyState, ReceiptHeader, ReceiptRow, ScaledText as Text } from '@basalt/ui';
 import {
   parseStrongCsv, parseHevyCsv, parseGenericCsv, parseBasaltSectionedCsv,
   buildImportPreview, commitImport, getExercises, normalizeExerciseName,
@@ -17,6 +14,7 @@ import { logLoggingEvent } from '../../lib/instrumentation';
 import { capturePhoto } from '../../lib/photoFood';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useTheme } from '@basalt/ui';
 
 // Competitor import — Strong / Hevy / generic CSV / Basalt's own export,
 // through a DRY-RUN preview before anything commits: session count, date
@@ -33,6 +31,7 @@ export function ImportSheet({ open, onClose, onImported }: {
   onClose: () => void;
   onImported: () => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [format, setFormat] = useState<Format>('Strong');
   const [text, setText] = useState('');
@@ -188,8 +187,8 @@ export function ImportSheet({ open, onClose, onImported }: {
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 16 + insets.bottom }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
         <ScrollView style={{ maxHeight: 560 }} keyboardShouldPersistTaps="handled">
           <ReceiptHeader label="Import training history" summary="dry-run first, always" />
           <ObChipLabel>Source</ObChipLabel>
@@ -228,7 +227,7 @@ export function ImportSheet({ open, onClose, onImported }: {
                 }}
                 hitSlop={8}
               >
-                <Text style={styles.pickLink}>…OR PICK A CSV FILE</Text>
+                <Text style={[styles.pickLink, { color: theme.text.faint }]}>…OR PICK A CSV FILE</Text>
               </Pressable>
             </>
           ) : null}
@@ -282,7 +281,7 @@ export function ImportSheet({ open, onClose, onImported }: {
                   <ObChipLabel>{`${routinePreview.unmatched.length} exercise ${routinePreview.unmatched.length === 1 ? 'name' : 'names'} without a library match`}</ObChipLabel>
                   {routinePreview.unmatched.map((name) => (
                     <View key={name}>
-                      <Text style={styles.unmatchedName}>{name}</Text>
+                      <Text style={[styles.unmatchedName, { color: theme.text.ink2 }]}>{name}</Text>
                       <ObInput
                         placeholder="Map to a library exercise (optional — imports as written otherwise)"
                         value={overrides[name] ?? ''}
@@ -322,7 +321,7 @@ export function ImportSheet({ open, onClose, onImported }: {
                   <ObChipLabel>{`${preview.unmatched.length} exercise ${preview.unmatched.length === 1 ? 'name' : 'names'} without a library match`}</ObChipLabel>
                   {preview.unmatched.map((name) => (
                     <View key={name}>
-                      <Text style={styles.unmatchedName}>{name}</Text>
+                      <Text style={[styles.unmatchedName, { color: theme.text.ink2 }]}>{name}</Text>
                       <ObInput
                         placeholder="Map to a library exercise (optional — imports as written otherwise)"
                         value={overrides[name] ?? ''}
@@ -355,18 +354,16 @@ export function ImportSheet({ open, onClose, onImported }: {
 }
 
 const styles = StyleSheet.create({
-  pickLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 8 },
+  pickLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 8 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
+  grab: { width: 34, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 4, marginBottom: 10 },
   pasteBox: { minHeight: 88, maxHeight: 150 },
-  unmatchedName: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, color: color.ink2, marginTop: 10 },
+  unmatchedName: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, marginTop: 10 },
 });

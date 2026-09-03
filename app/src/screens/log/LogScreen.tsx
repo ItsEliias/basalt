@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav, ObInput,
-  color, mono, groupInt, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav, ObInput, mono, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
 import { RecipesTab } from './RecipesTab';
 import { PlannerTab } from './PlannerTab';
 import {
@@ -479,11 +475,11 @@ function CaptureTab() {
       ) : null}
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
-      <View style={styles.vf}>
+      <View style={[styles.vf, { borderColor: theme.surfaces.border }]}>
         <View style={styles.modes}>
           {(['search', 'barcode', 'photo', 'ai', 'manual'] as Mode[]).map((m) => (
             <Pressable key={m} onPress={() => setMode(m)}>
-              <Text style={[styles.mode, mode === m && styles.modeOn]}>{m.toUpperCase()}</Text>
+              <Text style={[styles.mode, { color: theme.text.faint }, mode === m && [styles.modeOn, { color: theme.text.ink, borderBottomColor: theme.text.ink }]]}>{m.toUpperCase()}</Text>
             </Pressable>
           ))}
         </View>
@@ -502,7 +498,7 @@ function CaptureTab() {
                 <View style={[styles.corner, styles.cBL]} />
                 <View style={[styles.corner, styles.cBR]} />
               </View>
-              <Text style={styles.hint}>EAN-13 · GS1 CHECK-DIGIT VERIFIED ON DEVICE</Text>
+              <Text style={[styles.hint, { color: theme.text.mute }]}>EAN-13 · GS1 CHECK-DIGIT VERIFIED ON DEVICE</Text>
             </View>
           ) : (
             <View style={styles.cameraDenied}>
@@ -534,17 +530,17 @@ function CaptureTab() {
             <CTA label={photoBusy === 'label' ? 'Reading…' : 'Scan a nutrition label'} disabled={photoBusy !== null} onPress={() => void runPhoto('camera', 'label')} />
             <View style={styles.photoMinor}>
               <Pressable onPress={() => void runPhoto('gallery', 'meal')} disabled={photoBusy !== null}>
-                <Text style={styles.photoMinorLink}>FROM GALLERY</Text>
+                <Text style={[styles.photoMinorLink, { color: theme.text.faint }]}>FROM GALLERY</Text>
               </Pressable>
               <Pressable onPress={() => void stashPhoto()} disabled={photoBusy !== null}>
-                <Text style={styles.photoMinorLink}>PHOTO NOW, LOG LATER</Text>
+                <Text style={[styles.photoMinorLink, { color: theme.text.faint }]}>PHOTO NOW, LOG LATER</Text>
               </Pressable>
             </View>
             {photoQueue.length > 0 ? (
               <View style={{ marginTop: 6 }}>
                 {photoQueue.map((q) => (
-                  <View key={q.id} style={styles.queueRow}>
-                    <Text style={styles.queueLabel}>{queuedLabel(q.takenAt, new Date()).toUpperCase()}</Text>
+                  <View key={q.id} style={[styles.queueRow, { borderTopColor: theme.surfaces.border }]}>
+                    <Text style={[styles.queueLabel, { color: theme.text.ink2 }]}>{queuedLabel(q.takenAt, new Date()).toUpperCase()}</Text>
                     <Pressable
                       disabled={photoBusy !== null}
                       onPress={async () => {
@@ -555,10 +551,10 @@ function CaptureTab() {
                         });
                       }}
                     >
-                      <Text style={styles.photoMinorLink}>ESTIMATE</Text>
+                      <Text style={[styles.photoMinorLink, { color: theme.text.faint }]}>ESTIMATE</Text>
                     </Pressable>
                     <Pressable onPress={() => void dequeuePhoto(q.id).then(setPhotoQueue)}>
-                      <Text style={styles.photoMinorLink}>REMOVE</Text>
+                      <Text style={[styles.photoMinorLink, { color: theme.text.faint }]}>REMOVE</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -578,7 +574,7 @@ function CaptureTab() {
             />
             {voiceAvailable() ? (
               <Pressable onPress={() => void toggleVoice()} hitSlop={8}>
-                <Text style={[styles.voiceLink, voiceState === 'listening' && styles.voiceLive]}>
+                <Text style={[styles.voiceLink, { color: theme.text.faint }, voiceState === 'listening' && { color: theme.text.ink }]}>
                   {voiceState === 'listening' ? 'LISTENING — TAP WHEN DONE' : 'SPEAK IT INSTEAD'}
                 </Text>
               </Pressable>
@@ -612,23 +608,23 @@ function CaptureTab() {
             <>
               <View style={styles.resultRow}>
                 <View style={{ flexShrink: 1 }}>
-                  <Text style={styles.resultName}>{scan.product.name}</Text>
-                  <Text style={styles.resultMeta}>{resultMeta(scan.product)}</Text>
+                  <Text style={[styles.resultName, { color: theme.text.ink }]}>{scan.product.name}</Text>
+                  <Text style={[styles.resultMeta, { color: theme.text.faint }]}>{resultMeta(scan.product)}</Text>
                   {(() => {
                     const line = conflictLine(dietaryConflicts(scan.product.allergens, dietaryFlags));
-                    return line ? <Text style={styles.conflict}>{line.toUpperCase()}</Text> : null;
+                    return line ? <Text style={[styles.conflict, { color: theme.text.fat }]}>{line.toUpperCase()}</Text> : null;
                   })()}
                 </View>
-                <Pressable style={styles.addBtn} onPress={() => openDraftFromProduct(scan.product)}>
-                  <Text style={styles.addBtnText}>ADD</Text>
+                <Pressable style={[styles.addBtn, { borderColor: theme.surfaces.borderStrong }]} onPress={() => openDraftFromProduct(scan.product)}>
+                  <Text style={[styles.addBtnText, { color: theme.text.ink2 }]}>ADD</Text>
                 </Pressable>
               </View>
               {(() => {
                 const q = qualityLine(scan.product);
                 return q ? (
-                  <View style={styles.qualityRow}>
-                    <Text style={styles.qualityLabel}>QUALITY</Text>
-                    <Text style={styles.qualityText}>{q}</Text>
+                  <View style={[styles.qualityRow, { borderTopColor: theme.surfaces.border }]}>
+                    <Text style={[styles.qualityLabel, { color: theme.text.faint }]}>QUALITY</Text>
+                    <Text style={[styles.qualityText, { color: theme.text.ink2 }]}>{q}</Text>
                   </View>
                 ) : null;
               })()}
@@ -715,7 +711,7 @@ function CaptureTab() {
               <ReceiptRow
                 name={p.name}
                 meta={resultMeta(p)}
-                metaAccent={dietaryConflicts(p.allergens, dietaryFlags).length > 0 ? color.fat : undefined}
+                metaAccent={dietaryConflicts(p.allergens, dietaryFlags).length > 0 ? theme.text.fat : undefined}
                 value={groupInt(p.calories)}
                 unit="kcal"
                 last={i === Math.min(results.length, 10) - 1}
@@ -832,12 +828,11 @@ const styles = StyleSheet.create({
   trayCommit: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, fontWeight: '600' },
   trayClear: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9 },
   photoMinor: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
-  voiceLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, paddingVertical: 10, textAlign: 'center' },
-  voiceLive: { color: color.ink },
-  photoMinorLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingVertical: 8 },
-  queueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border, paddingVertical: 2 },
-  queueLabel: { fontFamily: mono, fontSize: 11.5, color: color.ink2, letterSpacing: 0.4 },
-  scroll: { flex: 1, backgroundColor: color.bg },
+  voiceLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 10, textAlign: 'center' },
+  photoMinorLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, paddingVertical: 8 },
+  queueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 2 },
+  queueLabel: { fontFamily: mono, fontSize: 11.5, letterSpacing: 0.4 },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   vf: {
     borderRadius: 14,
@@ -845,12 +840,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: '#101216',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
     paddingHorizontal: 12,
   },
   modes: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 12, paddingBottom: 8 },
-  mode: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24, color: color.faint, paddingBottom: 3 },
-  modeOn: { color: color.ink, borderBottomWidth: 1, borderBottomColor: color.ink },
+  mode: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24, paddingBottom: 3 },
+  modeOn: { borderBottomWidth: 1 },
   cameraWrap: { height: 260, borderRadius: 10, overflow: 'hidden', marginBottom: 12, justifyContent: 'flex-end' },
   cameraDenied: { paddingBottom: 12 },
   reticle: {
@@ -863,22 +857,22 @@ const styles = StyleSheet.create({
   cBL: { left: 0, bottom: 0, borderLeftWidth: 1.5, borderBottomWidth: 1.5 },
   cBR: { right: 0, bottom: 0, borderRightWidth: 1.5, borderBottomWidth: 1.5 },
   hint: {
-    fontFamily: mono, fontSize: 11, letterSpacing: 1.33, color: color.mute,
+    fontFamily: mono, fontSize: 11, letterSpacing: 1.33,
     textAlign: 'center', paddingBottom: 14,
   },
   resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, paddingVertical: 11 },
-  resultName: { fontSize: 14, fontWeight: '500', color: color.ink },
-  resultMeta: { fontFamily: mono, fontSize: 11.5, color: color.faint, marginTop: 3 },
-  conflict: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 4, letterSpacing: 0.38 },
+  resultName: { fontSize: 14, fontWeight: '500' },
+  resultMeta: { fontFamily: mono, fontSize: 11.5, marginTop: 3 },
+  conflict: { fontFamily: mono, fontSize: 11, marginTop: 4, letterSpacing: 0.38 },
   addBtn: {
-    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth, borderRadius: 8,
     paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0,
   },
-  addBtnText: { fontFamily: mono, fontSize: 11, color: color.ink2 },
+  addBtnText: { fontFamily: mono, fontSize: 11 },
   qualityRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-    paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border,
+    paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth,
   },
-  qualityLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2, color: color.faint },
-  qualityText: { fontFamily: mono, fontSize: 12, color: color.ink2 },
+  qualityLabel: { fontFamily: mono, fontSize: 11, fontWeight: '600', letterSpacing: 1.2 },
+  qualityText: { fontFamily: mono, fontSize: 12 },
 });

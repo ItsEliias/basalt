@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  color, mono, CTA, ObDots, ObQuestion, ObSub, ObOption, ObInput, ObInRow,
-  ObChipLabel, ObNote, ChipRow, ChipGroup, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { mono, CTA, ObDots, ObQuestion, ObSub, ObOption, ObInput, ObInRow, ObChipLabel, ObNote, ChipRow, ChipGroup, useTheme, ScaledText as Text } from '@basalt/ui';
 import { saveProfile, saveTargets, addWeightEntry } from '@basalt/core-data';
 import { computeTargets } from '@basalt/nutrition';
 import { supabase } from '../../lib/supabase';
@@ -224,17 +220,17 @@ export function OnboardingScreen() {
     >
       <View style={styles.topRow}>
         <Pressable onPress={() => step > 1 && setStep(prevStep(step, state))} hitSlop={10}>
-          <Text style={styles.brand}>{step > 1 ? '← BASALT' : 'BASALT'}</Text>
+          <Text style={[styles.brand, { color: theme.text.ink }]}>{step > 1 ? '← BASALT' : 'BASALT'}</Text>
         </Pressable>
         <Pressable onPress={() => finish(true)} hitSlop={10} disabled={busy}>
-          <Text style={styles.skip}>SKIP — SET UP LATER</Text>
+          <Text style={[styles.skip, { color: theme.text.faint }]}>SKIP — SET UP LATER</Text>
         </Pressable>
       </View>
       <ObDots total={TOTAL_STEPS} current={step} />
 
       <View style={styles.step}>{stepBody()}</View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={[styles.error, { color: theme.text.fat }]}>{error}</Text> : null}
       <View style={[styles.footer, { paddingBottom: Math.max(34, insets.bottom + 12) }]}>
         <CTA
           label={busy ? '…' : step === TOTAL_STEPS ? 'Build my targets' : 'Continue'}
@@ -247,12 +243,12 @@ export function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 22 },
+  root: { flex: 1, paddingHorizontal: 22 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { fontFamily: mono, fontSize: 11, letterSpacing: 2.42, color: color.ink },
-  skip: { fontFamily: mono, fontSize: 11, letterSpacing: 1, color: color.faint },
+  brand: { fontFamily: mono, fontSize: 11, letterSpacing: 2.42 },
+  skip: { fontFamily: mono, fontSize: 11, letterSpacing: 1 },
   step: { flex: 1, minHeight: 0 },
   scroll: { flex: 1, marginTop: 16, marginBottom: 10 },
-  error: { fontSize: 12.5, color: color.fat, lineHeight: 18 },
+  error: { fontSize: 12.5, lineHeight: 18 },
   footer: {},
 });
