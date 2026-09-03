@@ -31,9 +31,11 @@ export function Bar({ pct, fill }: { pct: number; fill: string }) {
 
 function Ratio({ value, target, unit, over }: { value: string; target: string; unit: string; over?: boolean }) {
   const { theme } = useTheme();
+  // Data face, floored at 12.5 — condensed faces (Athletic) cramp below it.
+  const size = Math.max(12.5, theme.typography.scale.sm);
   return (
-    <Text style={[styles.ratio, { color: theme.text.ink2 }, over && { color: theme.text.fat }]} maxFontSizeMultiplier={1.3}>
-      {value} <Text style={[styles.ratioOf, { color: theme.text.faint }, over && { color: theme.text.fat }]}>/ {target} {unit}</Text>
+    <Text style={[styles.ratio, { fontSize: size, color: theme.text.ink2 }, over && { color: theme.text.fat }]} maxFontSizeMultiplier={1.3}>
+      {value} <Text style={[styles.ratioOf, { fontSize: size, color: theme.text.faint }, over && { color: theme.text.fat }]}>/ {target} {unit}</Text>
       {over ? '' : null}
     </Text>
   );
@@ -90,6 +92,8 @@ export function CapRow({
   const overSuffix = overCapSuffix(s.over, theme.expression.overCap, s.overBy, fmt);
   const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
   const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
+  // Data face, floored at 12.5 — condensed faces (Athletic) cramp below it.
+  const ratioSize = Math.max(12.5, theme.typography.scale.sm);
 
   return (
     <View style={styles.macro}>
@@ -99,11 +103,11 @@ export function CapRow({
           {'  '}{name}
         </Text>
         <Text
-          style={[styles.ratio, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.ink2 }]}
+          style={[styles.ratio, { fontSize: ratioSize, fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.ink2 }]}
           maxFontSizeMultiplier={1.3}
         >
           {fmt(value)}{' '}
-          <Text style={[styles.ratioOf, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.faint }]}>
+          <Text style={[styles.ratioOf, { fontSize: ratioSize, fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.faint }]}>
             / {fmt(cap)} {unit}
           </Text>
           {overSuffix}

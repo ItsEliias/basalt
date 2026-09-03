@@ -22,10 +22,18 @@ export function GuidedTimerDisplay({
 }) {
   const { theme } = useTheme();
   const numColor = tone === 'warn' ? theme.text.fat : tone === 'rest' ? theme.text.recovery : theme.text.ink;
+  // Counting is the state the phone is read from across a room — the
+  // countdown goes full hero (104) and the phase label steps up.
+  const counting = currentSet >= 0 && tone !== 'idle';
   return (
     <View>
-      <Text style={[styles.num, { color: numColor }]} maxFontSizeMultiplier={1.3}>{seconds}</Text>
-      <Text style={[styles.phase, { color: theme.text.mute }]}>{phaseLabel.toUpperCase()}</Text>
+      <Text
+        style={[styles.num, counting && styles.numCounting, { color: numColor }]}
+        maxFontSizeMultiplier={1.3}
+      >
+        {seconds}
+      </Text>
+      <Text style={[styles.phase, counting && styles.phaseCounting, { color: theme.text.mute }]}>{phaseLabel.toUpperCase()}</Text>
       <View style={[styles.barTrack, { backgroundColor: theme.surfaces.border }]}>
         <View style={[styles.barFill, { backgroundColor: theme.fill.mark }, { width: `${Math.max(0, Math.min(1, progress)) * 100}%` }]} />
       </View>
@@ -70,6 +78,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 18,
   },
+  numCounting: { fontSize: 104, lineHeight: 104, letterSpacing: -3.12 },
   phase: {
     fontFamily: mono,
     fontSize: 11,
@@ -77,6 +86,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
   },
+  phaseCounting: { fontSize: 12.5, letterSpacing: 2 },
   barTrack: { height: 4, borderRadius: 2, marginTop: 16, overflow: 'hidden' },
   barFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2 },
   setTicks: { flexDirection: 'row', gap: 5, marginTop: 14, justifyContent: 'center' },
