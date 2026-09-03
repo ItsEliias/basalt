@@ -22,7 +22,8 @@ let Worklets: any = null;
 try {
   VC = require('react-native-vision-camera');
   Worklets = require('react-native-worklets-core').Worklets;
-} catch {
+} catch (e) {
+  console.warn('[ppg-bench] camera module require failed:', e);
   VC = null;
 }
 
@@ -246,7 +247,8 @@ export function PpgDebugSheet({ open, onClose }: { open: boolean; onClose: () =>
 
 // Inner component so hooks from the lazily-required module only run when
 // the module exists and a capture is active. Low resolution + 30 fps +
-// torch on; every frame's mean red channel becomes one sample.
+// torch when the device has one (requesting it on a flash-less camera
+// kills the session); every frame's mean red channel becomes one sample.
 function PpgCamera({ onSample }: { onSample: (t: number, v: number) => void }) {
   const device = VC.useCameraDevice('back');
   const format = VC.useCameraFormat(device, [
@@ -278,7 +280,7 @@ function PpgCamera({ onSample }: { onSample: (t: number, v: number) => void }) {
         device={device}
         format={format}
         isActive
-        torch="on"
+        torch={device.hasTorch ? 'on' : 'off'}
         pixelFormat="rgb"
         frameProcessor={frameProcessor}
       />
