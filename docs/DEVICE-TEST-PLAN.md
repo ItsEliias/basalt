@@ -172,3 +172,28 @@ Legend: each line is a checkbox; note failures inline with device + Android vers
 - [ ] Haptic at every transition/hold change; usable fully silent, screen stays awake
 - [ ] Bilateral stretches do both sides; transitions never under 10 s
 - [ ] Assessment reorders stretch order only; completed routine logs; partial never logs
+
+### 25 · Actions pass (V3.3)
+- [ ] Six-theme sweep: no screen renders Minimal's palette in another theme
+      (macro names ink, dots colored, paper themes fully legible) — the
+      themeBypass test guards imports, this verifies rendering
+- [ ] Set rows: tapping ✓ commits (row un-ghosts, rest timer starts);
+      tapping again reopens; keyboard-dismiss still commits; ✓ target
+      comfortably hittable with a sweaty thumb
+- [ ] End session lives in the header; RPE sheet cancels cleanly
+      ('cancel — keep training') without ending anything
+- [ ] Tray: bottom commit bar shows running total; 'Log N items' commits
+      all-or-nothing; Clear empties without logging
+- [ ] Capture modes: 44dp segments at the bottom of the capture area
+      switch correctly; active segment obvious in all six themes
+- [ ] Start walk: pinned bar shows over scrolled weather/shoes; GPS
+      accuracy in the bar matches the card
+- [ ] Quick-log +: 56dp, filled mark/markOn in every theme, opens the sheet
+- [ ] SrcNote folding: long notes collapse to one line + why→; expanding
+      in place doesn't shift surrounding cards; short notes never fold
+- [ ] Trends: checked-not-shown folds to the one-line summary and expands
+      in place with r values
+- [ ] Settings: section switches flip Today sections live; Recover's
+      Track cycle button enables the card
+- [ ] Water tile shows 'Nothing logged yet · target ml' before first entry
+- [ ] Guided timer: countdown at hero size while counting; readable at 2 m
