@@ -25,7 +25,7 @@ import {
   CormorantGaramond_400Regular,
   CormorantGaramond_500Medium,
 } from '@expo-google-fonts/cormorant-garamond';
-import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text } from '@basalt/ui';
+import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
@@ -230,7 +230,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider theme={theme} density={profile?.density} textScale={profile?.textScale}>
-        <StatusBar style="light" />
+        {/* Icon color must oppose the theme ground — hardcoded "light" made
+            the clock and battery invisible on the paper themes. */}
+        <StatusBar style={relativeLuminance(theme.surfaces.bg) > 0.5 ? 'dark' : 'light'} />
         <Gate />
       </ThemeProvider>
     </SafeAreaProvider>
