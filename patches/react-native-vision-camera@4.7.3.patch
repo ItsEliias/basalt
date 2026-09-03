@@ -2,7 +2,7 @@ diff --git a/android/README.md b/android/README.md
 deleted file mode 100644
 index 6eebb68d9f242a118d634455976c94c3936dd56c..0000000000000000000000000000000000000000
 diff --git a/android/src/main/java/com/mrousavy/camera/core/CameraDeviceDetails.kt b/android/src/main/java/com/mrousavy/camera/core/CameraDeviceDetails.kt
-index 76b6ab08689846a6d951b432239edf715e68baaa..da569c82c5474d54bb6312be6aa700f467ca32f7 100644
+index 76b6ab08689846a6d951b432239edf715e68baaa..db51558fcb4a0678ece17ce0acb9b7ca9f6bbcf8 100644
 --- a/android/src/main/java/com/mrousavy/camera/core/CameraDeviceDetails.kt
 +++ b/android/src/main/java/com/mrousavy/camera/core/CameraDeviceDetails.kt
 @@ -7,7 +7,8 @@ import android.util.Log
@@ -75,6 +75,55 @@ index 76b6ab08689846a6d951b432239edf715e68baaa..da569c82c5474d54bb6312be6aa700f4
      return range ?: Range(0, 0)
    }
  
+@@ -229,23 +235,23 @@ class CameraDeviceDetails(private val cameraInfo: CameraInfo, extensionsManager:
+   }
+ 
+   private fun getDeviceTypes(): List<DeviceType> {
++    // Patched: upstream walks cameraCharacteristicsMap (removed from the
++    // public interop class in CameraX 1.6.0's camera2-pipe rewrite —
++    // NoSuchMethodError at runtime). Physical sub-cameras aren't reachable
++    // through the public API, so classify the logical camera only.
+     val defaultList = listOf(DeviceType.WIDE_ANGLE)
+     val camera2Details = camera2Details ?: return defaultList
+ 
+-    val deviceTypes = camera2Details.cameraCharacteristicsMap.map { (_, characteristics) ->
+-      val sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE) ?: return@map DeviceType.WIDE_ANGLE
+-      val focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS) ?: return@map DeviceType.WIDE_ANGLE
+-      val fov = getMaxFieldOfView(focalLengths, sensorSize)
++    val sensorSize = camera2Details.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE) ?: return defaultList
++    val focalLengths = camera2Details.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS) ?: return defaultList
++    val fov = getMaxFieldOfView(focalLengths, sensorSize)
+ 
+-      return@map when {
+-        fov > 94 -> DeviceType.ULTRA_WIDE_ANGLE
+-        fov in 60f..94f -> DeviceType.WIDE_ANGLE
+-        fov < 60f -> DeviceType.TELEPHOTO
+-        else -> throw Error("Invalid Field Of View! ($fov)")
+-      }
++    val type = when {
++      fov > 94 -> DeviceType.ULTRA_WIDE_ANGLE
++      fov < 60f -> DeviceType.TELEPHOTO
++      else -> DeviceType.WIDE_ANGLE
+     }
+-
+-    return deviceTypes
++    return listOf(type)
+   }
+ 
+   private fun getFieldOfView(focalLength: Float, sensorSize: SizeF): Double {
+@@ -263,9 +269,9 @@ class CameraDeviceDetails(private val cameraInfo: CameraInfo, extensionsManager:
+   }
+ 
+   private fun getMaxFieldOfView(): Double {
+-    val characteristics = camera2Details?.cameraCharacteristicsCompat ?: return 0.0
+-    val sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE) ?: return 0.0
+-    val focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS) ?: return 0.0
++    val device = camera2Details ?: return 0.0
++    val sensorSize = device.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE) ?: return 0.0
++    val focalLengths = device.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS) ?: return 0.0
+     return getMaxFieldOfView(focalLengths, sensorSize)
+   }
+ }
 diff --git a/ios/README.md b/ios/README.md
 deleted file mode 100644
 index 1c47fe132d3ab5ef1ed73fdc309ce34b91cf4c31..0000000000000000000000000000000000000000

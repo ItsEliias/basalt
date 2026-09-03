@@ -7,6 +7,10 @@ import { supabase } from '../lib/supabase';
 // (profile, current targets). Screen data stays in the screens — this store
 // is deliberately small.
 
+// Pending refreshCore retry after a failed profile fetch (module-level so
+// overlapping auth events don't stack timers).
+let coreRetry: ReturnType<typeof setTimeout> | null = null;
+
 type AppState = {
   session: Session | null;
   sessionLoaded: boolean;
@@ -50,12 +54,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   refreshCore: async () => {
+    // Runs on every auth event, including routine token refreshes. A
+    // transient fetch failure must not clobber known-good records with
+    // null — that briefly showed "no targets yet" to onboarded users.
+    // Sign-out is the only path that clears these (see onAuthStateChange).
     const [p, t] = await Promise.all([getProfile(supabase), getTargetsFor(supabase)]);
-    set({
-      profile: p.ok ? p.data : null,
-      targets: t.ok ? t.data : null,
-      bootstrapped: true,
-    });
+    set((s) => ({
+      profile: p.ok ? p.data : s.profile,
+      targets: t.ok ? t.data : s.targets,
+      // Only authoritative once a profile fetch has actually SUCCEEDED.
+      // Marking a failed fetch as bootstrapped routed onboarded users into
+      // onboarding on cold starts with a slow network (profile null ≠
+      // profile unknown). ok-with-null stays honest: that user really has
+      // no profile row and belongs in onboarding.
+      bootstrapped: s.bootstrapped || p.ok,
+    }));
+    if (!p.ok) {
+      if (coreRetry !== null) clearTimeout(coreRetry);
+      coreRetry = setTimeout(() => {
+        coreRetry = null;
+        void get().refreshCore();
+      }, 4000);
+    }
   },
 
   setQuickLogOpen: (open) => set({ quickLogOpen: open }),

@@ -15,7 +15,7 @@ import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
-import { groupEntriesByMeal, heroModel, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
+import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
@@ -184,6 +184,7 @@ export function TodayScreen() {
 
   const hero = targets && data ? heroModel(targets, data.totals, data.activeKcal) : null;
   const hideNumbers = profile?.hideNumbers ?? false;
+  const heroMode = ledgerHeroMode(hero !== null, hideNumbers);
 
   // hydrationEnabled has no backing setting in the app yet (the spec
   // assumes one) — treated as always-on, matching Ledger's current
@@ -266,7 +267,7 @@ export function TodayScreen() {
     >
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
       <Card>
-        {hero && hideNumbers ? (
+        {heroMode === 'qualitative' ? (
           <>
             <MicroLabel>Food</MicroLabel>
             <Text style={styles.heroSub}>
@@ -277,7 +278,7 @@ export function TodayScreen() {
             <SrcNote>Numbers hidden at your request · everything is still recorded and stays in your ledger and exports · turn back on in Settings</SrcNote>
           </>
         ) : null}
-        {hero && !hideNumbers ? (
+        {hero && heroMode === 'numeric' ? (
           <>
             <KV label="Energy remaining" right={<Text style={styles.targetRatio}><Text style={styles.targetOf}>target</Text> {hero.targetText}</Text>} />
             <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
@@ -290,14 +291,14 @@ export function TodayScreen() {
               ]}
             />
           </>
-        ) : (
+        ) : heroMode === 'no-targets' ? (
           <>
             <MicroLabel>Energy</MicroLabel>
             <EmptyState>
               No daily targets yet. Finish onboarding in Settings → Profile and your energy budget appears here.
             </EmptyState>
           </>
-        )}
+        ) : null}
       </Card>
 
       {/* ── Macros + caps ──────────────────────────────────────────── */}

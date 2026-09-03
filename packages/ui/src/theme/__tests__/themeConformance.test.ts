@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { THEMES, THEME_IDS, DEFAULT_THEME, type ThemeId } from '../themes';
 import { INVARIANTS } from '../contract';
-import { contrastRatio } from '../contrast';
+import { contrastRatio, relativeLuminance } from '../contrast';
 
 const SURFACES = ['bg', 'surface', 'surface2'] as const;
 // Object.keys() always types as string[] regardless of the record's key
@@ -90,5 +90,13 @@ describe('sizing invariants', () => {
   it.each(ids)('%s: over-cap never relies on colour alone', (id) => {
     // 'color' would fail WCAG 1.4.1 and the honesty rule that over-cap is stated plainly.
     expect(THEMES[id].expression.overCap).not.toBe('color');
+  });
+
+  it.each(ids)('%s: luminance-picked status-bar icons are legible on bg', (id) => {
+    // The app derives status-bar icon color from bg luminance (App.tsx).
+    // Hardcoded light icons shipped once — invisible clock on the paper themes.
+    const bg = THEMES[id].surfaces.bg;
+    const icons = relativeLuminance(bg) > 0.5 ? '#000000' : '#ffffff';
+    expect(contrastRatio(icons, bg)).toBeGreaterThanOrEqual(INVARIANTS.minTextContrast);
   });
 });
