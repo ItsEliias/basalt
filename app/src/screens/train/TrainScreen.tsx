@@ -831,7 +831,7 @@ const styles = StyleSheet.create({
   endBtnText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
   addSet: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, paddingVertical: 10 },
   addSetBtn: { flexGrow: 1, marginTop: 0, marginRight: 14 },
-  rowActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
+  rowActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 18, marginTop: 12 },
   linkAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, paddingTop: 8 },
   suggestion: { fontFamily: mono, fontSize: 11, letterSpacing: 0.38, lineHeight: 15, marginTop: 6 },
   fbRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
