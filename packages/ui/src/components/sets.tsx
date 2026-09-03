@@ -34,7 +34,7 @@ export function PrevNote({ children }: { children: string }) {
   return <Text style={[styles.prevNote, { color: theme.text.faint }]}>{children.toUpperCase()}</Text>;
 }
 
-export function SetsHeader({ columns }: { columns: string[] }) {
+export function SetsHeader({ columns, tickColumn }: { columns: string[]; tickColumn?: boolean }) {
   const { theme } = useTheme();
   return (
     <View style={[styles.headRow, { borderBottomColor: theme.surfaces.border }]}>
@@ -47,13 +47,14 @@ export function SetsHeader({ columns }: { columns: string[] }) {
           {c.toUpperCase()}
         </Text>
       ))}
+      {tickColumn ? <View style={styles.tickCol} /> : null}
     </View>
   );
 }
 
 export function SetRow({
   setNumber, prev, kg, reps, rir, ghost, pr, hasComment, onPressSet,
-  onChangeKg, onChangeReps, onChangeRir, onCommit,
+  onChangeKg, onChangeReps, onChangeRir, onCommit, done, onToggleDone,
 }: {
   setNumber: string;
   prev: string;
@@ -72,6 +73,10 @@ export function SetRow({
   onChangeReps?: (v: string) => void;
   onChangeRir?: (v: string) => void;
   onCommit?: () => void;
+  /** Explicit completion state for the ✓ column (defaults to !ghost). */
+  done?: boolean;
+  /** Visible completion trigger — keyboard-dismiss commit stays as the secondary path. */
+  onToggleDone?: () => void;
 }) {
   const { theme } = useTheme();
   const valueStyle = [styles.cellValue, { color: theme.text.ink }, ghost && { color: theme.text.faint }];
@@ -117,6 +122,22 @@ export function SetRow({
         placeholderTextColor={theme.text.faint}
         maxFontSizeMultiplier={1.3}
       />
+      {onToggleDone ? (
+        <Pressable
+          onPress={onToggleDone}
+          style={styles.tickCol}
+          hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: (done ?? !ghost) === true }}
+          accessibilityLabel={`Set ${setNumber} ${(done ?? !ghost) ? 'completed' : 'not completed'}`}
+        >
+          {(done ?? !ghost) ? (
+            <Text style={[styles.tickMark, { color: theme.text.carbs }]} maxFontSizeMultiplier={1.3}>✓</Text>
+          ) : (
+            <View style={[styles.tickEmpty, { borderColor: theme.surfaces.borderStrong }]} />
+          )}
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -164,6 +185,11 @@ const styles = StyleSheet.create({
   repsWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   pr: { fontFamily: mono, fontSize: 11, letterSpacing: 0.72 },
   commentMark: { fontFamily: mono, fontSize: 11 },
+  // 34px column + 8px hitSlop each side and the row's vertical slop clears
+  // the 48dp tap floor without inflating the row itself.
+  tickCol: { width: 34, alignItems: 'flex-end', justifyContent: 'center', alignSelf: 'stretch' },
+  tickMark: { fontSize: 15, lineHeight: 20 },
+  tickEmpty: { width: 16, height: 16, borderRadius: 5, borderWidth: 1.5 },
   rest: {
     flexDirection: 'row',
     justifyContent: 'space-between',

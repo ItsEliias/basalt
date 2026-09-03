@@ -466,7 +466,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           {`Last session · ${prevSummary(ex.prevSets) ?? '—'} · ${new Date(ex.prevPerformedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`}
         </PrevNote>
       ) : null}
-      <SetsHeader columns={['Set', 'Prev', 'kg', 'Reps', 'RIR']} />
+      <SetsHeader columns={['Set', 'Prev', 'kg', 'Reps', 'RIR']} tickColumn />
       {ex.rows.map((row, i) => (
         <SetRow
           key={row.setNumber}
@@ -484,6 +484,14 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           onChangeRir={(rir) => session.updateRow(ex.sessionExerciseId, i, { rir, committed: false })}
           onCommit={() => {
             void session.commitRow(ex.sessionExerciseId, i).then(() => onCommitted?.(ex.sessionExerciseId));
+          }}
+          done={row.committed}
+          onToggleDone={() => {
+            if (row.committed) {
+              session.updateRow(ex.sessionExerciseId, i, { committed: false });
+            } else {
+              void session.commitRow(ex.sessionExerciseId, i).then(() => onCommitted?.(ex.sessionExerciseId));
+            }
           }}
         />
       ))}
