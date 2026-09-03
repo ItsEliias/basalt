@@ -160,6 +160,13 @@ describe('todayTileSpecs — the Tiles layout fixed v1 content model', () => {
     expect(t.empty).toBe(true);
     expect(t.value).toBeUndefined();
   });
+
+  it('zero water is "nothing yet" with the target stated — never a placeholder 0', () => {
+    const t = todayTileSpecs({ ...base, waterMl: 0 }).find((x) => x.key === 'water')!;
+    expect(t.empty).toBe(true);
+    expect(t.value).toBeUndefined();
+    expect(t.emptyMessage).toBe('Nothing logged yet · 2,850 ml');
+  });
 });
 
 describe('ledgerHeroMode — hide-the-numbers must never impersonate no-targets', () => {
