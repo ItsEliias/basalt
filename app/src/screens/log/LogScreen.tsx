@@ -459,20 +459,6 @@ function CaptureTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ── The Tray — sticky running total, commit once ───────────── */}
-      {tray.length > 0 ? (
-        <View style={[styles.trayBanner, { backgroundColor: theme.surfaces.surface2, borderBottomColor: theme.surfaces.border }]}>
-          <Text style={[styles.trayLine, { color: theme.text.ink2 }]}>{trayLine(totals)}</Text>
-          <View style={styles.trayActions}>
-            <Pressable onPress={() => void commitTray()} disabled={trayBusy} hitSlop={10}>
-              <Text style={[styles.trayCommit, { color: theme.text.carbs }]}>{trayBusy ? 'LOGGING…' : 'LOG ALL'}</Text>
-            </Pressable>
-            <Pressable onPress={() => setTray([])} disabled={trayBusy} hitSlop={10}>
-              <Text style={[styles.trayClear, { color: theme.text.faint }]}>CLEAR</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={[styles.vf, { borderColor: theme.surfaces.border }]}>
@@ -809,24 +795,37 @@ function CaptureTab() {
         trayCount={totals.count}
       />
     </ScrollView>
+      {/* ── The Tray commit bar — bottom-anchored above the tab bar ── */}
+      {tray.length > 0 ? (
+        <View style={[styles.trayBar, { backgroundColor: theme.surfaces.surface2, borderTopColor: theme.surfaces.border }]}>
+          <Text style={[styles.trayLine, { color: theme.text.ink2 }]}>{trayLine(totals)}</Text>
+          <Pressable onPress={() => setTray([])} disabled={trayBusy} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
+            <Text style={[styles.trayClear, { color: theme.text.faint }]}>CLEAR</Text>
+          </Pressable>
+          <CTA
+            label={trayBusy ? 'Logging…' : `Log ${totals.count} ${totals.count === 1 ? 'item' : 'items'}`}
+            disabled={trayBusy}
+            onPress={() => void commitTray()}
+            style={styles.trayCommitBtn}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  trayBanner: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  trayBar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 14,
   },
-  trayLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, flexShrink: 1 },
-  trayActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  trayCommit: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, fontWeight: '600' },
+  trayLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, flexShrink: 1, flexGrow: 1 },
   trayClear: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9 },
+  trayCommitBtn: { marginTop: 0, paddingHorizontal: 18, flexShrink: 0 },
   photoMinor: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2 },
   voiceLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 10, textAlign: 'center' },
   photoMinorLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, paddingVertical: 8 },
