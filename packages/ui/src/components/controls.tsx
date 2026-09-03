@@ -10,8 +10,10 @@ import { useTheme, resolveTypeface } from '../theme';
 
 /** The one filled button — fill.mark/markOn, so it's the same pair as any
  *  other filled element in a theme (nav's active pill, a tile's accent). */
-export function CTA({ label, onPress, style, disabled }: {
+export function CTA({ label, onPress, style, disabled, secondary }: {
   label: string; onPress?: () => void; style?: StyleProp<ViewStyle>; disabled?: boolean;
+  /** Bordered, unfilled weight for actions that support rather than lead. */
+  secondary?: boolean;
 }) {
   const { theme } = useTheme();
   const upper = theme.typography.labelCase === 'upper';
@@ -21,7 +23,9 @@ export function CTA({ label, onPress, style, disabled }: {
       disabled={disabled}
       style={({ pressed }) => [
         styles.cta,
-        { backgroundColor: theme.fill.mark, borderRadius: theme.shape.radius.md },
+        secondary
+          ? { borderWidth: 1, borderColor: theme.surfaces.borderStrong, borderRadius: theme.shape.radius.md }
+          : { backgroundColor: theme.fill.mark, borderRadius: theme.shape.radius.md },
         pressed && { opacity: 0.85 },
         disabled && { opacity: 0.45 },
         style,
@@ -33,7 +37,8 @@ export function CTA({ label, onPress, style, disabled }: {
           {
             fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.bold),
             fontWeight: String(theme.typography.weight.bold) as TextStyle['fontWeight'],
-            letterSpacing: theme.typography.tracking.label, color: theme.fill.markOn,
+            letterSpacing: theme.typography.tracking.label,
+            color: secondary ? theme.text.ink : theme.fill.markOn,
           },
         ]}
       >
@@ -185,6 +190,8 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     marginTop: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   ctaText: { fontSize: 11 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },

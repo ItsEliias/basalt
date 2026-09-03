@@ -276,12 +276,20 @@ function SessionTab() {
     <>
       <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
-            <Text style={[styles.addSet, { color: theme.text.mute }, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>
-          </Pressable>
+          <View style={session.exercises.length === 0 ? { opacity: 0.4 } : null}>
+            <Chip label="Adapt" onPress={session.exercises.length === 0 ? undefined : () => setAdaptOpen(true)} />
+          </View>
           <Text style={[styles.elapsed, { color: theme.text.faint }]}>
             {session.startedAt ? `${elapsedText(session.startedAt, new Date())} ELAPSED` : ''}
           </Text>
+          <Pressable
+            onPress={() => setRpeOpen(true)}
+            disabled={session.busy}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            style={[styles.endBtn, { borderColor: theme.surfaces.borderStrong, borderRadius: theme.shape.radius.sm }, session.busy && { opacity: 0.45 }]}
+          >
+            <Text style={[styles.endBtnText, { color: theme.text.ink }]}>{session.busy ? '…' : 'END SESSION'}</Text>
+          </Pressable>
         </View>
 
         {session.exercises.map((ex, i) => (
@@ -299,7 +307,7 @@ function SessionTab() {
           </Card>
         ) : null}
 
-        <CTA label="Add exercise" onPress={() => setPickerOpen(true)} />
+        <CTA label="Add exercise" secondary onPress={() => setPickerOpen(true)} />
 
         {(() => {
           const sets = session.exercises.flatMap((e) =>
@@ -317,7 +325,6 @@ function SessionTab() {
           ) : null;
         })()}
 
-        <CTA label={session.busy ? '…' : 'End session'} disabled={session.busy} onPress={() => setRpeOpen(true)} />
         {session.error ? <Text style={[styles.error, { color: theme.text.fat }]}>{session.error}</Text> : null}
       </ScrollView>
 
@@ -496,14 +503,12 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
         />
       ))}
       <View style={styles.rowActions}>
-        <Pressable onPress={() => session.addRow(ex.sessionExerciseId)}>
-          <Text style={[styles.addSet, { color: theme.text.mute }]}>+ ADD SET</Text>
-        </Pressable>
-        <Pressable onPress={() => setPlatesOpen(true)}>
+        <CTA label="Add set" secondary onPress={() => session.addRow(ex.sessionExerciseId)} style={styles.addSetBtn} />
+        <Pressable onPress={() => setPlatesOpen(true)} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
           <Text style={[styles.addSet, { color: theme.text.mute }]}>PLATES</Text>
         </Pressable>
         {ex.repPrs.length > 0 ? (
-          <Pressable onPress={() => setPrsOpen(true)}>
+          <Pressable onPress={() => setPrsOpen(true)} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
             <Text style={[styles.addSet, { color: theme.text.mute }]}>PRS</Text>
           </Pressable>
         ) : null}
@@ -710,8 +715,11 @@ function RpeSheet({ open, busy, onClose, onFinish }: {
           options={['6', '7', '8', '9', '10']}
           onChange={(v) => onFinish(parseInt(v, 10))}
         />
-        <Pressable onPress={() => onFinish(null)} disabled={busy}>
+        <Pressable onPress={() => onFinish(null)} disabled={busy} hitSlop={{ top: 8, bottom: 8 }}>
           <Text style={[styles.skipRpe, { color: theme.text.faint }]}>SKIP — END WITHOUT A RATING</Text>
+        </Pressable>
+        <Pressable onPress={onClose} disabled={busy} hitSlop={{ top: 8, bottom: 8 }}>
+          <Text style={[styles.skipRpe, { color: theme.text.mute }]}>CANCEL — KEEP TRAINING</Text>
         </Pressable>
       </View>
     </Modal>
@@ -817,10 +825,13 @@ export function ExercisePicker({
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
-  elapsed: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, textAlign: 'right', marginTop: 10 },
+  elapsed: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, textAlign: 'right', flex: 1, marginHorizontal: 10 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  endBtn: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 12, minHeight: 36, justifyContent: 'center' },
+  endBtnText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
   addSet: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, paddingVertical: 10 },
-  rowActions: { flexDirection: 'row', justifyContent: 'space-between' },
+  addSetBtn: { flexGrow: 1, marginTop: 0, marginRight: 14 },
+  rowActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
   linkAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, paddingTop: 8 },
   suggestion: { fontFamily: mono, fontSize: 11, letterSpacing: 0.38, lineHeight: 15, marginTop: 6 },
   fbRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
