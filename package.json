@@ -19,5 +19,10 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "react-native-vision-camera@4.7.3": "patches/react-native-vision-camera@4.7.3.patch"
+    }
   }
 }
