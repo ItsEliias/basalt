@@ -86,6 +86,26 @@ must show a real-or-hidden absence (e.g. a vitals tile with no source, or
 the correlations card's "checked, not shown" list). Do not stage fake data
 to fill gaps.
 
+## Reliability notes (learned the hard way)
+
+- **Prefer a release build for captures** (`./gradlew assembleRelease`;
+  RN signs it with the debug keystore, so data survives reinstalls). Debug
+  + Metro adds the LogBox banner, dev toasts, Fast-Refresh artifacts and,
+  on a loaded host, ANR loops. The debug build is only needed for the
+  `__DEV__`-gated camera-HRV bench shot.
+- After an emulator **cold boot**, virtual wifi may sit unassociated —
+  `adb shell cmd wifi connect-network AndroidWifi open`. A cold boot also
+  loads the last quickboot snapshot; use `-no-snapshot` to avoid silently
+  rolling back to a stale installed APK.
+- **Verify every shot's content, not just its status bar** — a snap taken
+  during a transient fetch failure can capture an honest-looking empty
+  state with the wrong meaning.
+- The theme-gallery shots must show identical data: fill the current day
+  (Log → copy yesterday's meals) before cycling themes, and re-shoot the
+  whole set if the day rolls over mid-run.
+- The pull-to-refresh spinner lingers ~5 s after content lands; wait it
+  out before snapping.
+
 ## After a run
 
 ```bash
