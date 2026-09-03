@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -398,14 +398,21 @@ export function SettingsScreen() {
         <SrcNote>Tiles is Today only — Log, Train, Recover and Trends stay ledger for now</SrcNote>
         <ObChipLabel>Today sections — hiding is omission, never a ghost</ObChipLabel>
         {HIDEABLE_SECTIONS.map((sec, i) => (
-          <Pressable key={sec.key} onPress={() => toggleTodaySection(sec.key)} hitSlop={8}>
-            <ReceiptRow
-              name={sec.label}
-              meta={hiddenToday.includes(sec.key) ? 'hidden — tap to show' : 'shown — tap to hide'}
-              value={hiddenToday.includes(sec.key) ? 'off' : 'on'}
-              last={i === HIDEABLE_SECTIONS.length - 1}
-            />
-          </Pressable>
+          <ReceiptRow
+            key={sec.key}
+            name={sec.label}
+            meta={hiddenToday.includes(sec.key) ? 'hidden — still recorded' : 'shown'}
+            last={i === HIDEABLE_SECTIONS.length - 1}
+            right={
+              <Switch
+                value={!hiddenToday.includes(sec.key)}
+                onValueChange={() => toggleTodaySection(sec.key)}
+                trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                thumbColor={theme.text.ink}
+                accessibilityLabel={`${sec.label} section`}
+              />
+            }
+          />
         ))}
         <SrcNote>The energy hero is the day's anchor and always shows · hidden sections still record — everything stays in your ledger and exports</SrcNote>
       </Card>

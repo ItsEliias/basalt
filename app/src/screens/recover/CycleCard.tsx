@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, ChipGroup, ChipRow, ObChipLabel, mono, ScaledText as Text } from '@basalt/ui';
+import { Card, CTA, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, ChipGroup, ChipRow, ObChipLabel, mono, ScaledText as Text } from '@basalt/ui';
 import {
   loadCycle, saveCycleDay, CYCLE_SYMPTOMS,
   type CycleReport, type CycleEntry,
@@ -39,16 +39,18 @@ export function CycleCard() {
 
   if (!enabled) {
     return (
-      <Pressable
-        onPress={() => {
-          setEnabled(true);
-          void AsyncStorage.setItem(CARD_KEY, 'on');
-          refresh();
-        }}
-        hitSlop={8}
-      >
-        <Text style={[styles.optIn, { color: theme.text.faint }]}>TRACK CYCLE — OPT-IN, PRIVATE, NEVER IN ANY SCORE</Text>
-      </Pressable>
+      <View>
+        <CTA
+          label="Track cycle"
+          secondary
+          onPress={() => {
+            setEnabled(true);
+            void AsyncStorage.setItem(CARD_KEY, 'on');
+            refresh();
+          }}
+        />
+        <Text style={[styles.optIn, { color: theme.text.faint }]}>OPT-IN · PRIVATE · NEVER IN ANY SCORE</Text>
+      </View>
     );
   }
 
