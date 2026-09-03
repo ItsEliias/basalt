@@ -250,15 +250,7 @@ export function TrendsScreen() {
               </EmptyState>
             ) : null}
             {correlations.checkedNotShown.length > 0 ? (
-              <View style={{ marginTop: 6, gap: 3 }}>
-                <SrcNote>Checked, not shown</SrcNote>
-                {correlations.checkedNotShown.map((c) => (
-                  <SrcNote key={`${c.pair.aKey}-${c.pair.bKey}`} style={{ opacity: 0.75 }}>
-                    {`${c.pair.aLabel} × ${c.pair.bLabel}${c.pair.lag ? ' (next day)' : ''} — ${c.r === null ? 'no signal' : `r ${c.r.toFixed(2)}`}, ${c.n} d`}
-                  </SrcNote>
-                ))}
-                <SrcNote>|r| ≥ 0.45 and ≥ 30 days required · correlation, never cause</SrcNote>
-              </View>
+              <CheckedNotShown items={correlations.checkedNotShown} shownCount={correlations.shown.length} />
             ) : null}
           </>
         )}
@@ -378,6 +370,37 @@ export function TrendsScreen() {
       <CoopCard />
 
     </ScrollView>
+  );
+}
+
+/**
+ * The checked-not-shown list, folded to one honest line — the misses stay
+ * one tap away and expand in place, never a separate screen.
+ */
+function CheckedNotShown({ items, shownCount }: { items: CorrelationResult[]; shownCount: number }) {
+  const { theme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const n = items.length;
+  const summary =
+    shownCount === 0
+      ? `${n} pair${n === 1 ? '' : 's'} checked · none past |r| ≥ 0.45 · ${open ? 'hide list' : 'show list'}`
+      : `${n} more pair${n === 1 ? '' : 's'} checked · under the gates · ${open ? 'hide list' : 'show list'}`;
+  return (
+    <View style={{ marginTop: 6, gap: 3 }}>
+      <Pressable onPress={() => setOpen(!open)} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }} accessibilityRole="button" accessibilityState={{ expanded: open }}>
+        <SrcNote style={{ color: theme.text.mute }}>{summary}</SrcNote>
+      </Pressable>
+      {open ? (
+        <>
+          {items.map((c) => (
+            <SrcNote key={`${c.pair.aKey}-${c.pair.bKey}`} style={{ opacity: 0.75 }}>
+              {`${c.pair.aLabel} × ${c.pair.bLabel}${c.pair.lag ? ' (next day)' : ''} — ${c.r === null ? 'no signal' : `r ${c.r.toFixed(2)}`}, ${c.n} d`}
+            </SrcNote>
+          ))}
+          <SrcNote>|r| ≥ 0.45 and ≥ 30 days required · correlation, never cause</SrcNote>
+        </>
+      ) : null}
+    </View>
   );
 }
 
