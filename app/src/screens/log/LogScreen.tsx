@@ -462,13 +462,6 @@ function CaptureTab() {
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={[styles.vf, { borderColor: theme.surfaces.border }]}>
-        <View style={styles.modes}>
-          {(['search', 'barcode', 'photo', 'ai', 'manual'] as Mode[]).map((m) => (
-            <Pressable key={m} onPress={() => setMode(m)}>
-              <Text style={[styles.mode, { color: theme.text.faint }, mode === m && [styles.modeOn, { color: theme.text.ink, borderBottomColor: theme.text.ink }]]}>{m.toUpperCase()}</Text>
-            </Pressable>
-          ))}
-        </View>
 
         {mode === 'barcode' ? (
           permission?.granted ? (
@@ -569,6 +562,22 @@ function CaptureTab() {
             <SrcNote>Your description is sent to Anthropic (Claude) to estimate — only the text above, never your ledger, name or email · estimates wear ~ until you confirm · no AI key ever ships in this app · speech is transcribed by your phone's OS, audio never reaches Basalt's servers</SrcNote>
           </View>
         ) : null}
+
+        {/* ── Capture-mode segmented control — bottom of the capture area,
+               a filled control so it can't be mistaken for the tab sub-nav ── */}
+        <View style={[styles.modeSeg, { borderTopColor: theme.surfaces.border }]}>
+          {(['search', 'barcode', 'photo', 'ai', 'manual'] as Mode[]).map((m) => (
+            <Pressable
+              key={m}
+              onPress={() => setMode(m)}
+              style={[styles.modeSegBtn, mode === m && { backgroundColor: theme.surfaces.surface2 }]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === m }}
+            >
+              <Text style={[styles.mode, { color: mode === m ? theme.text.ink : theme.text.faint }]}>{m.toUpperCase()}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       {/* ── Scan result ────────────────────────────────────────────── */}
@@ -841,9 +850,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 12,
   },
-  modes: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 12, paddingBottom: 8 },
-  mode: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24, paddingBottom: 3 },
-  modeOn: { borderBottomWidth: 1 },
+  modeSeg: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, marginTop: 4 },
+  modeSegBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center' },
+  mode: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24 },
   cameraWrap: { height: 260, borderRadius: 10, overflow: 'hidden', marginBottom: 12, justifyContent: 'flex-end' },
   cameraDenied: { paddingBottom: 12 },
   reticle: {
