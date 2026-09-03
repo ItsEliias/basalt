@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupEntriesByMeal, heroModel, sessionMeta, microTotals, entryMeta, todayTileSpecs, filterTiles, sectionForTile, HIDEABLE_SECTIONS, microDetail,
+import { groupEntriesByMeal, heroModel, ledgerHeroMode, sessionMeta, microTotals, entryMeta, todayTileSpecs, filterTiles, sectionForTile, HIDEABLE_SECTIONS, microDetail,
 } from './model';
 import type { FoodEntryRow } from '@basalt/nutrition';
 import type { TargetsRecord } from '@basalt/core-data';
@@ -159,6 +159,21 @@ describe('todayTileSpecs — the Tiles layout fixed v1 content model', () => {
     const t = todayTileSpecs({ ...base, hideNumbers: true }).find((x) => x.key === 'energy')!;
     expect(t.empty).toBe(true);
     expect(t.value).toBeUndefined();
+  });
+});
+
+describe('ledgerHeroMode — hide-the-numbers must never impersonate no-targets', () => {
+  it('numbers hidden with targets present is qualitative, not the onboarding prompt', () => {
+    expect(ledgerHeroMode(true, true)).toBe('qualitative');
+  });
+
+  it('targets present and numbers shown is the numeric hero', () => {
+    expect(ledgerHeroMode(true, false)).toBe('numeric');
+  });
+
+  it('no targets is the no-targets empty state regardless of hide setting', () => {
+    expect(ledgerHeroMode(false, false)).toBe('no-targets');
+    expect(ledgerHeroMode(false, true)).toBe('no-targets');
   });
 });
 

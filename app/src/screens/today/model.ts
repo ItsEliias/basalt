@@ -84,6 +84,19 @@ export function heroModel(
   };
 }
 
+/**
+ * Which face the Ledger hero card wears. With numbers hidden the card must
+ * stay qualitative — it must never fall through to the no-targets onboarding
+ * prompt while targets exist (shipped once as exactly that bug).
+ */
+export type LedgerHeroMode = 'numeric' | 'qualitative' | 'no-targets';
+
+export function ledgerHeroMode(hasHero: boolean, hideNumbers: boolean): LedgerHeroMode {
+  if (hasHero && hideNumbers) return 'qualitative';
+  if (hasHero) return 'numeric';
+  return 'no-targets';
+}
+
 export type SessionRow = {
   title: string;
   meta: string;
