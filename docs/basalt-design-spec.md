@@ -119,7 +119,28 @@ their own guardrails, because calm is the one place gamification does the most d
 
 ## 6. Forbidden
 
-Rings/circular gauges · mascots, emoji in UI copy, motivational cheerleading ("You're crushing it!") · XP/levels/coins/badges-as-currency · big rounded card diaries (MFP-style) · dashboard-as-forced-home · upsells inside onboarding, countdown timers, pre-selected annual plans, ads to paying users · bright color without semantic meaning · AI summaries that displace data · localStorage in web builds.
+**Since the 2026-09-04 amendment (V3.4) this list is two lists.**
+
+**Globally forbidden — every theme, no exceptions:** XP/levels/coins/badges-as-currency ·
+confetti · streak shaming · fake precision · narration of results (motivational
+cheerleading, "You're crushing it!", AI summaries that displace data) · hidden formulas ·
+capture paywalls · any mandatory capture modality · sleep stages as anything but display ·
+emoji in UI copy · dashboard-as-forced-home · low-density big-card diaries that hide
+numbers (the MFP-redesign failure — a density rule, not a corner-radius rule) · upsells
+inside onboarding, countdown timers, pre-selected annual plans, ads to paying users ·
+bright colour without semantic meaning *within a theme's own declared palette* ·
+localStorage in web builds.
+
+**Theme-scoped expression — legal only where a theme declares the token for it:**
+rings/circular gauges (`shape.meter: 'ring' | 'dial'` — over-cap words mandatory, see the
+conformance test) · gradients (`surfaces.gradient`) · glow and gloss (`elevation:
+'gloss'`, `elevationParams`) · soft shadow (`elevation: 'softShadow' | 'clay'`) · card
+tilt (`shape.tilt`, ≤ 2°, never with a mono data face) · pastel domain grounds
+(`fill.domainGround`/`domainGroundOn`, pair-checked at 4.5:1) · sticker halo
+(`elevation: 'halo'`). Minimal, Humanist, Athletic, Brutalist, Depth and Atelier declare
+none of these and render exactly as before the split. Mascots leave this list only as
+**Pebble**, governed by its own law (§5 addendum): renders solely when a proposal with an
+action exists, off by default, never narration.
 
 **Glow, neon, glassmorphism, heavy shadows, new fonts, new hues, new radii** are forbidden
 *per theme* (Minimal's own values are unchanged — the prototype is still its source of

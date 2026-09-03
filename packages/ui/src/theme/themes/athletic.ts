@@ -54,7 +54,8 @@ export const athletic: Theme = {
   },
 
   shape: {
-    radius: { none: 0, sm: 2, md: 2, lg: 4 },
+    radius: { none: 0, sm: 2, md: 2, lg: 4, pill: 999 },
+    tilt: 0,
     borderWidth: { hairline: 1, thin: 2, thick: 3 },
     container: 'bare',
     elevation: 'border',

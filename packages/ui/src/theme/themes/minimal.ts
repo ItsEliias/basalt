@@ -57,7 +57,8 @@ export const minimal: Theme = {
   },
 
   shape: {
-    radius: { none: 0, sm: 2, md: 6, lg: 13 },
+    radius: { none: 0, sm: 2, md: 6, lg: 13, pill: 999 },
+    tilt: 0,
     borderWidth: { hairline: 0.5, thin: 1, thick: 2 },
     container: 'card',
     elevation: 'border',

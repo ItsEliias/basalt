@@ -54,7 +54,8 @@ export const atelier: Theme = {
   },
 
   shape: {
-    radius: { none: 0, sm: 0, md: 0, lg: 0 },
+    radius: { none: 0, sm: 0, md: 0, lg: 0, pill: 999 },
+    tilt: 0,
     borderWidth: { hairline: 0.5, thin: 1, thick: 1 },
     container: 'bare',
     elevation: 'none',

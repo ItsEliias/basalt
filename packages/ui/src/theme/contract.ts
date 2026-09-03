@@ -12,8 +12,14 @@
  */
 
 export type ContainerStrategy = 'card' | 'bare' | 'boxed';
-export type Elevation        = 'none' | 'border' | 'hardShadow' | 'blur';
-export type MeterStyle       = 'bar' | 'pill' | 'line' | 'stepped';
+/** V3.4 (forbidden-list split): softShadow/clay/halo/gloss are THEME-SCOPED
+ *  EXPRESSION — legal only in a theme that declares them. The six original
+ *  themes declare none and must render byte-identical to before the split. */
+export type Elevation        = 'none' | 'border' | 'hardShadow' | 'blur'
+                             | 'softShadow' | 'clay' | 'halo' | 'gloss';
+export type MeterStyle       = 'bar' | 'pill' | 'line' | 'stepped'
+                             | 'ticks' | 'ring' | 'dial' | 'blob';
+export type Domain           = 'protein' | 'carbs' | 'fat' | 'recovery';
 export type Align            = 'left' | 'center';
 export type OverCapStyle     = 'color' | 'fill' | 'word' | 'all';
 export type EmptyStateStyle  = 'quiet' | 'ruled' | 'boxed';
@@ -25,6 +31,10 @@ export type TodayLayout      = 'ledger' | 'tiles';
 export interface ThemeSurfaces {
   bg: string; surface: string; surface2: string;
   border: string; borderStrong: string;
+  /** Card-surface gradient (Gummy only). When declared, EVERY text colour
+   *  must clear 4.5:1 against BOTH `from` and `to` — a gradient makes
+   *  contrast vary across the tile, so both ends are the floor. */
+  gradient?: { from: string; to: string; angle: number };
 }
 
 /** Rendered type. Every value must clear 4.5:1 on bg, surface AND surface2. */
@@ -56,6 +66,12 @@ export interface ThemeFillColours {
   faint: string;
   protein: string; carbs: string; fat: string; recovery: string;
   warnBg: string;
+  /** Pastel GROUND per domain (a tile surface, not a mark) with its matching
+   *  on-colour — the same pairing discipline as mark/markOn. Theme-scoped
+   *  expression: only bubbly themes declare these; every pair must clear
+   *  4.5:1 (the on-colour is text). */
+  domainGround?: Record<Domain, string>;
+  domainGroundOn?: Record<Domain, string>;
 }
 
 export interface ThemeTypography {
@@ -70,10 +86,18 @@ export interface ThemeTypography {
 }
 
 export interface ThemeShape {
-  radius: { none: number; sm: number; md: number; lg: number };
+  radius: { none: number; sm: number; md: number; lg: number; pill: number };
   borderWidth: { hairline: number; thin: number; thick: number };
   container: ContainerStrategy;
   elevation: Elevation;
+  /** Geometry for the theme-scoped elevations (softShadow/clay/halo/gloss).
+   *  Undeclared for the four original elevations. `inset` marks the clay/
+   *  soft inner-highlight pair; `haloWidth` is Sticker's white die-cut ring. */
+  elevationParams?: { offset: number; blur: number; alpha: number; inset?: boolean; haloWidth?: number };
+  /** Whole-card tilt in degrees (Sticker only). Conformance caps it at 2°
+   *  and forces 0 on any theme whose data face is mono — tilted mono
+   *  columns don't align. */
+  tilt: number;
   meter: MeterStyle;
   /** Progress-bar track/fill geometry (reference/themes-today.html's
    *  `.meter`/`.meter i`) — every theme has its own; nothing derives these

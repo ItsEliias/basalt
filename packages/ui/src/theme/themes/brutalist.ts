@@ -54,7 +54,8 @@ export const brutalist: Theme = {
   },
 
   shape: {
-    radius: { none: 0, sm: 0, md: 0, lg: 0 },
+    radius: { none: 0, sm: 0, md: 0, lg: 0, pill: 999 },
+    tilt: 0,
     borderWidth: { hairline: 2, thin: 3, thick: 4 },
     container: 'boxed',
     elevation: 'hardShadow',
