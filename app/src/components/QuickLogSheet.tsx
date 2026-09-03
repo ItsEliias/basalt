@@ -1,6 +1,7 @@
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, ScaledText as Text } from '@basalt/ui';
+import { mono, ScaledText as Text } from '@basalt/ui';
+import { useTheme } from '@basalt/ui';
 
 // The quick-log (+) sheet — 3-wide mono-labeled grid. Every logging action
 // is ≤2 taps from here; Water +250 commits instantly with no screen.
@@ -28,28 +29,29 @@ export function QuickLogSheet({
   onClose: () => void;
   onAction: (a: QuickAction) => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
         <View style={styles.grid}>
           {ITEMS.map((it) => (
             <Pressable
               key={it.key}
-              style={styles.item}
+              style={[styles.item, { borderColor: theme.surfaces.border }]}
               onPress={() => {
                 onAction(it.key);
                 onClose();
               }}
             >
-              <Text style={styles.glyph}>{it.glyph}</Text>
-              <Text style={styles.label}>{it.label.toUpperCase()}</Text>
+              <Text style={[styles.glyph, { color: theme.text.ink2 }]}>{it.glyph}</Text>
+              <Text style={[styles.label, { color: theme.text.mute }]}>{it.label.toUpperCase()}</Text>
             </Pressable>
           ))}
         </View>
-        <Text style={styles.hint}>LOG ANYTHING FROM ANYWHERE · WATER +250 COMMITS INSTANTLY, NO SCREEN</Text>
+        <Text style={[styles.hint, { color: theme.text.faint }]}>LOG ANYTHING FROM ANYWHERE · WATER +250 COMMITS INSTANTLY, NO SCREEN</Text>
       </View>
     </Modal>
   );
@@ -58,27 +60,24 @@ export function QuickLogSheet({
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 14 },
+  grab: { width: 34, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 4, marginBottom: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   item: {
     flexBasis: '31%',
     flexGrow: 1,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 6,
     alignItems: 'center',
   },
-  glyph: { fontSize: 16, color: color.ink2, fontFamily: mono },
-  label: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, marginTop: 8 },
-  hint: { fontFamily: mono, fontSize: 10.5, color: color.faint, textAlign: 'center', marginTop: 14, letterSpacing: 0.57 },
+  glyph: { fontSize: 16, fontFamily: mono },
+  label: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, marginTop: 8 },
+  hint: { fontFamily: mono, fontSize: 10.5, textAlign: 'center', marginTop: 14, letterSpacing: 0.57 },
 });

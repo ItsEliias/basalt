@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow,
-  color, mono, ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, mono, ScaledText as Text } from '@basalt/ui';
 import {
   riegelPredict, trainingPaces, buildRacePlan, rampBack, raceTimeText,
   getActiveRacePlan, startRacePlan, setRaceSessionDone, stopRacePlan,
@@ -11,6 +8,7 @@ import {
   type RaceKey, type RacePlanRecord,
 } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Race plan — one knob (a recent result), one named model (Riegel 1977,
 // T2 = T1 × (D2/D1)^1.06), a tick-box week view, and a published
@@ -35,6 +33,7 @@ function paceText(secPerKm: number): string {
 }
 
 export function RacePlanCard() {
+  const { theme } = useTheme();
   const [plan, setPlan] = useState<RacePlanRecord | null>(null);
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [race, setRace] = useState<RaceKey>('10k');
@@ -158,7 +157,7 @@ export function RacePlanCard() {
           const n = w.sessions.filter((s) => done.has(s.key)).length;
           return (
             <Pressable key={w.index} onPress={() => setViewWeek(w.index)} hitSlop={6}>
-              <Text style={[styles.weekDot, w.index === focusWeek && styles.weekDotOn]}>
+              <Text style={[styles.weekDot, { color: theme.text.faint }, w.index === focusWeek && { color: theme.text.ink }]}>
                 {n === 3 ? '●' : n > 0 ? '◐' : '○'}
               </Text>
             </Pressable>
@@ -180,7 +179,7 @@ export function RacePlanCard() {
       ))}
 
       <Pressable onPress={() => void stopRacePlan(supabase, plan.id).then(refresh)} hitSlop={8}>
-        <Text style={styles.stopLink}>STOP PLAN</Text>
+        <Text style={[styles.stopLink, { color: theme.text.faint }]}>STOP PLAN</Text>
       </Pressable>
       <SrcNote>
         Catch-up rule, published: ≤1 week behind → repeat your last completed week · more → step back two weeks and rebuild · paces wear ~ because the model is a formula, not a promise
@@ -191,7 +190,6 @@ export function RacePlanCard() {
 
 const styles = StyleSheet.create({
   dotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 8, paddingHorizontal: 4 },
-  weekDot: { fontFamily: mono, fontSize: 12, color: color.faint },
-  weekDotOn: { color: color.ink },
-  stopLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, paddingVertical: 10, textAlign: 'center' },
+  weekDot: { fontFamily: mono, fontSize: 12 },
+  stopLink: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 10, textAlign: 'center' },
 });

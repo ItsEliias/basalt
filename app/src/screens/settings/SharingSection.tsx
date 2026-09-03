@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup,
-  color, mono, groupInt,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup, mono, groupInt, ScaledText as Text } from '@basalt/ui';
 import {
   SHARE_DOMAINS, SHARE_PRESETS, grantLine,
   createShareGrant, listMyGrants, listSharedWithMe, revokeShareGrant, redeemShareCode,
@@ -14,6 +10,7 @@ import {
 } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { logShareEvent } from '../../lib/instrumentation';
+import { useTheme } from '@basalt/ui';
 
 // Sharing — read-only grants (docs/SHARING-RLS-DESIGN.md). The server's
 // RLS is the whole enforcement; this UI only ever states what it stores:
@@ -21,6 +18,7 @@ import { logShareEvent } from '../../lib/instrumentation';
 // see the history.
 
 export function SharingSection() {
+  const { theme } = useTheme();
   const [mine, setMine] = useState<ShareGrant[]>([]);
   const [withMe, setWithMe] = useState<ShareGrant[]>([]);
   const [creating, setCreating] = useState(false);
@@ -99,12 +97,12 @@ export function SharingSection() {
 
       {freshCode ? (
         <>
-          <View style={styles.codeBox}>
-            <Text style={styles.codeText}>{freshCode.inviteCode}</Text>
+          <View style={[styles.codeBox, { borderColor: theme.surfaces.border }]}>
+            <Text style={[styles.codeText, { color: theme.text.ink }]}>{freshCode.inviteCode}</Text>
           </View>
           <SrcNote>{`Give this code to your ${freshCode.role === 'custom' ? 'person' : freshCode.role} — single use, expires in 48 h · they enter it in their own Basalt under Sharing`}</SrcNote>
           <Pressable onPress={() => setFreshCode(null)} hitSlop={8}>
-            <Text style={styles.link}>DONE</Text>
+            <Text style={[styles.link, { color: theme.text.faint }]}>DONE</Text>
           </Pressable>
         </>
       ) : null}
@@ -132,12 +130,12 @@ export function SharingSection() {
           })}
           <CTA label="Create the code" disabled={domains.length === 0} onPress={() => void create()} />
           <Pressable onPress={() => setCreating(false)} hitSlop={8}>
-            <Text style={styles.link}>CANCEL</Text>
+            <Text style={[styles.link, { color: theme.text.faint }]}>CANCEL</Text>
           </Pressable>
         </>
       ) : (
         <Pressable onPress={() => { setCreating(true); setFreshCode(null); }} hitSlop={8}>
-          <Text style={styles.link}>+ NEW GRANT</Text>
+          <Text style={[styles.link, { color: theme.text.faint }]}>+ NEW GRANT</Text>
         </Pressable>
       )}
 
@@ -167,7 +165,7 @@ export function SharingSection() {
           style={{ flex: 1 }}
         />
         <Pressable onPress={() => void redeem()} hitSlop={10} disabled={!redeemText.trim()}>
-          <Text style={styles.link}>CLAIM</Text>
+          <Text style={[styles.link, { color: theme.text.faint }]}>CLAIM</Text>
         </Pressable>
       </View>
       {message ? <SrcNote>{message}</SrcNote> : null}
@@ -191,6 +189,7 @@ type ViewerData = {
 };
 
 function SharedViewerSheet({ grant, onClose }: { grant: ShareGrant | null; onClose: () => void }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [data, setData] = useState<ViewerData | null>(null);
 
@@ -274,8 +273,8 @@ function SharedViewerSheet({ grant, onClose }: { grant: ShareGrant | null; onClo
   return (
     <Modal visible={grant !== null} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface }, { paddingBottom: 16 + insets.bottom }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.border }]} />
         <ScrollView style={{ maxHeight: 560 }}>
           <ReceiptHeader label="Shared with you" summary={grant ? grant.domains.join(' · ') : undefined} />
           {data === null ? <EmptyState>Loading…</EmptyState> : (
@@ -313,11 +312,11 @@ function SharedViewerSheet({ grant, onClose }: { grant: ShareGrant | null; onClo
 }
 
 const styles = StyleSheet.create({
-  link: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint, paddingVertical: 10, textAlign: 'center' },
-  codeBox: { borderWidth: StyleSheet.hairlineWidth, borderColor: color.border, borderRadius: 8, paddingVertical: 14, marginTop: 8, alignItems: 'center' },
-  codeText: { fontFamily: mono, fontSize: 22, letterSpacing: 6, color: color.ink },
+  link: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 10, textAlign: 'center' },
+  codeBox: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingVertical: 14, marginTop: 8, alignItems: 'center' },
+  codeText: { fontFamily: mono, fontSize: 22, letterSpacing: 6 },
   redeemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
-  sheet: { backgroundColor: color.surface, borderTopLeftRadius: 14, borderTopRightRadius: 14, paddingHorizontal: 16, paddingTop: 8 },
-  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: color.border, marginBottom: 8 },
+  sheet: { borderTopLeftRadius: 14, borderTopRightRadius: 14, paddingHorizontal: 16, paddingTop: 8 },
+  grab: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 8 },
 });

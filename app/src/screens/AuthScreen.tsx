@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, mono, CTA, ObInput, ObChipLabel, SrcNote, useTheme, ScaledText as Text } from '@basalt/ui';
+import { mono, CTA, ObInput, ObChipLabel, SrcNote, useTheme, ScaledText as Text } from '@basalt/ui';
 import { supabase } from '../lib/supabase';
 
 // Sign in / create account — email + password, nothing else. No quiz, no
@@ -35,8 +35,8 @@ export function AuthScreen() {
       style={[styles.root, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.brand}>BASALT</Text>
-      <Text style={styles.lede}>
+      <Text style={[styles.brand, { color: theme.text.ink }]}>BASALT</Text>
+      <Text style={[styles.lede, { color: theme.text.ink }]}>
         {mode === 'signin' ? 'Sign in to your ledger.' : 'Create your ledger.'}
       </Text>
 
@@ -53,7 +53,7 @@ export function AuthScreen() {
         <View style={styles.pwRow}>
           <ObChipLabel>Password</ObChipLabel>
           <Pressable onPress={() => setShowPassword((s) => !s)} hitSlop={10}>
-            <Text style={styles.pwToggle}>{showPassword ? 'HIDE' : 'SHOW'}</Text>
+            <Text style={[styles.pwToggle, { color: theme.text.mute }]}>{showPassword ? 'HIDE' : 'SHOW'}</Text>
           </Pressable>
         </View>
         <ObInput
@@ -66,7 +66,7 @@ export function AuthScreen() {
         />
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={[styles.error, { color: theme.text.fat }]}>{error}</Text> : null}
 
       <CTA
         label={busy ? '…' : mode === 'signin' ? 'Sign in' : 'Create account'}
@@ -74,7 +74,7 @@ export function AuthScreen() {
         disabled={busy || !email.trim() || password.length < 6}
       />
       <Text
-        style={styles.switch}
+        style={[styles.switch, { color: theme.text.mute }]}
         onPress={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); }}
       >
         {mode === 'signin' ? 'NEW HERE — CREATE AN ACCOUNT' : 'ALREADY HAVE AN ACCOUNT — SIGN IN'}
@@ -89,17 +89,16 @@ export function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 22 },
-  brand: { fontFamily: mono, fontSize: 11, letterSpacing: 2.42, color: color.ink },
-  lede: { fontSize: 24, fontWeight: '650' as any, letterSpacing: -0.36, color: color.ink, marginTop: 34 },
-  error: { fontSize: 12.5, color: color.fat, marginTop: 12, lineHeight: 18 },
+  root: { flex: 1, paddingHorizontal: 22 },
+  brand: { fontFamily: mono, fontSize: 11, letterSpacing: 2.42 },
+  lede: { fontSize: 24, fontWeight: '650' as any, letterSpacing: -0.36, marginTop: 34 },
+  error: { fontSize: 12.5, marginTop: 12, lineHeight: 18 },
   pwRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
-  pwToggle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, paddingVertical: 4 },
+  pwToggle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, paddingVertical: 4 },
   switch: {
     fontFamily: mono,
     fontSize: 11,
     letterSpacing: 1.2,
-    color: color.mute,
     textAlign: 'center',
     marginTop: 18,
     paddingVertical: 6,

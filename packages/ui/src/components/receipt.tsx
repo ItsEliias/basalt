@@ -55,7 +55,7 @@ export function MealTag({ children }: { children: string }) {
 }
 
 export function ReceiptRow({
-  name, meta, value, unit, last, valueColor, thumb, metaAccent,
+  name, meta, value, unit, last, valueColor, thumb, metaAccent, right,
 }: {
   name: string;
   meta?: ReactNode;
@@ -67,6 +67,8 @@ export function ReceiptRow({
   thumb?: ReactNode;
   /** Render `meta` in an accent (e.g. a dietary-conflict line in --fat). */
   metaAccent?: string;
+  /** A real control on the right (e.g. a Switch) instead of value text. */
+  right?: ReactNode;
 }) {
   const { theme, density, textScale } = useTheme();
   const nameSize = typeScale.rowName.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
@@ -116,7 +118,7 @@ export function ReceiptRow({
           ) : null}
         </View>
       </View>
-      {value !== undefined ? (
+      {right ?? (value !== undefined ? (
         <View style={styles.right}>
           <Text
             style={[styles.value, { fontFamily: dataFont, fontWeight: dataWeight, color: theme.text.ink }, valueColor ? { color: valueColor } : null]}
@@ -130,7 +132,7 @@ export function ReceiptRow({
             </Text>
           ) : null}
         </View>
-      ) : null}
+      ) : null)}
     </View>
   );
 }

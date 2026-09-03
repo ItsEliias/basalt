@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, ChipGroup, BodyFigure,
-  ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav,
-  GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput,
-  color, mono, mmss, groupInt, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, ChipGroup, BodyFigure, ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav, GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput, mono, mmss, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
   platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
@@ -160,7 +154,7 @@ function SessionTab() {
                   <Pressable
                     onPress={() => void duplicateTemplate(supabase, t.id, `${t.name} copy`).then(refreshTemplates)}
                   >
-                    <Text style={styles.timedLink}>DUPLICATE →</Text>
+                    <Text style={[styles.timedLink, { color: theme.text.faint }]}>DUPLICATE →</Text>
                   </Pressable>
                 </View>
               </View>
@@ -169,7 +163,7 @@ function SessionTab() {
             <EmptyState>No templates yet — build one below to start a session with your own targets pre-filled.</EmptyState>
           )}
           <Pressable onPress={() => setBuilderOpen(true)}>
-            <Text style={styles.addSet}>+ NEW TEMPLATE</Text>
+            <Text style={[styles.addSet, { color: theme.text.mute }]}>+ NEW TEMPLATE</Text>
           </Pressable>
         </Card>
 
@@ -197,7 +191,7 @@ function SessionTab() {
                 />
               ) : null}
               <Pressable onPress={() => void stopProgram(supabase).then(refreshProgram)} hitSlop={8}>
-                <Text style={styles.addSet}>STOP PROGRAM</Text>
+                <Text style={[styles.addSet, { color: theme.text.mute }]}>STOP PROGRAM</Text>
               </Pressable>
               <SrcNote>
                 Block: 3 weeks accumulation · 2 intensification · 1 deload — suggested loads and sets follow the phase · a suggestion, never a mandate
@@ -245,7 +239,7 @@ function SessionTab() {
                   name={r.region[0]!.toUpperCase() + r.region.slice(1)}
                   meta={`${r.hardSets72h} hard sets in 72 h · ${r.why} · tap to override`}
                   value={r.status === 'overridden' ? 'fresh — your call' : r.status}
-                  valueColor={r.status === 'loaded' ? color.protein : r.status === 'fresh' || r.status === 'overridden' ? color.carbs : color.ink2}
+                  valueColor={r.status === 'loaded' ? theme.text.protein : r.status === 'fresh' || r.status === 'overridden' ? theme.text.carbs : theme.text.ink2}
                   last={i === recovery.length - 1}
                 />
               </Pressable>
@@ -282,12 +276,20 @@ function SessionTab() {
     <>
       <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => setAdaptOpen(true)} disabled={session.exercises.length === 0}>
-            <Text style={[styles.addSet, session.exercises.length === 0 && { opacity: 0.4 }]}>ADAPT</Text>
-          </Pressable>
-          <Text style={styles.elapsed}>
+          <View style={session.exercises.length === 0 ? { opacity: 0.4 } : null}>
+            <Chip label="Adapt" onPress={session.exercises.length === 0 ? undefined : () => setAdaptOpen(true)} />
+          </View>
+          <Text style={[styles.elapsed, { color: theme.text.faint }]}>
             {session.startedAt ? `${elapsedText(session.startedAt, new Date())} ELAPSED` : ''}
           </Text>
+          <Pressable
+            onPress={() => setRpeOpen(true)}
+            disabled={session.busy}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            style={[styles.endBtn, { borderColor: theme.surfaces.borderStrong, borderRadius: theme.shape.radius.sm }, session.busy && { opacity: 0.45 }]}
+          >
+            <Text style={[styles.endBtnText, { color: theme.text.ink }]}>{session.busy ? '…' : 'END SESSION'}</Text>
+          </Pressable>
         </View>
 
         {session.exercises.map((ex, i) => (
@@ -305,7 +307,7 @@ function SessionTab() {
           </Card>
         ) : null}
 
-        <CTA label="Add exercise" onPress={() => setPickerOpen(true)} />
+        <CTA label="Add exercise" secondary onPress={() => setPickerOpen(true)} />
 
         {(() => {
           const sets = session.exercises.flatMap((e) =>
@@ -323,8 +325,7 @@ function SessionTab() {
           ) : null;
         })()}
 
-        <CTA label={session.busy ? '…' : 'End session'} disabled={session.busy} onPress={() => setRpeOpen(true)} />
-        {session.error ? <Text style={styles.error}>{session.error}</Text> : null}
+        {session.error ? <Text style={[styles.error, { color: theme.text.fat }]}>{session.error}</Text> : null}
       </ScrollView>
 
       <KeepAwakeWhileTraining />
@@ -354,6 +355,7 @@ function SessionTab() {
 }
 
 function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseState; index: number; all: SessionExerciseState[]; onCommitted?: (id: string) => void }) {
+  const { theme } = useTheme();
   const session = useSessionStore();
   const restHere = session.rest?.sessionExerciseId === ex.sessionExerciseId;
   const [commentFor, setCommentFor] = useState<number | null>(null);
@@ -382,7 +384,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           ]}
         />
         <Pressable onPress={() => session.toggleTempo(ex.sessionExerciseId)} hitSlop={8}>
-          <Text style={styles.timedLink}>
+          <Text style={[styles.timedLink, { color: theme.text.faint }]}>
             {ex.tempoOn
               ? 'TEMPO 3-1-1 ON — HAPTIC BEATS DURING WORK · TAP TO TURN OFF'
               : 'TEMPO 3-1-1 OFF · TAP FOR HAPTIC BEATS DURING WORK'}
@@ -446,7 +448,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
       {supersetLabel ? <SupersetTag label={supersetLabel} /> : null}
       <ExerciseHead name={ex.exercise.name} meta={exerciseMetaText(ex.exercise.primaryMuscles, ex.exercise.equipment)} />
       {ex.suggestion ? (
-        <Text style={styles.suggestion}>
+        <Text style={[styles.suggestion, { color: theme.text.mute }]}>
           {suggestionText(ex.suggestion)}
           {ex.tmLine ? ` · ${ex.tmLine} (TM = 90% of your best e1RM, moves only by full 2.5 kg steps)` : ''}
           {ex.suggestion.kind !== 'first_time' ? ' · a suggestion, never a mandate' : ''}
@@ -454,7 +456,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
       ) : null}
       {index > 0 ? (
         <Pressable onPress={() => void session.toggleSupersetWithPrevious(ex.sessionExerciseId)}>
-          <Text style={styles.linkAction}>
+          <Text style={[styles.linkAction, { color: theme.text.faint }]}>
             {ex.supersetGroup !== null && ex.supersetGroup === all[index - 1]?.supersetGroup
               ? 'UNLINK SUPERSET'
               : '⟂ LINK WITH PREVIOUS (SUPERSET)'}
@@ -471,7 +473,7 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           {`Last session · ${prevSummary(ex.prevSets) ?? '—'} · ${new Date(ex.prevPerformedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`}
         </PrevNote>
       ) : null}
-      <SetsHeader columns={['Set', 'Prev', 'kg', 'Reps', 'RIR']} />
+      <SetsHeader columns={['Set', 'Prev', 'kg', 'Reps', 'RIR']} tickColumn />
       {ex.rows.map((row, i) => (
         <SetRow
           key={row.setNumber}
@@ -490,18 +492,24 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           onCommit={() => {
             void session.commitRow(ex.sessionExerciseId, i).then(() => onCommitted?.(ex.sessionExerciseId));
           }}
+          done={row.committed}
+          onToggleDone={() => {
+            if (row.committed) {
+              session.updateRow(ex.sessionExerciseId, i, { committed: false });
+            } else {
+              void session.commitRow(ex.sessionExerciseId, i).then(() => onCommitted?.(ex.sessionExerciseId));
+            }
+          }}
         />
       ))}
       <View style={styles.rowActions}>
-        <Pressable onPress={() => session.addRow(ex.sessionExerciseId)}>
-          <Text style={styles.addSet}>+ ADD SET</Text>
-        </Pressable>
-        <Pressable onPress={() => setPlatesOpen(true)}>
-          <Text style={styles.addSet}>PLATES</Text>
+        <CTA label="Add set" secondary onPress={() => session.addRow(ex.sessionExerciseId)} style={styles.addSetBtn} />
+        <Pressable onPress={() => setPlatesOpen(true)} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
+          <Text style={[styles.addSet, { color: theme.text.mute }]}>PLATES</Text>
         </Pressable>
         {ex.repPrs.length > 0 ? (
-          <Pressable onPress={() => setPrsOpen(true)}>
-            <Text style={styles.addSet}>PRS</Text>
+          <Pressable onPress={() => setPrsOpen(true)} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
+            <Text style={[styles.addSet, { color: theme.text.mute }]}>PRS</Text>
           </Pressable>
         ) : null}
       </View>
@@ -510,10 +518,10 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
       ) : null}
       {ex.rows.some((r) => r.committed) ? (
         <View style={styles.fbRow}>
-          <Text style={styles.fbLabel}>THIS FELT</Text>
+          <Text style={[styles.fbLabel, { color: theme.text.faint }]}>THIS FELT</Text>
           {(['too_easy', 'right', 'too_hard'] as const).map((f) => (
             <Pressable key={f} onPress={() => void session.giveFeedback(ex.sessionExerciseId, f)}>
-              <Text style={[styles.fbChip, ex.feedback === f && styles.fbChipOn]}>
+              <Text style={[styles.fbChip, { color: theme.text.mute, borderColor: theme.surfaces.borderStrong }, ex.feedback === f && { color: theme.text.ink, borderColor: theme.text.ink2 }]}>
                 {f === 'too_easy' ? 'TOO EASY' : f === 'right' ? 'RIGHT' : 'TOO HARD'}
               </Text>
             </Pressable>
@@ -546,14 +554,15 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
 function CommentSheet({ open, initial, setNumber, onClose, onSave }: {
   open: boolean; initial: string; setNumber: number; onClose: () => void; onSave: (t: string) => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState(initial);
   useEffect(() => setText(initial), [initial, open]);
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-        <Text style={styles.sheetTitle}>SET {setNumber} · NOTE</Text>
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>SET {setNumber} · NOTE</Text>
         <ObInput
           placeholder="Machine seat 4 · felt heavy · grip cue…"
           value={text}
@@ -571,18 +580,19 @@ function ExerciseDetailSheet({ exercise, onClose, onPick }: {
   onClose: () => void;
   onPick: (e: Exercise, timed: boolean) => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   if (!exercise) return null;
   const emphasis = regionsFor(exercise);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-        <Text style={styles.sheetTitle}>{exercise.name.toUpperCase()}</Text>
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>{exercise.name.toUpperCase()}</Text>
         <View style={styles.detailRow}>
           <BodyFigure intensity={intensityFor(emphasis)} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.detailMeta}>
+            <Text style={[styles.detailMeta, { color: theme.text.ink2 }]}>
               {[
                 exercise.primaryMuscles.length > 0 ? `Primary · ${exercise.primaryMuscles.join(', ')}` : null,
                 exercise.secondaryMuscles.length > 0 ? `Secondary · ${exercise.secondaryMuscles.join(', ')}` : null,
@@ -590,19 +600,19 @@ function ExerciseDetailSheet({ exercise, onClose, onPick }: {
                 exercise.difficulty ? `Level · ${exercise.difficulty}` : null,
               ].filter(Boolean).join('\n')}
             </Text>
-            <View style={styles.mediaSlot}>
-              <Text style={styles.mediaSlotText}>MEDIA — LICENSED GIF PACK PENDING</Text>
+            <View style={[styles.mediaSlot, { borderColor: theme.surfaces.borderStrong }]}>
+              <Text style={[styles.mediaSlotText, { color: theme.text.faint }]}>MEDIA — LICENSED GIF PACK PENDING</Text>
             </View>
           </View>
         </View>
         {exercise.instructions.length > 0 ? (
-          <Text style={styles.detailInstructions} numberOfLines={6}>
+          <Text style={[styles.detailInstructions, { color: theme.text.mute }]} numberOfLines={6}>
             {exercise.instructions.slice(0, 3).join(' ')}
           </Text>
         ) : null}
         <CTA label="Add to session" onPress={() => { onClose(); onPick(exercise, false); }} />
         <Pressable onPress={() => { onClose(); onPick(exercise, true); }}>
-          <Text style={styles.addAsTimed}>ADD AS TIMED (PLANK-STYLE) →</Text>
+          <Text style={[styles.addAsTimed, { color: theme.text.mute }]}>ADD AS TIMED (PLANK-STYLE) →</Text>
         </Pressable>
         <SrcNote>Primary solid · secondary faded · muscle data from free-exercise-db</SrcNote>
       </View>
@@ -611,6 +621,7 @@ function ExerciseDetailSheet({ exercise, onClose, onPick }: {
 }
 
 function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; ex: SessionExerciseState }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [sharing, setSharing] = useState(false);
   if (sharing) {
@@ -623,8 +634,8 @@ function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; e
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-        <Text style={styles.sheetTitle}>REP PRS — {ex.exercise.name.toUpperCase()}</Text>
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>REP PRS — {ex.exercise.name.toUpperCase()}</Text>
         {ex.repPrs.map((pr, i) => (
           <ReceiptRow
             key={pr.reps}
@@ -636,7 +647,7 @@ function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; e
           />
         ))}
         <Pressable onPress={() => setSharing(true)}>
-          <Text style={styles.addSet}>SHARE AS IMAGE →</Text>
+          <Text style={[styles.addSet, { color: theme.text.mute }]}>SHARE AS IMAGE →</Text>
         </Pressable>
         <SrcNote>Best real weight at each rep count · from your working sets only · untrained rep counts don't appear</SrcNote>
       </View>
@@ -647,6 +658,7 @@ function PrsSheet({ open, onClose, ex }: { open: boolean; onClose: () => void; e
 function PlatesSheet({ open, onClose, targetKgText }: {
   open: boolean; onClose: () => void; targetKgText: string;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [kgText, setKgText] = useState(targetKgText);
   const [barKg, setBarKg] = useState(20);
@@ -656,29 +668,29 @@ function PlatesSheet({ open, onClose, targetKgText }: {
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-        <Text style={styles.sheetTitle}>PLATE CALCULATOR</Text>
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>PLATE CALCULATOR</Text>
         <ObInput placeholder="Target (kg)" keyboardType="decimal-pad" value={kgText} onChangeText={setKgText} />
         <ChipRow options={['20 kg bar', '15 kg bar']} value={`${barKg} kg bar`} onChange={(v) => setBarKg(parseInt(v, 10))} />
         {breakdown ? (
           <>
-            <Text style={styles.platesLine}>{platesText(breakdown)}</Text>
+            <Text style={[styles.platesLine, { color: theme.text.ink }]}>{platesText(breakdown)}</Text>
             {breakdown.residualKg !== 0 ? (
-              <Text style={styles.platesResidual}>
+              <Text style={[styles.platesResidual, { color: theme.text.fat }]}>
                 {`loads ${breakdown.achievableKg} kg — ${Math.abs(breakdown.residualKg)} kg short of ${breakdown.requestedKg}`}
               </Text>
             ) : null}
           </>
         ) : kgText.trim() !== '' ? (
-          <Text style={styles.platesResidual}>below bar weight — nothing to load</Text>
+          <Text style={[styles.platesResidual, { color: theme.text.fat }]}>below bar weight — nothing to load</Text>
         ) : null}
         {breakdown && isFinite(target) && target > barKg ? (
           <>
-            <Text style={styles.warmupTitle}>WARM-UP RAMP</Text>
+            <Text style={[styles.warmupTitle, { color: theme.text.faint }]}>WARM-UP RAMP</Text>
             {warmupSets(target, barKg).map((w) => (
-              <Text key={w.label} style={styles.warmupLine}>
+              <Text key={w.label} style={[styles.warmupLine, { color: theme.text.ink }]}>
                 {`${w.kg} kg × ${w.reps}`}
-                <Text style={styles.warmupPct}>{`  ·  ${w.label}`}</Text>
+                <Text style={[styles.warmupPct, { color: theme.text.faint }]}>{`  ·  ${w.label}`}</Text>
               </Text>
             ))}
           </>
@@ -692,18 +704,22 @@ function PlatesSheet({ open, onClose, targetKgText }: {
 function RpeSheet({ open, busy, onClose, onFinish }: {
   open: boolean; busy: boolean; onClose: () => void; onFinish: (rpe: number | null) => void;
 }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
-        <Text style={styles.sheetTitle}>HOW HARD WAS THE SESSION? · RPE</Text>
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+        <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>HOW HARD WAS THE SESSION? · RPE</Text>
         <ChipRow
           options={['6', '7', '8', '9', '10']}
           onChange={(v) => onFinish(parseInt(v, 10))}
         />
-        <Pressable onPress={() => onFinish(null)} disabled={busy}>
-          <Text style={styles.skipRpe}>SKIP — END WITHOUT A RATING</Text>
+        <Pressable onPress={() => onFinish(null)} disabled={busy} hitSlop={{ top: 8, bottom: 8 }}>
+          <Text style={[styles.skipRpe, { color: theme.text.faint }]}>SKIP — END WITHOUT A RATING</Text>
+        </Pressable>
+        <Pressable onPress={onClose} disabled={busy} hitSlop={{ top: 8, bottom: 8 }}>
+          <Text style={[styles.skipRpe, { color: theme.text.mute }]}>CANCEL — KEEP TRAINING</Text>
         </Pressable>
       </View>
     </Modal>
@@ -759,9 +775,9 @@ export function ExercisePicker({
     <Modal visible={open} animationType="fade" onRequestClose={onClose}>
       <View style={[styles.picker, { backgroundColor: theme.surfaces.bg, paddingTop: insets.top + 12, paddingBottom: insets.bottom }]}>
         <View style={styles.pickerHead}>
-          <Text style={styles.pickerTitle}>Library</Text>
+          <Text style={[styles.pickerTitle, { color: theme.text.ink }]}>Library</Text>
           <Pressable onPress={onClose} hitSlop={10}>
-            <Text style={styles.pickerClose}>CLOSE</Text>
+            <Text style={[styles.pickerClose, { color: theme.text.faint }]}>CLOSE</Text>
           </Pressable>
         </View>
         <View style={{ paddingHorizontal: 16 }}>
@@ -769,7 +785,7 @@ export function ExercisePicker({
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.chips}>
           {hasEquipmentProfile ? (
-            <Chip label="My equipment" on={mineOnly} accent={color.carbs} onPress={() => setMineOnly(!mineOnly)} />
+            <Chip label="My equipment" on={mineOnly} accent={theme.fill.carbs} onPress={() => setMineOnly(!mineOnly)} />
           ) : null}
           {MUSCLES.map((m) => (
             <Chip key={m} label={m} on={muscle === m} onPress={() => setMuscle(muscle === m ? null : m)} />
@@ -807,55 +823,55 @@ export function ExercisePicker({
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: color.bg },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
-  elapsed: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'right', marginTop: 10 },
+  elapsed: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, textAlign: 'right', flex: 1, marginHorizontal: 10 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  addSet: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute, paddingVertical: 10 },
-  rowActions: { flexDirection: 'row', justifyContent: 'space-between' },
-  linkAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, paddingTop: 8 },
-  suggestion: { fontFamily: mono, fontSize: 11, letterSpacing: 0.38, color: color.mute, lineHeight: 15, marginTop: 6 },
+  endBtn: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 12, minHeight: 36, justifyContent: 'center' },
+  endBtnText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
+  addSet: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, paddingVertical: 10 },
+  addSetBtn: { flexGrow: 1, marginTop: 0, marginRight: 14 },
+  rowActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 18, marginTop: 12 },
+  linkAction: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, paddingTop: 8 },
+  suggestion: { fontFamily: mono, fontSize: 11, letterSpacing: 0.38, lineHeight: 15, marginTop: 6 },
   fbRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  fbLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint },
+  fbLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85 },
   fbChip: {
-    fontFamily: mono, fontSize: 11, letterSpacing: 0.7, color: color.mute,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.7,
+    borderWidth: StyleSheet.hairlineWidth, borderRadius: 999,
     paddingHorizontal: 10, paddingVertical: 5, overflow: 'hidden',
   },
-  fbChipOn: { color: color.ink, borderColor: color.ink2 },
-  warmupTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, color: color.faint, marginTop: 16 },
-  warmupLine: { fontFamily: mono, fontSize: 14, color: color.ink, marginTop: 6, fontVariant: ['tabular-nums'] },
-  warmupPct: { fontSize: 11, color: color.faint },
+  warmupTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 0.85, marginTop: 16 },
+  warmupLine: { fontFamily: mono, fontSize: 14, marginTop: 6, fontVariant: ['tabular-nums'] },
+  warmupPct: { fontSize: 11 },
   pickerLinks: { flexDirection: 'row', justifyContent: 'space-between' },
   detailRow: { flexDirection: 'row', gap: 18, alignItems: 'flex-start', marginTop: 14 },
-  detailMeta: { fontFamily: mono, fontSize: 11.5, color: color.ink2, lineHeight: 17, letterSpacing: 0.3 },
-  detailInstructions: { fontSize: 12.5, color: color.mute, lineHeight: 18, marginTop: 12 },
+  detailMeta: { fontFamily: mono, fontSize: 11.5, lineHeight: 17, letterSpacing: 0.3 },
+  detailInstructions: { fontSize: 12.5, lineHeight: 18, marginTop: 12 },
   mediaSlot: {
-    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderStyle: 'dashed',
+    borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed',
     borderRadius: 10, padding: 12, marginTop: 12, alignItems: 'center',
   },
-  mediaSlotText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.8, color: color.faint },
+  mediaSlotText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.8 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 18,
   },
-  sheetTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
-  platesLine: { fontFamily: mono, fontSize: 14, color: color.ink, marginTop: 14 },
-  platesResidual: { fontFamily: mono, fontSize: 11, color: color.fat, marginTop: 8 },
-  skipRpe: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 14 },
-  error: { fontSize: 12.5, color: color.fat, marginTop: 10 },
+  sheetTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
+  platesLine: { fontFamily: mono, fontSize: 14, marginTop: 14 },
+  platesResidual: { fontFamily: mono, fontSize: 11, marginTop: 8 },
+  skipRpe: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, textAlign: 'center', paddingVertical: 14 },
+  error: { fontSize: 12.5, marginTop: 10 },
   cfgRow: { flexDirection: 'row', gap: 10, marginTop: 12, justifyContent: 'center' },
-  picker: { flex: 1, backgroundColor: color.bg, paddingHorizontal: 0 },
+  picker: { flex: 1, paddingHorizontal: 0 },
   pickerHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16 },
-  pickerTitle: { fontSize: 21, fontWeight: '650' as any, letterSpacing: -0.21, color: color.ink },
-  pickerClose: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint },
+  pickerTitle: { fontSize: 21, fontWeight: '650' as any, letterSpacing: -0.21 },
+  pickerClose: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
   chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  timedLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, paddingBottom: 8, marginTop: -4 },
-  addAsTimed: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.mute, textAlign: 'center', paddingVertical: 12 },
+  timedLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, paddingBottom: 8, marginTop: -4 },
+  addAsTimed: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, textAlign: 'center', paddingVertical: 12 },
 });

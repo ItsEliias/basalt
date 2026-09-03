@@ -1,54 +1,60 @@
 import { StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
-import { color, radius } from '../tokens';
+import { radius } from '../tokens';
 import { mono, monoTabular } from '../typography';
+import { useTheme } from '../theme';
 
 // The sets table — Set / Prev(ghost) / kg / Reps / RIR. Previous values are
 // ghosted editable defaults; a PR is a quiet typographic mark in --carbs.
 // Completion is a color state change, nothing springier.
 
 export function ExerciseHead({ name, meta }: { name: string; meta: string }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.exHead}>
-      <Text style={styles.exName}>{name}</Text>
-      <Text style={styles.exMeta}>{meta.toUpperCase()}</Text>
+      <Text style={[styles.exName, { color: theme.text.ink }]}>{name}</Text>
+      <Text style={[styles.exMeta, { color: theme.text.faint }]}>{meta.toUpperCase()}</Text>
     </View>
   );
 }
 
 /** Superset link indicator — 2px accent line + mono caps tag. */
 export function SupersetTag({ label }: { label: string }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.ssLink}>
-      <View style={styles.ssLine} />
-      <Text style={styles.ssText}>{label.toUpperCase()}</Text>
+      <View style={[styles.ssLine, { backgroundColor: theme.fill.protein }]} />
+      <Text style={[styles.ssText, { color: theme.text.protein }]}>{label.toUpperCase()}</Text>
     </View>
   );
 }
 
 /** "LAST SESSION · 4 × 8 @ 72.5 kg · 14 AUG" ghost note. */
 export function PrevNote({ children }: { children: string }) {
-  return <Text style={styles.prevNote}>{children.toUpperCase()}</Text>;
+  const { theme } = useTheme();
+  return <Text style={[styles.prevNote, { color: theme.text.faint }]}>{children.toUpperCase()}</Text>;
 }
 
-export function SetsHeader({ columns }: { columns: string[] }) {
+export function SetsHeader({ columns, tickColumn }: { columns: string[]; tickColumn?: boolean }) {
+  const { theme } = useTheme();
   return (
-    <View style={styles.headRow}>
+    <View style={[styles.headRow, { borderBottomColor: theme.surfaces.border }]}>
       {columns.map((c, i) => (
         <Text
           key={c}
-          style={[styles.headCell, i === 0 ? styles.cellFirst : styles.cellRight]}
+          style={[styles.headCell, { color: theme.text.faint }, i === 0 ? styles.cellFirst : styles.cellRight]}
           maxFontSizeMultiplier={1.3}
         >
           {c.toUpperCase()}
         </Text>
       ))}
+      {tickColumn ? <View style={styles.tickCol} /> : null}
     </View>
   );
 }
 
 export function SetRow({
   setNumber, prev, kg, reps, rir, ghost, pr, hasComment, onPressSet,
-  onChangeKg, onChangeReps, onChangeRir, onCommit,
+  onChangeKg, onChangeReps, onChangeRir, onCommit, done, onToggleDone,
 }: {
   setNumber: string;
   prev: string;
@@ -67,17 +73,22 @@ export function SetRow({
   onChangeReps?: (v: string) => void;
   onChangeRir?: (v: string) => void;
   onCommit?: () => void;
+  /** Explicit completion state for the ✓ column (defaults to !ghost). */
+  done?: boolean;
+  /** Visible completion trigger — keyboard-dismiss commit stays as the secondary path. */
+  onToggleDone?: () => void;
 }) {
-  const valueStyle = [styles.cellValue, ghost && { color: color.faint }];
+  const { theme } = useTheme();
+  const valueStyle = [styles.cellValue, { color: theme.text.ink }, ghost && { color: theme.text.faint }];
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { borderBottomColor: theme.surfaces.border }]}>
       <Pressable onPress={onPressSet} style={styles.cellFirstWrap} hitSlop={6}>
-        <Text style={styles.cellSet} maxFontSizeMultiplier={1.3}>
+        <Text style={[styles.cellSet, { color: theme.text.mute }]} maxFontSizeMultiplier={1.3}>
           {setNumber}
-          {hasComment ? <Text style={styles.commentMark}> ✎</Text> : null}
+          {hasComment ? <Text style={[styles.commentMark, { color: theme.text.faint }]}> ✎</Text> : null}
         </Text>
       </Pressable>
-      <Text style={[styles.cellPrev, styles.cellRight]} maxFontSizeMultiplier={1.3}>{prev}</Text>
+      <Text style={[styles.cellPrev, { color: theme.text.faint }, styles.cellRight]} maxFontSizeMultiplier={1.3}>{prev}</Text>
       <TextInput
         style={[...valueStyle, styles.cellRight, styles.cellInput]}
         value={kg}
@@ -85,7 +96,7 @@ export function SetRow({
         onEndEditing={onCommit}
         keyboardType="decimal-pad"
         placeholder="—"
-        placeholderTextColor={color.faint}
+        placeholderTextColor={theme.text.faint}
         maxFontSizeMultiplier={1.3}
       />
       <View style={[styles.cellRight, styles.repsWrap]}>
@@ -96,10 +107,10 @@ export function SetRow({
           onEndEditing={onCommit}
           keyboardType="number-pad"
           placeholder="—"
-          placeholderTextColor={color.faint}
+          placeholderTextColor={theme.text.faint}
           maxFontSizeMultiplier={1.3}
         />
-        {pr ? <Text style={styles.pr}> PR</Text> : null}
+        {pr ? <Text style={[styles.pr, { color: theme.text.carbs }]}> PR</Text> : null}
       </View>
       <TextInput
         style={[...valueStyle, styles.cellRight, styles.cellInput]}
@@ -108,40 +119,56 @@ export function SetRow({
         onEndEditing={onCommit}
         keyboardType="number-pad"
         placeholder="—"
-        placeholderTextColor={color.faint}
+        placeholderTextColor={theme.text.faint}
         maxFontSizeMultiplier={1.3}
       />
+      {onToggleDone ? (
+        <Pressable
+          onPress={onToggleDone}
+          style={styles.tickCol}
+          hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: (done ?? !ghost) === true }}
+          accessibilityLabel={`Set ${setNumber} ${(done ?? !ghost) ? 'completed' : 'not completed'}`}
+        >
+          {(done ?? !ghost) ? (
+            <Text style={[styles.tickMark, { color: theme.text.carbs }]} maxFontSizeMultiplier={1.3}>✓</Text>
+          ) : (
+            <View style={[styles.tickEmpty, { borderColor: theme.surfaces.borderStrong }]} />
+          )}
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 /** Rest timer bar (surface2) — legible at arm's length, skippable. */
 export function RestTimerBar({ time, onSkip }: { time: string; onSkip: () => void }) {
+  const { theme } = useTheme();
   return (
-    <View style={styles.rest}>
-      <Text style={styles.restLabel}>REST</Text>
-      <Text style={styles.restTime}>{time}</Text>
-      <Pressable onPress={onSkip}><Text style={styles.restSkip}>SKIP →</Text></Pressable>
+    <View style={[styles.rest, { backgroundColor: theme.surfaces.surface2, borderColor: theme.surfaces.borderStrong }]}>
+      <Text style={[styles.restLabel, { color: theme.text.mute }]}>REST</Text>
+      <Text style={[styles.restTime, { color: theme.text.ink }]}>{time}</Text>
+      <Pressable onPress={onSkip}><Text style={[styles.restSkip, { color: theme.text.faint }]}>SKIP →</Text></Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   exHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
-  exName: { fontSize: 15, fontWeight: '600', letterSpacing: -0.15, color: color.ink, flexShrink: 1 },
-  exMeta: { fontFamily: mono, fontSize: 11.5, color: color.faint, letterSpacing: 0.6, flexShrink: 0 },
+  exName: { fontSize: 15, fontWeight: '600', letterSpacing: -0.15, flexShrink: 1 },
+  exMeta: { fontFamily: mono, fontSize: 11.5, letterSpacing: 0.6, flexShrink: 0 },
   ssLink: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  ssLine: { width: 2, height: 14, backgroundColor: color.protein, borderRadius: 1, marginLeft: 2 },
-  ssText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24, color: color.protein },
-  prevNote: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 10 },
+  ssLine: { width: 2, height: 14, borderRadius: 1, marginLeft: 2 },
+  ssText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24 },
+  prevNote: { fontFamily: mono, fontSize: 11, marginTop: 10 },
   headRow: {
     flexDirection: 'row',
     paddingBottom: 8,
     marginTop: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
   },
-  headCell: { fontFamily: mono, fontSize: 11, letterSpacing: 0.95, color: color.faint },
+  headCell: { fontFamily: mono, fontSize: 11, letterSpacing: 0.95 },
   cellFirst: { flex: 0.8, textAlign: 'left' },
   cellFirstWrap: { flex: 0.8 },
   cellRight: { flex: 1, textAlign: 'right' },
@@ -150,28 +177,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
   },
-  cellSet: { ...monoTabular, fontSize: 11, color: color.mute },
-  cellPrev: { ...monoTabular, fontSize: 11, color: color.faint },
-  cellValue: { ...monoTabular, fontSize: 15, color: color.ink },
+  cellSet: { ...monoTabular, fontSize: 11 },
+  cellPrev: { ...monoTabular, fontSize: 11 },
+  cellValue: { ...monoTabular, fontSize: 15 },
   cellInput: { paddingVertical: 4, paddingHorizontal: 0, textAlign: 'right' },
   repsWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  pr: { fontFamily: mono, color: color.carbs, fontSize: 11, letterSpacing: 0.72 },
-  commentMark: { fontFamily: mono, color: color.faint, fontSize: 11 },
+  pr: { fontFamily: mono, fontSize: 11, letterSpacing: 0.72 },
+  commentMark: { fontFamily: mono, fontSize: 11 },
+  // 34px column + 8px hitSlop each side and the row's vertical slop clears
+  // the 48dp tap floor without inflating the row itself.
+  tickCol: { width: 34, alignItems: 'flex-end', justifyContent: 'center', alignSelf: 'stretch' },
+  tickMark: { fontSize: 15, lineHeight: 20 },
+  tickEmpty: { width: 16, height: 16, borderRadius: 5, borderWidth: 1.5 },
   rest: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: color.surface2,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border2,
     borderRadius: radius.timer,
     paddingVertical: 11,
     paddingHorizontal: 14,
     marginTop: 12,
   },
-  restLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, color: color.mute },
-  restTime: { ...monoTabular, fontSize: 18, fontWeight: '500', color: color.ink },
-  restSkip: { fontFamily: mono, fontSize: 11, color: color.faint, letterSpacing: 0.8 },
+  restLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14 },
+  restTime: { ...monoTabular, fontSize: 18, fontWeight: '500' },
+  restSkip: { fontFamily: mono, fontSize: 11, letterSpacing: 0.8 },
 });

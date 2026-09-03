@@ -2,11 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Location from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA,
-  color, mono, mmss, paceText, groupInt, useTheme,
-  ScaledText as Text, ObInput,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, mono, mmss, paceText, groupInt, useTheme, ScaledText as Text, ObInput } from '@basalt/ui';
 import {
   acceptFix, routeDistanceM, summarizeWalk, computeSplits, saveWalk, listRecentWalks,
   type GpsFix, type Split, type WalkRow,
@@ -379,6 +375,7 @@ export function OutdoorTab() {
   }, [tracking, routeNudge, loop, mode]);
 
   return (
+    <View style={styles.root}>
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {tracking ? <KeepAwakeWhileTracking /> : null}
 
@@ -397,14 +394,14 @@ export function OutdoorTab() {
               setVoiceSplits(next);
               void AsyncStorage.setItem('basalt.voiceSplits', next ? 'on' : 'off');
             }}>
-              <Text style={styles.shareLink}>{voiceSplits ? 'VOICE SPLITS ON — EVERY KM · TAP TO TURN OFF' : 'VOICE SPLITS OFF · TAP TO ANNOUNCE EVERY KM'}</Text>
+              <Text style={[styles.shareLink, { color: theme.text.faint }]}>{voiceSplits ? 'VOICE SPLITS ON — EVERY KM · TAP TO TURN OFF' : 'VOICE SPLITS OFF · TAP TO ANNOUNCE EVERY KM'}</Text>
             </Pressable>
             {/* Guided interval scripts — a fixed set, not a library */}
             <View style={styles.loopRow}>
-              <Text style={styles.loopLabel}>GUIDED…</Text>
+              <Text style={[styles.loopLabel, { color: theme.text.faint }]}>GUIDED…</Text>
               {INTERVAL_WALKS.map((w) => (
                 <Pressable key={w.key} onPress={() => { setGuided(guided?.key === w.key ? null : w); }}>
-                  <Text style={[styles.loopChip, guided?.key === w.key && styles.loopChipOn]}>
+                  <Text style={[styles.loopChip, { color: theme.text.ink2, borderColor: theme.surfaces.borderStrong }, guided?.key === w.key && [styles.loopChipOn, { color: theme.text.ink, borderBottomColor: theme.text.ink }]]}>
                     {w.name.replace(' · ', ' ').toUpperCase()}
                   </Text>
                 </Pressable>
@@ -415,7 +412,7 @@ export function OutdoorTab() {
             ) : null}
             {shoes.length > 0 ? (
               <View style={styles.loopRow}>
-                <Text style={styles.loopLabel}>SHOE…</Text>
+                <Text style={[styles.loopLabel, { color: theme.text.faint }]}>SHOE…</Text>
                 {shoes.map((sh) => (
                   <Pressable
                     key={sh.id}
@@ -425,16 +422,16 @@ export function OutdoorTab() {
                       void AsyncStorage.setItem('basalt.activeShoe', next ?? '');
                     }}
                   >
-                    <Text style={[styles.loopChip, activeShoeId === sh.id && styles.loopChipOn]}>{sh.name.toUpperCase()}</Text>
+                    <Text style={[styles.loopChip, { color: theme.text.ink2, borderColor: theme.surfaces.borderStrong }, activeShoeId === sh.id && [styles.loopChipOn, { color: theme.text.ink, borderBottomColor: theme.text.ink }]]}>{sh.name.toUpperCase()}</Text>
                   </Pressable>
                 ))}
               </View>
             ) : null}
             <View style={styles.loopRow}>
-              <Text style={styles.loopLabel}>LOOP OF…</Text>
+              <Text style={[styles.loopLabel, { color: theme.text.faint }]}>LOOP OF…</Text>
               {[2, 3, 5, 8].map((km) => (
                 <Pressable key={km} disabled={loopBusy} onPress={() => void generateLoop(km)}>
-                  <Text style={styles.loopChip}>{loopBusy ? '…' : `${km} KM`}</Text>
+                  <Text style={[styles.loopChip, { color: theme.text.ink2, borderColor: theme.surfaces.borderStrong }]}>{loopBusy ? '…' : `${km} KM`}</Text>
                 </Pressable>
               ))}
             </View>
@@ -442,7 +439,7 @@ export function OutdoorTab() {
             {loop ? (
               <>
                 <WalkMap route={loop.points.map((p, i) => ({ ...p, t: i }))} height={190} />
-                <Text style={styles.loopMeta}>
+                <Text style={[styles.loopMeta, { color: theme.text.ink }]}>
                   {`${(loop.lengthM / 1000).toFixed(2)} km loop — you asked for ${(loop.requestedM / 1000).toFixed(0)} km`}
                 </Text>
                 <SrcNote>{loop.note}</SrcNote>
@@ -452,14 +449,14 @@ export function OutdoorTab() {
                     setRouteNudge(!routeNudge);
                   }}
                 >
-                  <Text style={styles.shareLink}>
+                  <Text style={[styles.shareLink, { color: theme.text.faint }]}>
                     {routeNudge
                       ? `ROUTE NUDGE ON — ONE BUZZ WHEN >${DEVIATION_ALERT_M} M OFF THIS LOOP · TAP TO TURN OFF`
                       : `ROUTE NUDGE OFF · TAP TO BUZZ WHEN >${DEVIATION_ALERT_M} M OFF THIS LOOP`}
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => { setLoop(null); setRouteNudge(false); }}>
-                  <Text style={styles.shareLink}>DISMISS</Text>
+                  <Text style={[styles.shareLink, { color: theme.text.faint }]}>DISMISS</Text>
                 </Pressable>
               </>
             ) : null}
@@ -487,29 +484,28 @@ export function OutdoorTab() {
             <ReceiptHeader label="Ready" summary={`GPS ±${Math.round(mode.last.accuracy)} m`} />
             {weather ? (
               <>
-                <Text style={styles.weatherLine}>{weather}</Text>
+                <Text style={[styles.weatherLine, { color: theme.text.ink2 }]}>{weather}</Text>
                 <SrcNote>{WEATHER_ATTRIBUTION}</SrcNote>
               </>
             ) : null}
-            <CTA label="Start walk" onPress={() => void start()} />
           </>
         ) : null}
 
         {mode.kind === 'tracking' ? (
           <>
             <View style={styles.liveRow}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>RECORDING · GPS ±{Math.round(mode.last.accuracy)} M</Text>
+              <View style={[styles.liveDot, { backgroundColor: theme.fill.carbs }]} />
+              <Text style={[styles.liveText, { color: theme.text.carbs }]}>RECORDING · GPS ±{Math.round(mode.last.accuracy)} M</Text>
             </View>
             {glance ? (
               // Glance mode — the FIXED stat set (distance, time, pace) in
               // large type, readable at arm's length mid-walk. No config.
               <View style={styles.glanceBlock}>
-                <Text style={styles.glanceValue}>
+                <Text style={[styles.glanceValue, { color: theme.text.ink }]}>
                   {liveDistance < 1000 ? `${Math.round(liveDistance)} m` : `${(liveDistance / 1000).toFixed(2)} km`}
                 </Text>
-                <Text style={styles.glanceValue}>{mmss(liveSeconds)}</Text>
-                <Text style={styles.glanceValue}>{livePace ? `${paceText(livePace)} /km` : '— /km'}</Text>
+                <Text style={[styles.glanceValue, { color: theme.text.ink }]}>{mmss(liveSeconds)}</Text>
+                <Text style={[styles.glanceValue, { color: theme.text.ink }]}>{livePace ? `${paceText(livePace)} /km` : '— /km'}</Text>
               </View>
             ) : (
               <View style={styles.statRow}>
@@ -527,30 +523,30 @@ export function OutdoorTab() {
               }}
               hitSlop={8}
             >
-              <Text style={styles.shareLink}>{glance ? 'GLANCE TYPE ON · TAP FOR DETAIL' : 'LARGE GLANCE TYPE · TAP TO ENLARGE'}</Text>
+              <Text style={[styles.shareLink, { color: theme.text.faint }]}>{glance ? 'GLANCE TYPE ON · TAP FOR DETAIL' : 'LARGE GLANCE TYPE · TAP TO ENLARGE'}</Text>
             </Pressable>
             {guided ? (
               guidedPos ? (
-                <View style={styles.guidedRow}>
-                  <Text style={styles.guidedEffort}>{guidedPos.phase.effort.toUpperCase()}</Text>
-                  <Text style={styles.guidedRemain}>{mmss(guidedPos.phaseRemainS)} LEFT · {mmss(Math.max(0, walkTotalSeconds(guided) - liveSeconds))} IN SCRIPT</Text>
+                <View style={[styles.guidedRow, { borderTopColor: theme.surfaces.border }]}>
+                  <Text style={[styles.guidedEffort, { color: theme.text.ink }]}>{guidedPos.phase.effort.toUpperCase()}</Text>
+                  <Text style={[styles.guidedRemain, { color: theme.text.mute }]}>{mmss(guidedPos.phaseRemainS)} LEFT · {mmss(Math.max(0, walkTotalSeconds(guided) - liveSeconds))} IN SCRIPT</Text>
                 </View>
               ) : (
-                <Text style={styles.shareLink}>SCRIPT FINISHED — RECORDING CONTINUES UNTIL YOU STOP</Text>
+                <Text style={[styles.shareLink, { color: theme.text.faint }]}>SCRIPT FINISHED — RECORDING CONTINUES UNTIL YOU STOP</Text>
               )
             ) : null}
             {beacon ? (
               <Pressable onPress={() => void stopBeacon()}>
-                <View style={styles.beaconRow}>
-                  <View style={styles.beaconDot} />
-                  <Text style={styles.beaconText}>
+                <View style={[styles.beaconRow, { borderColor: theme.fill.recovery }]}>
+                  <View style={[styles.beaconDot, { backgroundColor: theme.fill.recovery }]} />
+                  <Text style={[styles.beaconText, { color: theme.text.recovery }]}>
                     {`LIVE BEACON ACTIVE — ANYONE WITH THE LINK SEES YOUR POSITION · EXPIRES ${new Date(beacon.expiresAt).toTimeString().slice(0, 5)} · TAP TO STOP`}
                   </Text>
                 </View>
               </Pressable>
             ) : (
               <Pressable onPress={() => void startBeacon()}>
-                <Text style={styles.shareLink}>SHARE A LIVE BEACON → EXPLICIT START, EXPLICIT STOP, 2 H MAX</Text>
+                <Text style={[styles.shareLink, { color: theme.text.faint }]}>SHARE A LIVE BEACON → EXPLICIT START, EXPLICIT STOP, 2 H MAX</Text>
               </Pressable>
             )}
             <CTA label="Stop & save" onPress={() => void stop()} />
@@ -620,7 +616,7 @@ export function OutdoorTab() {
             hitSlop={10}
             disabled={!newShoe.trim()}
           >
-            <Text style={styles.shareLink}>ADD</Text>
+            <Text style={[styles.shareLink, { color: theme.text.faint }]}>ADD</Text>
           </Pressable>
         </View>
         <SrcNote>{SHOE_GUIDANCE}</SrcNote>
@@ -682,7 +678,7 @@ export function OutdoorTab() {
                     );
                   })()}
                   <Pressable onPress={() => setShareWalk(w)}>
-                    <Text style={styles.shareLink}>SHARE AS IMAGE →</Text>
+                    <Text style={[styles.shareLink, { color: theme.text.faint }]}>SHARE AS IMAGE →</Text>
                   </Pressable>
                 </>
               ) : null}
@@ -698,33 +694,43 @@ export function OutdoorTab() {
         </ShareSheet>
       ) : null}
     </ScrollView>
+      {/* Start walk pinned above the tab bar — weather and shoes scroll. */}
+      {mode.kind === 'ready' ? (
+        <View style={[styles.startBar, { backgroundColor: theme.surfaces.surface2, borderTopColor: theme.surfaces.border }]}>
+          <Text style={[styles.startBarMeta, { color: theme.text.ink2 }]}>{`GPS ±${Math.round(mode.last.accuracy)} m`}</Text>
+          <CTA label="Start walk" onPress={() => void start()} style={styles.startBarBtn} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 function Stat({ k, v, u }: { k: string; v: string; u?: string }) {
+  const { theme } = useTheme();
   return (
     <View>
-      <Text style={styles.statK}>{k.toUpperCase()}</Text>
-      <Text style={styles.statV}>
+      <Text style={[styles.statK, { color: theme.text.faint }]}>{k.toUpperCase()}</Text>
+      <Text style={[styles.statV, { color: theme.text.ink }]}>
         {v}
-        {u ? <Text style={styles.statU}> {u}</Text> : null}
+        {u ? <Text style={[styles.statU, { color: theme.text.mute }]}> {u}</Text> : null}
       </Text>
     </View>
   );
 }
 
 function SplitsBlock({ splits }: { splits: Split[] }) {
+  const { theme } = useTheme();
   const fastest = Math.min(...splits.map((s) => s.paceSecPerKm));
   return (
     <View style={{ marginTop: 14 }}>
       <ReceiptHeader label="Splits" summary="longer bar = faster" />
       {splits.map((s) => (
-        <View key={s.km} style={styles.split}>
-          <Text style={styles.splitKm}>{s.distanceM < 1000 ? `.${Math.round(s.distanceM / 10) / 100}`.replace('0.', '.') : s.km}</Text>
-          <View style={styles.splitBar}>
-            <View style={[styles.splitFill, { width: `${Math.round((fastest / s.paceSecPerKm) * 100)}%` }]} />
+        <View key={s.km} style={[styles.split, { borderBottomColor: theme.surfaces.border }]}>
+          <Text style={[styles.splitKm, { color: theme.text.faint }]}>{s.distanceM < 1000 ? `.${Math.round(s.distanceM / 10) / 100}`.replace('0.', '.') : s.km}</Text>
+          <View style={[styles.splitBar, { backgroundColor: theme.surfaces.border }]}>
+            <View style={[styles.splitFill, { backgroundColor: theme.fill.carbs }, { width: `${Math.round((fastest / s.paceSecPerKm) * 100)}%` }]} />
           </View>
-          <Text style={styles.splitPace}>{paceText(s.paceSecPerKm)}</Text>
+          <Text style={[styles.splitPace, { color: theme.text.ink }]}>{paceText(s.paceSecPerKm)}</Text>
         </View>
       ))}
     </View>
@@ -737,42 +743,53 @@ function KeepAwakeWhileTracking() {
 }
 
 const styles = StyleSheet.create({
-  shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
-  loopChipOn: { color: color.ink, borderBottomWidth: 1, borderBottomColor: color.ink },
-  guidedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border },
-  guidedEffort: { fontFamily: mono, fontSize: 13, letterSpacing: 1.2, color: color.ink, fontWeight: '600' },
-  guidedRemain: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.mute },
+  root: { flex: 1 },
+  startBar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  startBarMeta: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, flexGrow: 1 },
+  startBarBtn: { marginTop: 0, paddingHorizontal: 18, flexShrink: 0 },
+  shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 10 },
+  loopChipOn: { borderBottomWidth: 1 },
+  guidedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth },
+  guidedEffort: { fontFamily: mono, fontSize: 13, letterSpacing: 1.2, fontWeight: '600' },
+  guidedRemain: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6 },
   shoeAddRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   glanceBlock: { paddingVertical: 10, gap: 6 },
-  glanceValue: { fontFamily: mono, fontSize: 40, letterSpacing: 0.5, color: color.ink, fontVariant: ['tabular-nums'] },
-  weatherLine: { fontFamily: mono, fontSize: 12, letterSpacing: 0.6, color: color.ink2, paddingVertical: 6 },
+  glanceValue: { fontFamily: mono, fontSize: 40, letterSpacing: 0.5, fontVariant: ['tabular-nums'] },
+  weatherLine: { fontFamily: mono, fontSize: 12, letterSpacing: 0.6, paddingVertical: 6 },
   loopRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
-  loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9, color: color.faint },
+  loopLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 0.9 },
   loopChip: {
-    fontFamily: mono, fontSize: 11, letterSpacing: 0.7, color: color.ink2,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2, borderRadius: 999,
+    fontFamily: mono, fontSize: 11, letterSpacing: 0.7,
+    borderWidth: StyleSheet.hairlineWidth, borderRadius: 999,
     paddingHorizontal: 12, paddingVertical: 6, overflow: 'hidden',
   },
-  loopMeta: { fontFamily: mono, fontSize: 11, color: color.ink, marginTop: 8, fontVariant: ['tabular-nums'] },
+  loopMeta: { fontFamily: mono, fontSize: 11, marginTop: 8, fontVariant: ['tabular-nums'] },
   beaconRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: color.recovery, borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth, borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 8,
   },
-  beaconDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.recovery },
-  beaconText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, color: color.recovery, flexShrink: 1, lineHeight: 12 },
-  scroll: { flex: 1, backgroundColor: color.bg },
+  beaconDot: { width: 6, height: 6, borderRadius: 3 },
+  beaconText: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, flexShrink: 1, lineHeight: 12 },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.carbs },
-  liveText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.26, color: color.carbs },
+  liveDot: { width: 6, height: 6, borderRadius: 3 },
+  liveText: { fontFamily: mono, fontSize: 11, letterSpacing: 1.26 },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  statK: { fontFamily: mono, fontSize: 11, letterSpacing: 1.08, color: color.faint },
-  statV: { fontFamily: mono, fontSize: 17, fontWeight: '500', color: color.ink, marginTop: 5, fontVariant: ['tabular-nums'] },
-  statU: { fontSize: 11, color: color.mute },
-  split: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  splitKm: { fontFamily: mono, fontSize: 11, color: color.faint, width: 26 },
-  splitBar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: color.border },
-  splitFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: color.carbs },
-  splitPace: { fontFamily: mono, fontSize: 12, color: color.ink, width: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  statK: { fontFamily: mono, fontSize: 11, letterSpacing: 1.08 },
+  statV: { fontFamily: mono, fontSize: 17, fontWeight: '500', marginTop: 5, fontVariant: ['tabular-nums'] },
+  statU: { fontSize: 11 },
+  split: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  splitKm: { fontFamily: mono, fontSize: 11, width: 26 },
+  splitBar: { flex: 1, height: 4, borderRadius: 2 },
+  splitFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2 },
+  splitPace: { fontFamily: mono, fontSize: 12, width: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
 });

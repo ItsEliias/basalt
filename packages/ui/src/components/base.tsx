@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View, type TextStyle, type ViewStyle, type StyleProp } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle, type StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { space, type as typeScale } from '../tokens';
 import { monoTabular } from '../typography';
@@ -134,28 +134,60 @@ export function KV({ label, right, faint, style }: { label: ReactNode; right?: R
   );
 }
 
-/** The honesty footer on every data card — small caps, faint. */
+/**
+ * The honesty footer on every data card — small caps, faint. Long notes
+ * (over two rendered lines) collapse to their first line with a "why"
+ * disclosure: the fine print is always one tap away, never a wall.
+ */
 export function SrcNote({ children, center, style }: { children: ReactNode; center?: boolean; style?: StyleProp<TextStyle> }) {
   const { theme, textScale } = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const [lineCount, setLineCount] = useState<number | null>(null);
   const fontSize = typeScale.srcNote.fontSize * TEXT_SCALE_MULTIPLIER[textScale];
   const upper = theme.typography.labelCase === 'upper';
+  const long = (lineCount ?? 0) > 2;
+  const collapsed = long && !expanded;
   return (
-    <Text
-      style={[
-        styles.srcNote,
-        {
-          fontSize, fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.regular),
-          fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
-          color: theme.text.faint,
-          letterSpacing: theme.typography.tracking.label,
-        },
-        center && { textAlign: 'center' },
-        style,
-      ]}
-      maxFontSizeMultiplier={1.3}
-    >
-      {typeof children === 'string' && upper ? children.toUpperCase() : children}
-    </Text>
+    <View>
+      <Text
+        style={[
+          styles.srcNote,
+          {
+            fontSize, fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.regular),
+            fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
+            color: theme.text.faint,
+            letterSpacing: theme.typography.tracking.label,
+          },
+          center && { textAlign: 'center' },
+          style,
+        ]}
+        maxFontSizeMultiplier={1.3}
+        numberOfLines={collapsed ? 1 : undefined}
+        onTextLayout={lineCount === null ? (e) => setLineCount(e.nativeEvent.lines.length) : undefined}
+      >
+        {typeof children === 'string' && upper ? children.toUpperCase() : children}
+      </Text>
+      {long ? (
+        <Pressable onPress={() => setExpanded(!expanded)} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }} accessibilityRole="button">
+          <Text
+            style={[
+              styles.srcNote,
+              {
+                fontSize,
+                fontFamily: resolveTypeface(theme.typography.ui, theme.typography.weight.medium),
+                fontWeight: String(theme.typography.weight.medium) as TextStyle['fontWeight'],
+                color: theme.text.mute,
+                letterSpacing: theme.typography.tracking.label,
+              },
+              center && { textAlign: 'center' },
+            ]}
+            maxFontSizeMultiplier={1.3}
+          >
+            {collapsed ? (upper ? 'WHY →' : 'why →') : (upper ? 'LESS ↑' : 'less ↑')}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 

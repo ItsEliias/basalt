@@ -1,5 +1,4 @@
 import { StyleSheet, Text, View, type TextStyle } from 'react-native';
-import { color } from '../tokens';
 import { mono, monoTabular } from '../typography';
 import { capState, fillPct, overCapSuffix } from '../format';
 import { useTheme, resolveTypeface } from '../theme';
@@ -31,9 +30,12 @@ export function Bar({ pct, fill }: { pct: number; fill: string }) {
 }
 
 function Ratio({ value, target, unit, over }: { value: string; target: string; unit: string; over?: boolean }) {
+  const { theme } = useTheme();
+  // Data face, floored at 12.5 — condensed faces (Athletic) cramp below it.
+  const size = Math.max(12.5, theme.typography.scale.sm);
   return (
-    <Text style={[styles.ratio, over && { color: color.fat }]} maxFontSizeMultiplier={1.3}>
-      {value} <Text style={[styles.ratioOf, over && { color: color.fat }]}>/ {target} {unit}</Text>
+    <Text style={[styles.ratio, { fontSize: size, color: theme.text.ink2 }, over && { color: theme.text.fat }]} maxFontSizeMultiplier={1.3}>
+      {value} <Text style={[styles.ratioOf, { fontSize: size, color: theme.text.faint }, over && { color: theme.text.fat }]}>/ {target} {unit}</Text>
       {over ? '' : null}
     </Text>
   );
@@ -45,10 +47,11 @@ export function MacroRow({
 }: {
   name: string; dot: string; value: number; target: number; unit?: string;
 }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.macro}>
       <View style={styles.kv}>
-        <Text style={styles.name}>
+        <Text style={[styles.name, { color: theme.text.ink }]}>
           <View style={[styles.dot, { backgroundColor: dot }]} />
           {'  '}{name}
         </Text>
@@ -89,6 +92,8 @@ export function CapRow({
   const overSuffix = overCapSuffix(s.over, theme.expression.overCap, s.overBy, fmt);
   const dataFont = resolveTypeface(theme.typography.data, theme.typography.weight.regular);
   const dataWeight = String(theme.typography.weight.regular) as TextStyle['fontWeight'];
+  // Data face, floored at 12.5 — condensed faces (Athletic) cramp below it.
+  const ratioSize = Math.max(12.5, theme.typography.scale.sm);
 
   return (
     <View style={styles.macro}>
@@ -98,11 +103,11 @@ export function CapRow({
           {'  '}{name}
         </Text>
         <Text
-          style={[styles.ratio, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.ink2 }]}
+          style={[styles.ratio, { fontSize: ratioSize, fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.ink2 }]}
           maxFontSizeMultiplier={1.3}
         >
           {fmt(value)}{' '}
-          <Text style={[styles.ratioOf, { fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.faint }]}>
+          <Text style={[styles.ratioOf, { fontSize: ratioSize, fontFamily: dataFont, fontWeight: dataWeight, color: s.over ? theme.text.fat : theme.text.faint }]}>
             / {fmt(cap)} {unit}
           </Text>
           {overSuffix}
@@ -120,13 +125,14 @@ export function SegmentedStack({
   /** widths as fractions of the whole (0–1); remainder renders as track. */
   segments: { fraction: number; fill: string }[];
 }) {
+  const { theme } = useTheme();
   const used = segments.reduce((s, x) => s + Math.max(0, x.fraction), 0);
   return (
     <View style={styles.stack}>
       {segments.map((s, i) => (
         <View key={i} style={[styles.stackSeg, { flex: Math.max(0.0001, s.fraction), backgroundColor: s.fill }]} />
       ))}
-      <View style={[styles.stackSeg, styles.stackRest, { flex: Math.max(0.0001, 1 - Math.min(1, used)) }]} />
+      <View style={[styles.stackSeg, { flex: Math.max(0.0001, 1 - Math.min(1, used)), backgroundColor: theme.surfaces.border }]} />
     </View>
   );
 }
@@ -134,13 +140,12 @@ export function SegmentedStack({
 const styles = StyleSheet.create({
   macro: { marginTop: 13 },
   kv: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  name: { fontSize: 12.5, color: color.ink2 },
+  name: { fontSize: 12.5 },
   dot: { width: 7, height: 7, borderRadius: 2 },
-  ratio: { ...monoTabular, fontSize: 12, color: color.ink2 },
-  ratioOf: { fontFamily: mono, color: color.faint },
+  ratio: { ...monoTabular, fontSize: 12 },
+  ratioOf: { fontFamily: mono },
   barTrack: { marginTop: 7, overflow: 'hidden' },
   barFill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
   stack: { height: 6, borderRadius: 3, marginTop: 14, flexDirection: 'row', gap: 2 },
   stackSeg: { borderRadius: 2 },
-  stackRest: { backgroundColor: color.border },
 });

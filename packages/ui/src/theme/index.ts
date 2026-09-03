@@ -5,3 +5,4 @@ export * from './contrast';
 export * from './provider';
 export * from './themes';
 export * from './typeface';
+export * from './stagePalette';

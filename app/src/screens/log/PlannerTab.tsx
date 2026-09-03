@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, MealTag, CTA, ChipRow,
-  groupInt, color, mono, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, MealTag, CTA, ChipRow, groupInt, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
   listMealPlans, addMealPlan, deleteMealPlan, listRecipes, getRecipeDetail, logRecipeServing,
   listGroceryItems, setGroceryChecked, clearCheckedGroceries, groupByAisle, fmtQty,
@@ -113,7 +109,7 @@ export function PlannerTab() {
                   );
                 })
               ) : (
-                <ReceiptRow name="Unplanned" meta="no meal scheduled" value="—" valueColor={color.faint} />
+                <ReceiptRow name="Unplanned" meta="no meal scheduled" value="—" valueColor={theme.text.faint} />
               )}
             </View>
           );
@@ -121,19 +117,19 @@ export function PlannerTab() {
         {recipes.length > 0 ? (
           adding ? (
             <View style={{ marginTop: 12 }}>
-              <Text style={styles.microLabel}>DAY</Text>
+              <Text style={[styles.microLabel, { color: theme.text.mute }]}>DAY</Text>
               <ChipRow
                 options={days.map((d) => d.label)}
                 value={days.find((d) => d.date === addDate)?.label}
                 onChange={(label) => setAddDate(days.find((d) => d.label === label)!.date)}
               />
-              <Text style={styles.microLabel}>SLOT</Text>
+              <Text style={[styles.microLabel, { color: theme.text.mute }]}>SLOT</Text>
               <ChipRow
                 options={SLOTS.map((s) => s.label)}
                 value={SLOTS.find((s) => s.key === addSlot)?.label}
                 onChange={(label) => setAddSlot(SLOTS.find((s) => s.label === label)!.key)}
               />
-              <Text style={styles.microLabel}>RECIPE</Text>
+              <Text style={[styles.microLabel, { color: theme.text.mute }]}>RECIPE</Text>
               {recipes.slice(0, 8).map((r) => (
                 <Pressable
                   key={r.id}
@@ -144,11 +140,11 @@ export function PlannerTab() {
                   }}
                   hitSlop={8}
                 >
-                  <ReceiptRow name={r.title} meta={`serves ${r.serves}`} value="plan" valueColor={color.faint} />
+                  <ReceiptRow name={r.title} meta={`serves ${r.serves}`} value="plan" valueColor={theme.text.faint} />
                 </Pressable>
               ))}
               <Pressable onPress={() => setAdding(false)}>
-                <Text style={styles.cancel}>CANCEL</Text>
+                <Text style={[styles.cancel, { color: theme.text.faint }]}>CANCEL</Text>
               </Pressable>
             </View>
           ) : (
@@ -169,7 +165,7 @@ export function PlannerTab() {
               name={p.recipeTitle ?? p.note ?? 'Planned meal'}
               meta={`${new Date(`${p.date}T00:00:00`).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric' })} · ${p.mealSlot}`}
               value={OUTCOME_TEXT[p.outcome]}
-              valueColor={p.outcome === 'as_planned' ? color.carbs : p.outcome === 'not_logged' ? color.faint : color.ink2}
+              valueColor={p.outcome === 'as_planned' ? theme.text.carbs : p.outcome === 'not_logged' ? theme.text.faint : theme.text.ink2}
               last={i === reconciled.length - 1}
             />
           ))}
@@ -191,17 +187,17 @@ export function PlannerTab() {
                 {group.items.map((item) => (
                   <Pressable
                     key={item.id}
-                    style={styles.checkRow}
+                    style={[styles.checkRow, { borderBottomColor: theme.surfaces.border }]}
                     onPress={async () => {
                       await setGroceryChecked(supabase, item.id, !item.checked);
                       void refresh();
                     }}
                   >
-                    <View style={[styles.box, item.checked && styles.boxDone]}>
-                      {item.checked ? <Text style={styles.boxTick}>✓</Text> : null}
+                    <View style={[styles.box, { borderColor: theme.surfaces.borderStrong }, item.checked && { backgroundColor: theme.surfaces.surface2, borderColor: theme.fill.faint }]}>
+                      {item.checked ? <Text style={[styles.boxTick, { color: theme.text.mute }]}>✓</Text> : null}
                     </View>
-                    <Text style={[styles.qty, item.checked && styles.strike]}>{fmtQty(item.qty, item.unit)}</Text>
-                    <Text style={[styles.ing, item.checked && styles.strike]}>{item.name}</Text>
+                    <Text style={[styles.qty, { color: theme.text.ink2 }, item.checked && [styles.strike, { color: theme.text.faint }]]}>{fmtQty(item.qty, item.unit)}</Text>
+                    <Text style={[styles.ing, { color: theme.text.ink }, item.checked && [styles.strike, { color: theme.text.faint }]]}>{item.name}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -225,15 +221,14 @@ export function PlannerTab() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: color.bg },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
-  microLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, color: color.mute, marginTop: 14 },
-  cancel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.faint, textAlign: 'center', paddingVertical: 12 },
-  checkRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  box: { width: 14, height: 14, borderWidth: 1, borderColor: color.border2, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
-  boxDone: { backgroundColor: color.surface2, borderColor: color.faint },
-  boxTick: { fontSize: 11, color: color.mute, lineHeight: 11 },
-  qty: { fontFamily: mono, fontSize: 12, color: color.ink2, minWidth: 74, fontVariant: ['tabular-nums'] },
-  ing: { fontSize: 14, color: color.ink, flexShrink: 1 },
-  strike: { color: color.faint, textDecorationLine: 'line-through' },
+  microLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, marginTop: 14 },
+  cancel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, textAlign: 'center', paddingVertical: 12 },
+  checkRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  box: { width: 14, height: 14, borderWidth: 1, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  boxTick: { fontSize: 11, lineHeight: 11 },
+  qty: { fontFamily: mono, fontSize: 12, minWidth: 74, fontVariant: ['tabular-nums'] },
+  ing: { fontSize: 14, flexShrink: 1 },
+  strike: { textDecorationLine: 'line-through' },
 });

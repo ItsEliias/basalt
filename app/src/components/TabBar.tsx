@@ -67,13 +67,13 @@ export function TabBar({
   return (
     <View style={[styles.bar, { borderTopColor: theme.surfaces.border, backgroundColor: theme.surfaces.bg, paddingBottom: 14 + insets.bottom }]}>
       {left.map(renderTab)}
-      <Pressable onPress={onPlus} style={styles.plusWrap} hitSlop={8}>
-        <View style={[styles.plusBtn, { borderRadius: theme.shape.radius.lg, borderColor: theme.surfaces.borderStrong, backgroundColor: theme.surfaces.surface2 }]}>
+      <Pressable onPress={onPlus} style={styles.plusWrap} hitSlop={8} accessibilityRole="button" accessibilityLabel="Quick log">
+        <View style={[styles.plusBtn, { borderRadius: theme.shape.radius.lg, backgroundColor: theme.fill.mark }]}>
           <Text
             style={[
               styles.plusText,
               {
-                color: theme.text.ink,
+                color: theme.fill.markOn,
                 fontFamily: resolveTypeface(theme.typography.data, theme.typography.weight.regular),
                 fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
               },
@@ -100,13 +100,19 @@ const styles = StyleSheet.create({
   tab: { alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4 },
   tabInner: { alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4 },
   label: { fontSize: 10.5, marginTop: 5 },
-  plusWrap: { top: -4, paddingHorizontal: 4 },
+  // 56dp, raised above the bar line, filled mark/markOn in every theme —
+  // the one always-available capture trigger reads as the primary action.
+  plusWrap: { top: -16, paddingHorizontal: 4 },
   plusBtn: {
-    width: 40,
-    height: 40,
-    borderWidth: StyleSheet.hairlineWidth,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  plusText: { fontSize: 19, lineHeight: 22 },
+  plusText: { fontSize: 26, lineHeight: 30 },
 });

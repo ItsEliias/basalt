@@ -188,12 +188,20 @@ export function todayTileSpecs(input: {
   }
 
   // 5 — Water, half, hide if hydration disabled (not an empty state: absent).
+  // Zero logged is "nothing yet", never a placeholder 0 — real or hidden.
   if (input.hydrationEnabled) {
-    tiles.push({
-      key: 'water', span: 'half', label: 'Water',
-      value: Math.round(input.waterMl).toLocaleString('en-US'),
-      unit: `/ ${Math.round(input.waterTargetMl).toLocaleString('en-US')} ml`,
-    });
+    if (input.waterMl > 0) {
+      tiles.push({
+        key: 'water', span: 'half', label: 'Water',
+        value: Math.round(input.waterMl).toLocaleString('en-US'),
+        unit: `/ ${Math.round(input.waterTargetMl).toLocaleString('en-US')} ml`,
+      });
+    } else {
+      tiles.push({
+        key: 'water', span: 'half', label: 'Water', empty: true,
+        emptyMessage: `Nothing logged yet · ${Math.round(input.waterTargetMl).toLocaleString('en-US')} ml`,
+      });
+    }
   }
 
   // 6 — Training, full, "Rest day" or the session name — never absent,

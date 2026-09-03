@@ -1,27 +1,31 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { color, radius } from '../tokens';
+import { radius } from '../tokens';
 import { mono } from '../typography';
+import { useTheme } from '../theme';
 
 // Onboarding kit — ob-opt single/multi with round/square marks, ob-input,
 // chip-label rows, dots progress. Every step skippable; the CTA must stay
 // on-screen at all common viewport heights (regression-tested in the app).
 
 export function ObDots({ total, current }: { total: number; current: number }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.dots}>
       {Array.from({ length: total }, (_, i) => (
-        <View key={i} style={[styles.dot, i < current && { backgroundColor: color.ink }]} />
+        <View key={i} style={[styles.dot, { backgroundColor: theme.surfaces.border }, i < current && { backgroundColor: theme.fill.mark }]} />
       ))}
     </View>
   );
 }
 
 export function ObQuestion({ children }: { children: string }) {
-  return <Text style={styles.q}>{children}</Text>;
+  const { theme } = useTheme();
+  return <Text style={[styles.q, { color: theme.text.ink }]}>{children}</Text>;
 }
 
 export function ObSub({ children }: { children: string }) {
-  return <Text style={styles.sub}>{children}</Text>;
+  const { theme } = useTheme();
+  return <Text style={[styles.sub, { color: theme.text.mute }]}>{children}</Text>;
 }
 
 export function ObOption({
@@ -34,14 +38,15 @@ export function ObOption({
   multi?: boolean;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
   return (
-    <Pressable onPress={onPress} style={[styles.opt, on && styles.optOn]}>
+    <Pressable onPress={onPress} style={[styles.opt, { borderColor: theme.surfaces.border }, on && { borderColor: theme.text.ink2, backgroundColor: theme.surfaces.surface }]}>
       <View style={{ flexShrink: 1 }}>
-        <Text style={styles.optTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.optSub}>{subtitle.toUpperCase()}</Text> : null}
+        <Text style={[styles.optTitle, { color: theme.text.ink }]}>{title}</Text>
+        {subtitle ? <Text style={[styles.optSub, { color: theme.text.faint }]}>{subtitle.toUpperCase()}</Text> : null}
       </View>
-      <View style={[styles.mark, multi && styles.markSq, on && styles.markOn]}>
-        {on && multi ? <Text style={styles.markCheck}>✓</Text> : null}
+      <View style={[styles.mark, { borderColor: theme.surfaces.borderStrong }, multi && styles.markSq, on && { borderColor: theme.fill.mark, backgroundColor: theme.fill.mark }]}>
+        {on && multi ? <Text style={[styles.markCheck, { color: theme.fill.markOn }]}>✓</Text> : null}
       </View>
     </Pressable>
   );
@@ -56,14 +61,15 @@ export function ObOption({
 // functionally-normal but visually-blank TextInput, which still owns focus,
 // the keyboard and the caret.
 export function ObInput(props: React.ComponentProps<typeof TextInput>) {
+  const { theme } = useTheme();
   const { value, placeholder, secureTextEntry, multiline, style, ...rest } = props;
   const shown = secureTextEntry ? '•'.repeat(value?.length ?? 0) : value;
   return (
-    <View style={[styles.inputWrap, style]}>
+    <View style={[styles.inputWrap, { backgroundColor: theme.surfaces.surface, borderColor: theme.surfaces.border }, style]}>
       <TextInput
         placeholderTextColor="transparent"
-        cursorColor={color.ink}
-        selectionColor={color.ink}
+        cursorColor={theme.text.ink}
+        selectionColor={theme.text.ink}
         {...rest}
         value={value}
         secureTextEntry={secureTextEntry}
@@ -73,7 +79,7 @@ export function ObInput(props: React.ComponentProps<typeof TextInput>) {
       <Text
         pointerEvents="none"
         numberOfLines={multiline ? undefined : 1}
-        style={[styles.inputOverlay, !value && styles.inputPlaceholder]}
+        style={[styles.inputOverlay, { color: theme.text.ink }, !value && { color: theme.text.faint }]}
       >
         {value ? shown : (placeholder ?? '')}
       </Text>
@@ -86,48 +92,44 @@ export function ObInRow({ children }: { children: React.ReactNode }) {
 }
 
 export function ObChipLabel({ children }: { children: string }) {
-  return <Text style={styles.chipLabel}>{children.toUpperCase()}</Text>;
+  const { theme } = useTheme();
+  return <Text style={[styles.chipLabel, { color: theme.text.mute }]}>{children.toUpperCase()}</Text>;
 }
 
 export function ObNote({ children }: { children: string }) {
-  return <Text style={styles.note}>{children.toUpperCase()}</Text>;
+  const { theme } = useTheme();
+  return <Text style={[styles.note, { color: theme.text.faint }]}>{children.toUpperCase()}</Text>;
 }
 
 const styles = StyleSheet.create({
   dots: { flexDirection: 'row', gap: 6, marginTop: 26 },
-  dot: { height: 2, flex: 1, backgroundColor: color.border, borderRadius: 1 },
-  q: { fontSize: 24, fontWeight: '650' as any, letterSpacing: -0.36, color: color.ink, marginTop: 34, lineHeight: 30 },
-  sub: { fontSize: 14, color: color.mute, marginTop: 10, lineHeight: 20, maxWidth: 300 },
+  dot: { height: 2, flex: 1, borderRadius: 1 },
+  q: { fontSize: 24, fontWeight: '650' as any, letterSpacing: -0.36, marginTop: 34, lineHeight: 30 },
+  sub: { fontSize: 14, marginTop: 10, lineHeight: 20, maxWidth: 300 },
   opt: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
     borderRadius: radius.card,
     padding: 16,
     marginTop: 10,
   },
-  optOn: { borderColor: color.ink2, backgroundColor: color.surface },
-  optTitle: { fontSize: 14, fontWeight: '550' as any, color: color.ink },
-  optSub: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 4, letterSpacing: 0.4 },
+  optTitle: { fontSize: 14, fontWeight: '550' as any },
+  optSub: { fontFamily: mono, fontSize: 11, marginTop: 4, letterSpacing: 0.4 },
   mark: {
     width: 16,
     height: 16,
     borderWidth: 1,
-    borderColor: color.border2,
     borderRadius: 8,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   markSq: { borderRadius: 5 },
-  markOn: { borderColor: color.ink, backgroundColor: color.ink },
-  markCheck: { fontSize: 11, color: color.bg, lineHeight: 12 },
+  markCheck: { fontSize: 11, lineHeight: 12 },
   inputWrap: {
-    backgroundColor: color.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
     borderRadius: radius.input,
     marginTop: 10,
     flexGrow: 1,
@@ -148,11 +150,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    color: color.ink,
     fontSize: 14,
   },
-  inputPlaceholder: { color: color.faint },
   inRow: { flexDirection: 'row', gap: 10 },
-  chipLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, color: color.mute, marginTop: 20 },
-  note: { fontFamily: mono, fontSize: 10.5, color: color.faint, letterSpacing: 0.38, lineHeight: 16, marginTop: 22 },
+  chipLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.14, marginTop: 20 },
+  note: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.38, lineHeight: 16, marginTop: 22 },
 });

@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, ChipGroup, ChipRow, ObChipLabel,
-  color, mono, ScaledText as Text,
-} from '@basalt/ui';
+import { Card, CTA, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, ChipGroup, ChipRow, ObChipLabel, mono, ScaledText as Text } from '@basalt/ui';
 import {
   loadCycle, saveCycleDay, CYCLE_SYMPTOMS,
   type CycleReport, type CycleEntry,
 } from '@basalt/analytics';
 import { isoDay } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Cycle — facts and labelled estimates, strictly apart (engine-pinned).
 // The card itself is opt-in: nothing renders until the user turns it on,
@@ -21,6 +19,7 @@ const CARD_KEY = 'basalt.cycleCard';
 const FLOWS = ['spotting', 'light', 'medium', 'heavy'] as const;
 
 export function CycleCard() {
+  const { theme } = useTheme();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [report, setReport] = useState<(CycleReport & { today: CycleEntry | null }) | null>(null);
 
@@ -40,16 +39,18 @@ export function CycleCard() {
 
   if (!enabled) {
     return (
-      <Pressable
-        onPress={() => {
-          setEnabled(true);
-          void AsyncStorage.setItem(CARD_KEY, 'on');
-          refresh();
-        }}
-        hitSlop={8}
-      >
-        <Text style={styles.optIn}>TRACK CYCLE — OPT-IN, PRIVATE, NEVER IN ANY SCORE</Text>
-      </Pressable>
+      <View>
+        <CTA
+          label="Track cycle"
+          secondary
+          onPress={() => {
+            setEnabled(true);
+            void AsyncStorage.setItem(CARD_KEY, 'on');
+            refresh();
+          }}
+        />
+        <Text style={[styles.optIn, { color: theme.text.faint }]}>OPT-IN · PRIVATE · NEVER IN ANY SCORE</Text>
+      </View>
     );
   }
 
@@ -121,12 +122,12 @@ export function CycleCard() {
         }}
         hitSlop={8}
       >
-        <Text style={styles.optIn}>HIDE THIS CARD — YOUR LOGGED DAYS STAY YOURS</Text>
+        <Text style={[styles.optIn, { color: theme.text.faint }]}>HIDE THIS CARD — YOUR LOGGED DAYS STAY YOURS</Text>
       </Pressable>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  optIn: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 12 },
+  optIn: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 12 },
 });

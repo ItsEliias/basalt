@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, ReceiptHeader, ReceiptRow, ExerciseHead, EmptyState, color, mono, mmss, ScaledText as Text } from '@basalt/ui';
+import { Card, ReceiptHeader, ReceiptRow, ExerciseHead, EmptyState, mono, mmss, ScaledText as Text } from '@basalt/ui';
 import { getSessionDetail, type SessionDetail } from '@basalt/training';
 import { supabase } from '../lib/supabase';
+import { useTheme } from '@basalt/ui';
 
 // Read-only drill-down for a past session — the "Recent sessions" rows on
 // Train had no way to see what was actually trained; this closes that gap
@@ -11,6 +12,7 @@ import { supabase } from '../lib/supabase';
 // new navigation stack.
 
 export function SessionDetailSheet({ sessionId, onClose }: { sessionId: string | null; onClose: () => void }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,24 +33,24 @@ export function SessionDetailSheet({ sessionId, onClose }: { sessionId: string |
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom, maxHeight: '82%' }]}>
-        <View style={styles.grab} />
+      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom, maxHeight: '82%' }]}>
+        <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
         {s ? (
           <View style={styles.head}>
-            <Text style={styles.date}>
+            <Text style={[styles.date, { color: theme.text.ink }]}>
               {new Date(s.startedAt).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })}
             </Text>
-            <Text style={styles.meta}>
+            <Text style={[styles.meta, { color: theme.text.faint }]}>
               {new Date(s.startedAt).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}
               {durationLabel ? ` · ${durationLabel} duration` : ' · in progress'}
               {s.sessionRpe != null ? ` · RPE ${s.sessionRpe}` : ''}
             </Text>
-            {s.notes?.trim() ? <Text style={styles.notes}>{s.notes}</Text> : null}
+            {s.notes?.trim() ? <Text style={[styles.notes, { color: theme.text.ink2 }]}>{s.notes}</Text> : null}
           </View>
         ) : null}
         <ScrollView style={{ marginTop: 4 }} showsVerticalScrollIndicator={false}>
           {loading ? (
-            <Text style={styles.loading}>Reading the session…</Text>
+            <Text style={[styles.loading, { color: theme.text.faint }]}>Reading the session…</Text>
           ) : detail && detail.exercises.length > 0 ? (
             detail.exercises.map((ex) => (
               <Card key={ex.id} style={{ marginBottom: 12 }}>
@@ -82,18 +84,16 @@ export function SessionDetailSheet({ sessionId, onClose }: { sessionId: string |
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  grab: { width: 34, height: 3, borderRadius: 2, backgroundColor: color.border2, alignSelf: 'center', marginTop: 4, marginBottom: 14 },
+  grab: { width: 34, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 4, marginBottom: 14 },
   head: { marginBottom: 8 },
-  date: { fontSize: 18, fontWeight: '650' as any, color: color.ink },
-  meta: { fontFamily: mono, fontSize: 12, color: color.faint, marginTop: 4 },
-  notes: { fontSize: 13.5, color: color.ink2, marginTop: 8 },
-  loading: { fontFamily: mono, fontSize: 12, color: color.faint, paddingVertical: 20, textAlign: 'center' },
+  date: { fontSize: 18, fontWeight: '650' as any },
+  meta: { fontFamily: mono, fontSize: 12, marginTop: 4 },
+  notes: { fontSize: 13.5, marginTop: 8 },
+  loading: { fontFamily: mono, fontSize: 12, paddingVertical: 20, textAlign: 'center' },
 });

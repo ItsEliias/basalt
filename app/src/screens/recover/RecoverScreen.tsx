@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import {
-  Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav,
-  TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow,
-  color, mono, kgText, hoursMinutes, groupInt, mmss,
-  ChipGroup, useTheme,
-  ScaledText as Text,
-} from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav, TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow, mono, kgText, hoursMinutes, groupInt, mmss, ChipGroup, useTheme, ScaledText as Text } from '@basalt/ui';
 import { healthService, labelForPackage, type SleepSessionSummary } from '@basalt/health-connect';
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
@@ -190,8 +184,8 @@ function VitalsTab() {
       {ready ? (
         <Modal visible={mathOpen} transparent animationType="fade" onRequestClose={() => setMathOpen(false)}>
           <Pressable style={styles.dim} onPress={() => setMathOpen(false)} />
-          <View style={styles.mathSheet}>
-            <Text style={styles.mathTitle}>THE MATH</Text>
+          <View style={[styles.mathSheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }]}>
+            <Text style={[styles.mathTitle, { color: theme.text.mute }]}>THE MATH</Text>
             {ready.components.map((c, i) => (
               <ReceiptRow
                 key={c.key}
@@ -199,7 +193,7 @@ function VitalsTab() {
                 meta={c.detail}
                 value={c.points === null ? '—' : String(c.points)}
                 unit={c.points === null ? undefined : '/ 25'}
-                valueColor={c.points === null ? color.faint : undefined}
+                valueColor={c.points === null ? theme.text.faint : undefined}
                 last={i === ready.components.length - 1}
               />
             ))}
@@ -372,7 +366,7 @@ function VitalsTab() {
       {deviation?.headline ? (
         <Card>
           <ReceiptHeader label="Out of your range" summary="today vs your last 30 days" />
-          <Text style={styles.needLine}>{deviation.headline}</Text>
+          <Text style={[styles.needLine, { color: theme.text.ink }]}>{deviation.headline}</Text>
           {deviation.lines.map((line) => (
             <SrcNote key={line}>{line}</SrcNote>
           ))}
@@ -386,14 +380,14 @@ function VitalsTab() {
           <ReceiptHeader label="Sleep need" summary="tap for the math" />
           <Pressable onPress={() => setNeedMathOpen(!needMathOpen)} hitSlop={8}>
             {sleepNeed.lastNight ? (
-              <Text style={styles.needLine}>{sleepNeed.lastNight.line}</Text>
+              <Text style={[styles.needLine, { color: theme.text.ink }]}>{sleepNeed.lastNight.line}</Text>
             ) : null}
-            <Text style={styles.debtLine}>{sleepNeed.debtText}</Text>
+            <Text style={[styles.debtLine, { color: theme.text.mute }]}>{sleepNeed.debtText}</Text>
             {sleepNeed.window ? (
-              <Text style={styles.debtLine}>{sleepNeed.window.line}</Text>
+              <Text style={[styles.debtLine, { color: theme.text.mute }]}>{sleepNeed.window.line}</Text>
             ) : null}
             {sleepNeed.consistency ? (
-              <Text style={styles.debtLine}>{sleepNeed.consistency.line}</Text>
+              <Text style={[styles.debtLine, { color: theme.text.mute }]}>{sleepNeed.consistency.line}</Text>
             ) : null}
           </Pressable>
           {needMathOpen ? (
@@ -437,7 +431,7 @@ function VitalsTab() {
       {/* ── Camera-HRV tuning bench — dev builds only for now ──────── */}
       {__DEV__ ? (
         <Pressable onPress={() => setPpgOpen(true)} hitSlop={8}>
-          <Text style={styles.devLink}>CAMERA HRV — TUNING BENCH (DEV)</Text>
+          <Text style={[styles.devLink, { color: theme.text.faint }]}>CAMERA HRV — TUNING BENCH (DEV)</Text>
         </Pressable>
       ) : null}
       <PpgDebugSheet open={ppgOpen} onClose={() => setPpgOpen(false)} />
@@ -468,19 +462,19 @@ function VitalsTab() {
         {latest ? (
           <>
             <View style={styles.weightRow}>
-              <Text style={styles.weightValue}>
-                {kgText(latest.weightKg)} <Text style={styles.weightUnit}>kg</Text>
+              <Text style={[styles.weightValue, { color: theme.text.ink }]}>
+                {kgText(latest.weightKg)} <Text style={[styles.weightUnit, { color: theme.text.mute }]}>kg</Text>
               </Text>
               {rate !== null ? (
-                <Text style={[styles.weightRate, onPace && { color: color.carbs }]}>
+                <Text style={[styles.weightRate, { color: theme.text.ink2 }, onPace && { color: theme.text.carbs }]}>
                   {rate > 0 ? '+' : ''}{rate} kg / wk{onPace ? ' · on pace' : ''}
                 </Text>
               ) : (
-                <Text style={styles.weightRateFaint}>trend needs a few more weigh-ins</Text>
+                <Text style={[styles.weightRateFaint, { color: theme.text.faint }]}>trend needs a few more weigh-ins</Text>
               )}
             </View>
             {weights.length >= 2 ? (
-              <Sparkline points={sparkPoints(weights)} stroke={color.carbs} />
+              <Sparkline points={sparkPoints(weights)} stroke={theme.fill.carbs} />
             ) : null}
             <SrcNote>Weigh-ins from your log · trend is a least-squares fit, not wishful smoothing</SrcNote>
           </>
@@ -600,17 +594,17 @@ function MindTab() {
       <Card>
         <KV label={protocol.name} right={protocol.phases.filter((p) => p > 0).join(' · ')} />
         <View style={styles.pacer}>
-          <View style={styles.pacerRing}>
-            <Animated.View style={[styles.pacerFill, { transform: [{ scale }] }]} />
-            <Text style={styles.pacerLabel}>{running ? phase.label.toUpperCase() : 'READY'}</Text>
+          <View style={[styles.pacerRing, { borderColor: theme.surfaces.borderStrong }]}>
+            <Animated.View style={[styles.pacerFill, { borderColor: theme.fill.recovery }, { transform: [{ scale }] }]} />
+            <Text style={[styles.pacerLabel, { color: theme.text.ink2 }]}>{running ? phase.label.toUpperCase() : 'READY'}</Text>
           </View>
-          <Text style={styles.pacerCount}>
+          <Text style={[styles.pacerCount, { color: theme.text.faint }]}>
             {running ? `${phase.remaining} · FOLLOW THE SQUARE` : `${cycleSeconds(protocol)} S CYCLE`}
           </Text>
           {/* Running-state invariant: a glance must show the session is
               progressing, not just which phase it's in. */}
           {running ? (
-            <Text style={styles.pacerCount}>{`${mmss(clock)} OF ${minutes}:00`}</Text>
+            <Text style={[styles.pacerCount, { color: theme.text.faint }]}>{`${mmss(clock)} OF ${minutes}:00`}</Text>
           ) : null}
         </View>
         <ChipRow
@@ -630,7 +624,7 @@ function MindTab() {
             name={p.name}
             meta={p.meta}
             value={p.key === protocol.key ? 'active' : 'use'}
-            valueColor={p.key === protocol.key ? color.carbs : color.faint}
+            valueColor={p.key === protocol.key ? theme.text.carbs : theme.text.faint}
             last={i === PROTOCOLS.length - 1}
             {...{ onPress: undefined }}
           />
@@ -681,27 +675,25 @@ function MindTab() {
 const styles = StyleSheet.create({
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   mathSheet: {
-    backgroundColor: color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 30,
   },
-  mathTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, color: color.mute },
-  scroll: { flex: 1, backgroundColor: color.bg },
+  mathTitle: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2 },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   weightRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 },
-  weightValue: { ...({ fontFamily: mono } as object), fontSize: 23, fontWeight: '600', color: color.ink },
-  weightUnit: { fontSize: 12, color: color.mute, fontWeight: '400' },
-  weightRate: { fontFamily: mono, fontSize: 12, color: color.ink2 },
-  weightRateFaint: { fontFamily: mono, fontSize: 11, color: color.faint },
+  weightValue: { ...({ fontFamily: mono } as object), fontSize: 23, fontWeight: '600' },
+  weightUnit: { fontSize: 12, fontWeight: '400' },
+  weightRate: { fontFamily: mono, fontSize: 12 },
+  weightRateFaint: { fontFamily: mono, fontSize: 11 },
   pacer: { alignItems: 'center', paddingVertical: 26 },
   pacerRing: {
     width: 150, height: 150, borderRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: color.border2,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center', justifyContent: 'center',
   },
   pacerFill: {
@@ -709,12 +701,12 @@ const styles = StyleSheet.create({
     // pacer shape (no rings, no glow; spec §6 + the V3.1 item-2 brief).
     position: 'absolute', width: 150, height: 150, borderRadius: 2,
     backgroundColor: 'rgba(94,114,228,.10)',
-    borderWidth: 1, borderColor: color.recovery,
+    borderWidth: 1,
   },
-  pacerLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.98, color: color.ink2 },
-  pacerCount: { fontFamily: mono, fontSize: 11, color: color.faint, marginTop: 18, letterSpacing: 1 },
-  needLine: { fontSize: 14, color: color.ink, lineHeight: 21, marginTop: 4 },
-  devLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, color: color.faint, textAlign: 'center', paddingVertical: 10 },
-  debtLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, color: color.mute, marginTop: 6 },
+  pacerLabel: { fontFamily: mono, fontSize: 11, letterSpacing: 1.98 },
+  pacerCount: { fontFamily: mono, fontSize: 11, marginTop: 18, letterSpacing: 1 },
+  needLine: { fontSize: 14, lineHeight: 21, marginTop: 4 },
+  devLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 10 },
+  debtLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, marginTop: 6 },
   protocolTap: { marginTop: 4 },
 });
