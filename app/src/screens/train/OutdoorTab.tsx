@@ -375,6 +375,7 @@ export function OutdoorTab() {
   }, [tracking, routeNudge, loop, mode]);
 
   return (
+    <View style={styles.root}>
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {tracking ? <KeepAwakeWhileTracking /> : null}
 
@@ -487,7 +488,6 @@ export function OutdoorTab() {
                 <SrcNote>{WEATHER_ATTRIBUTION}</SrcNote>
               </>
             ) : null}
-            <CTA label="Start walk" onPress={() => void start()} />
           </>
         ) : null}
 
@@ -694,6 +694,14 @@ export function OutdoorTab() {
         </ShareSheet>
       ) : null}
     </ScrollView>
+      {/* Start walk pinned above the tab bar — weather and shoes scroll. */}
+      {mode.kind === 'ready' ? (
+        <View style={[styles.startBar, { backgroundColor: theme.surfaces.surface2, borderTopColor: theme.surfaces.border }]}>
+          <Text style={[styles.startBarMeta, { color: theme.text.ink2 }]}>{`GPS ±${Math.round(mode.last.accuracy)} m`}</Text>
+          <CTA label="Start walk" onPress={() => void start()} style={styles.startBarBtn} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -735,6 +743,17 @@ function KeepAwakeWhileTracking() {
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
+  startBar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  startBarMeta: { fontFamily: mono, fontSize: 11, letterSpacing: 0.6, flexGrow: 1 },
+  startBarBtn: { marginTop: 0, paddingHorizontal: 18, flexShrink: 0 },
   shareLink: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 10 },
   loopChipOn: { borderBottomWidth: 1 },
   guidedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth },
