@@ -215,7 +215,6 @@ export function ThemePickerList({
       keyExtractor={(id) => id}
       initialNumToRender={3}
       windowSize={5}
-      removeClippedSubviews
       renderItem={({ item }) => (
         <ThemeRow id={item} current={current} state={state} data={data} onPress={() => onSelect(item)} />
       )}
