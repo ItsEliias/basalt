@@ -213,8 +213,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))
       react-native-view-shot:
-        specifier: ^5.1.1
-        version: 5.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+        specifier: 4.0.3
+        version: 4.0.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-vision-camera:
         specifier: 4.7.3
         version: 4.7.3(patch_hash=ta3b5nlee54mehvlf5tdnlge7i)(react-native-worklets-core@1.6.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -3050,12 +3050,11 @@ packages:
     peerDependencies:
       react-native: '*'
 
-  react-native-view-shot@5.1.1:
-    resolution: {integrity: sha512-jOTLQrMGNBgv/nRA81VR2x2AdiCGoCjc63c9a5P4A0gStCbh9oDeJ6W+GtRxxQmxXXf6LDSrvG+mmWYulIrOkg==}
-    engines: {node: '>=20.19.4', npm: '>=10'}
+  react-native-view-shot@4.0.3:
+    resolution: {integrity: sha512-USNjYmED7C0me02c1DxKA0074Hw+y/nxo+xJKlffMvfUWWzL5ELh/TJA/pTnVqFurIrzthZDPtDM7aBFJuhrHQ==}
     peerDependencies:
-      react: '>=18.0.0'
-      react-native: '>=0.76.0'
+      react: '*'
+      react-native: '*'
 
   react-native-vision-camera@4.7.3:
     resolution: {integrity: sha512-g1/neOyjSqn1kaAa2FxI/qp5KzNvPcF0bnQw6NntfbxH6tm0+8WFZszlgb5OV+iYlB6lFUztCbDtyz5IpL47OA==}
@@ -6830,7 +6829,7 @@ snapshots:
       react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
       whatwg-url-without-unicode: 8.0.0-3
 
-  react-native-view-shot@5.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+  react-native-view-shot@4.0.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:
       html2canvas: 1.4.1
       react: 19.2.3

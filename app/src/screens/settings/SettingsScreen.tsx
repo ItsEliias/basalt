@@ -6,6 +6,7 @@ import * as Sharing from 'expo-sharing';
 import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup, kgText, groupInt, THEME_IDS, THEMES, type ThemeId, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { ImportSheet } from './ImportSheet';
+import { ThemePickerModal } from './ThemePicker';
 import { SharingSection } from './SharingSection';
 import { onOutboxChange, drainOutbox } from '../../lib/outbox';
 import { pendingLine } from '../../lib/outboxModel';
@@ -63,6 +64,7 @@ export function SettingsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [importOpen, setImportOpen] = useState(false);
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
   const [hiddenToday, setHiddenToday] = useState<string[]>([]);
   const [illnessNotif, setIllnessNotif] = useState<boolean | null>(null);
   useEffect(() => {
@@ -375,16 +377,15 @@ export function SettingsScreen() {
         />
         <SrcNote>Comfortable adds extra breathing room to every row and card — on by default</SrcNote>
         <ObChipLabel>Theme</ObChipLabel>
-        <ChipRow
-          options={THEME_OPTIONS}
-          value={THEMES[profile?.theme ?? 'minimal'].name}
-          onChange={(v) => {
-            const next = themeIdForLabel(v);
-            logThemeLayoutEvent({ type: 'theme_selected', theme: next, previous: profile?.theme ?? 'minimal' });
-            void save({ theme: next });
-          }}
-        />
-        <SrcNote>{THEMES[profile?.theme ?? 'minimal'].description} · every colour contrast-verified</SrcNote>
+        <Pressable onPress={() => setThemePickerOpen(true)} accessibilityRole="button" accessibilityLabel="Choose theme">
+          <ReceiptRow
+            name={THEMES[profile?.theme ?? 'minimal'].name}
+            meta={THEMES[profile?.theme ?? 'minimal'].description}
+            value="change →"
+            valueColor={theme.text.faint}
+          />
+        </Pressable>
+        <SrcNote>Live previews in your own numbers · every colour contrast-verified · nothing changes until you confirm</SrcNote>
         <ObChipLabel>Today layout</ObChipLabel>
         <ChipRow
           options={LAYOUT_OPTIONS}
@@ -490,6 +491,7 @@ export function SettingsScreen() {
           />
         </Pressable>
       </Card>
+      <ThemePickerModal open={themePickerOpen} onClose={() => setThemePickerOpen(false)} />
       <ImportSheet open={importOpen} onClose={() => setImportOpen(false)} onImported={() => void refreshCore()} />
 
       {/* ── Account ────────────────────────────────────────────────── */}
