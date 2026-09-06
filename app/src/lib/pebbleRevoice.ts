@@ -3,7 +3,7 @@ import {
   WEEK_REVIEW_CHANNEL_ID, WEEK_REVIEW_CONTENT, WEEK_REVIEW_NOTIF_ID, WEEK_REVIEW_TRIGGER,
 } from './weekReviewNotifModel';
 import { MONTHLY_REPORT_CONTENT, voicedContent } from './pebbleModel';
-import { MONTHLY_REPORT_CHANNEL_ID, MONTHLY_REPORT_NOTIF_ID, nextFirstOfMonth } from './monthlyReportNotif';
+import { MONTHLY_REPORT_CHANNEL_ID, MONTHLY_REPORT_NOTIF_ID, nextFirstOfMonth } from './monthlyReportNotifModel';
 
 // When the Pebble-voice toggle flips, notifications already scheduled for
 // the future keep whatever title they were scheduled with — so re-issue

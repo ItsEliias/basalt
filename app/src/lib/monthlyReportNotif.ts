@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { MONTHLY_REPORT_CONTENT, voicedContent } from './pebbleModel';
+import { isPebbleVoiceOn } from './pebble';
+import { MONTHLY_REPORT_NOTIF_ID, MONTHLY_REPORT_CHANNEL_ID, nextFirstOfMonth } from './monthlyReportNotifModel';
+export { MONTHLY_REPORT_NOTIF_ID, MONTHLY_REPORT_CHANNEL_ID, nextFirstOfMonth };
 
 // Monthly behavior-impact prompt — mirrors the Week in Review pattern
 // exactly: opt-in, a fixed factual prompt with NO numbers (a local trigger
@@ -11,8 +14,6 @@ import { MONTHLY_REPORT_CONTENT, voicedContent } from './pebbleModel';
 // for the next 1st at 18:00 and rescheduleMonthlyReportNotif() (called at
 // app start) keeps rolling it forward while the toggle is on.
 
-export const MONTHLY_REPORT_NOTIF_ID = 'monthly-behavior-report';
-export const MONTHLY_REPORT_CHANNEL_ID = 'monthly-report';
 const STORAGE_KEY = 'basalt.monthlyReportNotif';
 const CHANNEL_ID = MONTHLY_REPORT_CHANNEL_ID;
 
@@ -20,16 +21,11 @@ const CHANNEL_ID = MONTHLY_REPORT_CHANNEL_ID;
 // voice-parity test walks the real set.
 const CONTENT = MONTHLY_REPORT_CONTENT;
 
-export function nextFirstOfMonth(now: Date): Date {
-  return new Date(now.getFullYear(), now.getMonth() + 1, 1, 18, 0, 0);
-}
-
 export async function isMonthlyReportNotifEnabled(): Promise<boolean> {
   return (await AsyncStorage.getItem(STORAGE_KEY)) === 'on';
 }
 
 async function schedule(): Promise<void> {
-  const { isPebbleVoiceOn } = await import('./pebble');
   const v = voicedContent({ id: MONTHLY_REPORT_NOTIF_ID, ...CONTENT }, await isPebbleVoiceOn());
   await Notifications.scheduleNotificationAsync({
     identifier: MONTHLY_REPORT_NOTIF_ID,

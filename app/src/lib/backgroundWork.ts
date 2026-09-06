@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { isPebbleVoiceOn } from './pebble';
+import { voicedContent, VITALS_DEVIATION_TITLE } from './pebbleModel';
 import { isoDay } from '@basalt/core-data';
 import { loadDeviation, getMyPair, loadCoop } from '@basalt/analytics';
 import { supabase } from './supabase';
@@ -61,8 +63,6 @@ async function runBackgroundWork(): Promise<void> {
     const r = await loadDeviation(supabase);
     if (!r.ok || r.data.headline === null) return;
     await AsyncStorage.setItem(ILLNESS_LAST_KEY, today);
-    const { isPebbleVoiceOn } = await import('./pebble');
-    const { voicedContent, VITALS_DEVIATION_TITLE } = await import('./pebbleModel');
     const v = voicedContent({
       id: 'vitals-deviation',
       title: VITALS_DEVIATION_TITLE,

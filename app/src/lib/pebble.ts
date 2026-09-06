@@ -3,6 +3,7 @@ import {
   PEBBLE_STORAGE_KEY, PEBBLE_DISMISSED_KEY_PREFIX,
   normalizePebbleSettings, parsePebbleSettings, type PebbleSettings,
 } from './pebbleModel';
+import { revoiceScheduledNotifs } from './pebbleRevoice';
 
 // Pebble settings live on the device, like every notification toggle —
 // they are a voice preference, not ledger data.
@@ -16,7 +17,6 @@ export async function setPebbleSettings(patch: Partial<PebbleSettings>): Promise
   await AsyncStorage.setItem(PEBBLE_STORAGE_KEY, JSON.stringify(next));
   // The voice change applies to anything already sitting in the tray's
   // future: re-schedule the fixed prompts under the new voice.
-  const { revoiceScheduledNotifs } = await import('./pebbleRevoice');
   await revoiceScheduledNotifs(next.notifVoice);
   return next;
 }
