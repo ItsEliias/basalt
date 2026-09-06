@@ -2,8 +2,17 @@
 
 **Status: DRAFT** — answers assume the privacy policy is published at its final URL
 (URLs below are final: `https://basalt.itseliias.com/`) and AI quick-add stays enabled.
-**Both pages still carry a DRAFT banner pending your review — remove it before store submission.**
-If either changes, revisit the marked answers.
+**The only open input is your DRAFT check: review both pages and remove their DRAFT
+banners before store submission.** If either changes, revisit the marked answers.
+
+**Hosting, as declared (2026-09-07, closed test):** user data lives in the developer's
+Supabase project in `ap-southeast-2`. The project is currently shared with another app by
+the same developer (Arise); every Basalt object is `basalt_`-prefixed and every table is
+row-level-secured to `auth.uid()`, so no other app or user can read Basalt rows. Nothing
+in the data-safety form asks about project topology — the answers below are correct as
+written for the current project. The move to a dedicated project is scheduled for after
+the 14-day closed test, before production access; it changes no answer, only the
+infrastructure behind them.
 
 ## 1 · Data safety form
 
@@ -40,7 +49,9 @@ regardless — it is stated there.
 ### Data deletion
 
 - Deletion path: in-app (Settings → Delete account & all data, type-to-confirm) — immediate,
-  full cascade including the auth record.
+  full cascade including the auth record, **unconditionally** (the former shared-auth-pool
+  gate was removed and the change deployed 2026-09-07; a failed auth deletion is reported
+  as an error, never as success).
 - Web path: the deletion page's email flow (reply-confirmation identity check, ≤7 days).
 - No retention window; no partial retention. Answer "all data is deleted" without carve-outs.
 
@@ -93,6 +104,9 @@ them, and is fully deletable in-app.
 
 ## 4 · Revisit-if
 
+- Decommission runs (before production access, after the closed test) → update the
+  hosting note above and the privacy policy's hosting wording; no data-safety answer
+  changes.
 - AI quick-add disabled → remove the Anthropic service-provider declaration.
 - ~~Photo attachments ship → Photos becomes a collected type~~ — landed (food-entry photos, optional); the data-safety table above reflects it.
 - Live beacon landed → the location row above already reflects it (user-initiated sharing, not third-party sharing).

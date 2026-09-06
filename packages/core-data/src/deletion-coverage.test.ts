@@ -82,4 +82,31 @@ describe('deletion guard — every basalt_ table is wiped by BOTH paths', () => 
   it('the global-table allowlist only ever shrinks by intent', () => {
     expect([...GLOBAL_TABLES]).toEqual(['basalt_exercises']);
   });
+
+  // Play compliance (2026-09-07): account deletion is UNCONDITIONAL. The
+  // shared-auth-pool gate is gone — deleting your account always deletes
+  // the sign-in record, and a failure there is an error, never a success.
+  it('the auth record is deleted unconditionally — no shared-pool gate', () => {
+    expect(edgeSrc).not.toContain('hasAriseData');
+    expect(edgeSrc).not.toContain('ARISE_TABLES');
+    expect(edgeSrc).toMatch(/deleteUser\(uid\)/);
+  });
+
+  it('a failed auth deletion is reported as an error, not silently as success', () => {
+    expect(edgeSrc).toMatch(/authDeleted: false[\s\S]{0,400}status: 500/);
+  });
+
+  it('the wipe still never touches un-prefixed tables', () => {
+    // Every table named in the wipe lists and every literal .from() target
+    // is basalt_-prefixed — with ARISE_TABLES gone there is no legitimate
+    // un-prefixed name left in this function.
+    const listBlock = edgeSrc.slice(edgeSrc.indexOf('BASALT_TABLES'), edgeSrc.indexOf('Deno.serve'));
+    const named = [...listBlock.matchAll(/table: '([^']+)'|^\s*'([a-z0-9_-]+)',?$/gm)]
+      .map((m) => m[1] ?? m[2]!)
+      .filter((t) => /^[a-z0-9_-]+$/.test(t) && !['owner_id', 'grantee_id', 'a_id', 'b_id'].includes(t));
+    const fromTargets = [...edgeSrc.matchAll(/\.from\('([^']+)'\)/g)].map((m) => m[1]!);
+    const all = [...named, ...fromTargets];
+    expect(all.length).toBeGreaterThan(25);
+    for (const t of all) expect(t, `un-prefixed name in wipe path: ${t}`).toMatch(/^basalt[_-]/);
+  });
 });

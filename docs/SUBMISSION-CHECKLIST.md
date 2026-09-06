@@ -32,11 +32,21 @@ that resolves them.
   done; the public page is not. A minimal static page + a small Edge Function
   flow (email-verified deletion request) satisfies it.
 
-- [ ] **Run `docs/DECOMMISSION.md`.** Store submission is one of the three
-  named triggers for leaving the shared Arise Supabase project. Replay
-  migrations + seed into a dedicated project, repoint `app/.env`, re-run the
-  DoD walkthrough, make delete-account unconditional (no shared-auth-pool
-  caveat), then clean the `basalt_` tables out of the shared project.
+- [ ] **BEFORE PRODUCTION ACCESS (not before the closed test): run
+  `docs/DECOMMISSION.md`.** Decision 2026-09-07: the 14-day closed test runs
+  on the current shared project; the move to a dedicated project happens
+  after the closed test ends and before promotion to production. Replay
+  migrations + seed, repoint `app/.env`, re-run the DoD walkthrough, then
+  clean the `basalt_` tables out of the shared project.
+
+- [x] **Account deletion is unconditional (2026-09-07).** The shared-auth-pool
+  gate is removed from the delete-account Edge Function (deployed, v13):
+  every `basalt_` row, storage folder and the auth record are always
+  deleted; a failed auth deletion returns an error, never a success. Safe on
+  the shared project because Arise tables carry no FKs to `auth.users`
+  (verified) — an auth deletion orphans Arise rows without touching them.
+  Pinned by `packages/core-data/src/deletion-coverage.test.ts` (no
+  shared-pool gate, error-on-half-state, wipe list stays `basalt_`-only).
 
 - [~] **Play data-safety form — draft answers ready (Phase A).** See
   `docs/PLAY-ANSWERS.md`; transcribe once the privacy URL is final. Original item: Declare: health & fitness data (Health

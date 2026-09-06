@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -20,6 +20,9 @@ import { HIDEABLE_SECTIONS } from '../today/model';
 import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgroundWork';
 import { getPebbleSettings, setPebbleSettings } from '../../lib/pebble';
 import { PEBBLE_DEFAULTS, type PebbleSettings } from '../../lib/pebbleModel';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { buildFeedbackMailto } from '../../lib/feedbackModel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { zipSync, strToU8 } from 'fflate';
 import {
@@ -39,8 +42,8 @@ import {
 } from '../onboarding/model';
 
 // Settings — every onboarding answer editable, your data yours fully, delete
-// is a true full cascade (Edge Function; the shared-auth caveat is stated,
-// not hidden).
+// is a true full cascade (Edge Function; unconditional — rows, storage, then
+// the sign-in record).
 
 type EditKey = 'basics' | 'goals' | 'dietary' | 'training' | null;
 
@@ -560,6 +563,33 @@ export function SettingsScreen() {
       <Card>
         <ReceiptHeader label="Account" />
         <ReceiptRow name={session?.user.email ?? '—'} meta="free plan" />
+        <Pressable
+          onPress={() => {
+            const androidC = Platform.OS === 'android'
+              ? (Platform.constants as { Model?: string; Release?: string })
+              : {};
+            void Linking.openURL(buildFeedbackMailto({
+              version: Constants.expoConfig?.version ?? null,
+              build: Constants.nativeBuildVersion ?? null,
+              theme: profile?.theme ?? 'minimal',
+              model: androidC.Model ?? null,
+              androidRelease: androidC.Release ?? null,
+            }));
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Send feedback"
+        >
+          <ReceiptRow name="Send feedback" meta="opens your mail app — nothing is sent silently" value="→" valueColor={theme.text.faint} />
+        </Pressable>
+        <Pressable
+          onPress={() => void Linking.openURL('https://basalt.itseliias.com/privacy/')}
+          hitSlop={8}
+          accessibilityRole="link"
+          accessibilityLabel="Privacy policy"
+        >
+          <ReceiptRow name="Privacy policy" meta="what's collected, where it lives, how deletion works" value="→" valueColor={theme.text.faint} />
+        </Pressable>
         <Pressable onPress={() => void signOut()} hitSlop={8}>
           <ReceiptRow name="Sign out" />
         </Pressable>
@@ -576,8 +606,7 @@ export function SettingsScreen() {
       </Card>
       <SrcNote>
         Delete is a full cascade — required by Google Play & App Store policy, and also just right.
-        While Basalt shares its backend with Arise, the sign-in record itself is removed only when no
-        Arise data depends on it; the app tells you which happened.
+        Every row in every table goes, then the sign-in record itself, unconditionally.
       </SrcNote>
 
       {/* ── Edit sheets ────────────────────────────────────────────── */}
@@ -593,8 +622,8 @@ export function SettingsScreen() {
         <Text style={[styles.deleteTitle, { color: theme.text.fat }]}>Delete account & all data</Text>
         <Text style={[styles.deleteBody, { color: theme.text.ink2 }]}>
           This removes every row in every table — food, sessions, sets, water, weight, sleep, targets,
-          profile — and then the sign-in record itself where nothing else depends on it. There is no
-          undo and no grace period. Type DELETE to confirm.
+          profile — and then the sign-in record itself. There is no undo and no grace period. Type
+          DELETE to confirm.
         </Text>
         <ObInput placeholder="Type DELETE" autoCapitalize="characters" value={confirmText} onChangeText={setConfirmText} />
         <CTA
