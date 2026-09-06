@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
@@ -10,6 +10,13 @@ import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
+import { loadReadiness } from '@basalt/analytics';
+import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
+import {
+  PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
+  macroShortfallProposal, readinessSwapProposal, sleepDebtProposal,
+  type PebbleSettings,
+} from '../../lib/pebbleModel';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -110,7 +117,9 @@ async function loadToday(): Promise<TodayData> {
   };
 }
 
-export function TodayScreen() {
+export function TodayScreen({ onOpenTab }: {
+  onOpenTab?: (tab: 'log' | 'train' | 'recover') => void;
+} = {}) {
   const { theme } = useTheme();
   const targets = useAppStore((s) => s.targets);
   const profile = useAppStore((s) => s.profile);
@@ -123,6 +132,10 @@ export function TodayScreen() {
   // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
   const layout = profile?.todayLayout ?? 'ledger';
 
+  const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
+  const [pebbleDismissed, setPebbleDismissed] = useState<string[]>([]);
+  const [readinessScore, setReadinessScore] = useState<number | null>(null);
+
   const refresh = useCallback(async () => {
     setData(await loadToday());
     // Tile hide/show — hiding is omission; re-read so Settings changes land.
@@ -131,6 +144,14 @@ export function TodayScreen() {
       setHidden(new Set(raw ? (JSON.parse(raw) as string[]) : []));
     } catch {
       setHidden(new Set());
+    }
+    // Pebble: settings + today's dismissals; readiness only when it can show.
+    const pebble = await getPebbleSettings();
+    setPebbleSettings(pebble);
+    setPebbleDismissed(await dismissedToday(todayISO()));
+    if (pebble.showInApp) {
+      const r = await loadReadiness(supabase, new Date());
+      setReadinessScore(r.ok ? r.data.readiness.score : null);
     }
   }, []);
 
@@ -205,6 +226,34 @@ export function TodayScreen() {
         )
       : null;
 
+  // Pebble — proposals with actions, never commentary. Candidates come
+  // from engine values already on this screen; macro proposals stay silent
+  // under Hide-the-numbers. pebbleVisible enforces the law: no proposal or
+  // no opt-in → nothing renders.
+  const pebbleProposal: PebbleProposal | null = data && targets
+    ? pickProposal([
+        readinessSwapProposal({ score: readinessScore, band: null, hasSessionToday: data.sessions.length > 0 }),
+        hideNumbers ? null : macroShortfallProposal({
+          proteinG: data.totals.protein,
+          proteinTargetG: targets.proteinG,
+          entriesLogged: data.entries.length,
+          hour: new Date().getHours(),
+        }),
+        sleepDebtProposal({ sleepHours: data.sleepHours, sleepTargetMin: targets.sleepMin }),
+      ], pebbleDismissed)
+    : null;
+  const shownProposal = pebbleVisible(pebbleSettings, 'today', pebbleProposal) ? pebbleProposal : null;
+
+  const onPebbleAction = (proposal: PebbleProposal, action: PebbleAction) => {
+    if (action.kind === 'dismiss') {
+      void dismissForToday(todayISO(), proposal.id).then(setPebbleDismissed);
+      return;
+    }
+    if (action.kind === 'open-log') onOpenTab?.('log');
+    if (action.kind === 'open-train') onOpenTab?.('train');
+    if (action.kind === 'open-recover') onOpenTab?.('recover');
+  };
+
   // Widget snapshot: written on every Today computation; the widget shows
   // this with its age — never a number the app didn't compute.
   useEffect(() => {
@@ -234,6 +283,7 @@ export function TodayScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
+        <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
         <TileGridThemed>
           {filterTiles(tileSpecs, hidden).map((t) => (
             <Tile
@@ -245,6 +295,7 @@ export function TodayScreen() {
               over={t.over}
               empty={t.empty}
               emptyMessage={t.emptyMessage}
+              domain={t.domain}
             />
           ))}
         </TileGridThemed>
@@ -258,8 +309,10 @@ export function TodayScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
+      <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
-      <Card>
+      <Card lead>
         {heroMode === 'qualitative' ? (
           <>
             <MicroLabel>Food</MicroLabel>
@@ -272,6 +325,40 @@ export function TodayScreen() {
           </>
         ) : null}
         {hero && heroMode === 'numeric' ? (
+          theme.shape.meter === 'ring' && targets && data ? (
+            <>
+              <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
+              <View style={styles.ringRow}>
+                <HeroRings
+                  rings={[
+                    { fraction: Math.min(1, data.totals.calories / Math.max(1, targets.calories)), fill: theme.fill.accent },
+                    { fraction: Math.min(1, data.totals.protein / Math.max(1, targets.proteinG)), fill: theme.fill.protein },
+                    { fraction: Math.min(1, data.totals.carbs / Math.max(1, targets.carbsG)), fill: theme.fill.carbs },
+                  ]}
+                  centerValue={groupInt(hero.remaining)}
+                  centerLabel={hero.over ? 'kcal over' : 'left'}
+                />
+                <RingKey
+                  items={[
+                    { fill: theme.fill.accent, name: 'Energy', value: `${Math.round((data.totals.calories / Math.max(1, targets.calories)) * 100)}%` },
+                    { fill: theme.fill.protein, name: 'Protein', value: `${Math.round(data.totals.protein)}/${Math.round(targets.proteinG)}` },
+                    { fill: theme.fill.carbs, name: 'Carbs', value: `${Math.round(data.totals.carbs)}/${Math.round(targets.carbsG)}` },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+            </>
+          ) : theme.shape.meter === 'dial' ? (
+            <>
+              <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
+              <HeroDial
+                fraction={targets && data ? Math.min(1, data.totals.calories / Math.max(1, targets.calories)) : 0}
+                value={groupInt(hero.remaining)}
+                label={hero.over ? 'kcal over' : 'kcal left'}
+              />
+              <Text style={[styles.heroSub, styles.heroSubCentered, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+            </>
+          ) : (
           <>
             <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
             <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
@@ -284,6 +371,7 @@ export function TodayScreen() {
               ]}
             />
           </>
+          )
         ) : heroMode === 'no-targets' ? (
           <>
             <MicroLabel>Energy</MicroLabel>
@@ -470,6 +558,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   targetRatio: { fontFamily: mono, fontSize: 12 },
   targetOf: {},
+  ringRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10 },
+  heroSubCentered: { textAlign: 'center' },
   heroSub: { fontFamily: mono, fontSize: 11.5, marginTop: 10 },
   entryThumb: { width: 30, height: 30, borderRadius: 7 },
   undo: {

@@ -27,6 +27,7 @@ import {
 } from '@expo-google-fonts/cormorant-garamond';
 import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
+import { expressiveFontsReady, loadExpressiveFonts } from './src/lib/expressiveFonts';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
 import { FadeIn } from './src/components/FadeIn';
@@ -123,7 +124,7 @@ function MainShell() {
   };
 
   const body: Record<ViewKey, React.ReactNode> = {
-    today: <TodayScreen />,
+    today: <TodayScreen onOpenTab={setTab} />,
     log: <LogScreen />,
     train: <TrainScreen />,
     recover: <RecoverScreen />,
@@ -217,9 +218,24 @@ export default function App() {
   // (Minimal/comfortable/system) before the profile has loaded — never
   // blocks first paint on a network round trip.
   const profile = useAppStore((s) => s.profile);
-  const theme = profile?.theme ? THEMES[profile.theme] : THEMES[DEFAULT_THEME];
+  const themeId = profile?.theme && THEMES[profile.theme] ? profile.theme : DEFAULT_THEME;
+  const theme = THEMES[themeId];
 
-  if (!fontsLoaded) {
+  // V3.4 expressive themes load their typefaces on demand — a Minimal
+  // startup never waits on them (see lib/expressiveFonts.ts).
+  const [expressiveReady, setExpressiveReady] = useState(() => expressiveFontsReady(themeId));
+  useEffect(() => {
+    if (expressiveFontsReady(themeId)) {
+      setExpressiveReady(true);
+      return;
+    }
+    setExpressiveReady(false);
+    let alive = true;
+    void loadExpressiveFonts(themeId).then(() => { if (alive) setExpressiveReady(true); });
+    return () => { alive = false; };
+  }, [themeId]);
+
+  if (!fontsLoaded || !expressiveReady) {
     return (
       <View style={[styles.loading, { backgroundColor: theme.surfaces.bg }]}>
         <Text style={[styles.brand, { color: theme.text.faint }]}>BASALT</Text>

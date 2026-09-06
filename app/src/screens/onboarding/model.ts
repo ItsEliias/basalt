@@ -90,6 +90,8 @@ export type OnboardingState = {
   stress: string | null;
   motivations: string[];
   checkin: string | null;
+  /** V3.4: the theme picked on the final step; null keeps the default. */
+  theme: string | null;
 };
 
 export const initialState: OnboardingState = {
@@ -98,10 +100,10 @@ export const initialState: OnboardingState = {
   goals: [], conditions: [], medications: [], habits: {},
   allergies: [], diets: [], place: null, equipment: [],
   job: null, exercising: null, sleep: null, stress: null,
-  motivations: [], checkin: null,
+  motivations: [], checkin: null, theme: null,
 };
 
-export const TOTAL_STEPS = 8;
+export const TOTAL_STEPS = 9;
 
 /** Gym-only skips the home-equipment step (7). */
 export function nextStep(current: number, state: OnboardingState): number {
@@ -212,6 +214,7 @@ export function buildProfile(state: OnboardingState): Partial<ProfileRecord> {
     habits: Object.fromEntries(
       Object.entries(state.habits).filter(([, v]) => v !== undefined),
     ) as Record<string, string>,
+    ...(state.theme ? { theme: state.theme as ProfileRecord['theme'] } : {}),
     dietaryFlags: state.allergies,
     dietPatterns: state.diets,
     trainLocation: state.place,

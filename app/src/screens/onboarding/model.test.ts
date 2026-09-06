@@ -30,9 +30,15 @@ describe('conditional flow — gym skips the equipment step', () => {
     expect(nextStep(6, { ...initialState, place: 'both' })).toBe(7);
     expect(prevStep(8, { ...initialState, place: 'home' })).toBe(7);
   });
-  it('never leaves the 1..8 range', () => {
+  it('never leaves the 1..TOTAL_STEPS range', () => {
     expect(nextStep(TOTAL_STEPS, initialState)).toBe(TOTAL_STEPS);
     expect(prevStep(1, initialState)).toBe(1);
+  });
+  it('the theme step (9) follows life for everyone', () => {
+    expect(TOTAL_STEPS).toBe(9);
+    expect(nextStep(8, { ...initialState, place: 'gym' })).toBe(9);
+    expect(nextStep(8, { ...initialState, place: 'home' })).toBe(9);
+    expect(prevStep(9, { ...initialState, place: 'gym' })).toBe(8);
   });
 });
 
@@ -81,6 +87,11 @@ describe('buildProfile', () => {
     expect(p.activityLevel).toBe('moderate');
     expect(p.checkinPreference).toBe('weekly');
     expect(p.useMetric).toBe(false);
+  });
+
+  it('carries a picked theme, and omits the field when none was picked', () => {
+    expect(buildProfile({ ...initialState, theme: 'gummy' }).theme).toBe('gummy');
+    expect('theme' in buildProfile(initialState)).toBe(false);
   });
 });
 

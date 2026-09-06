@@ -54,7 +54,8 @@ export const depth: Theme = {
   },
 
   shape: {
-    radius: { none: 0, sm: 10, md: 14, lg: 20 },
+    radius: { none: 0, sm: 10, md: 14, lg: 20, pill: 999 },
+    tilt: 0,
     borderWidth: { hairline: 1, thin: 1, thick: 2 },
     container: 'card',
     elevation: 'blur',

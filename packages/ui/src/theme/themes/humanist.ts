@@ -54,7 +54,8 @@ export const humanist: Theme = {
   },
 
   shape: {
-    radius: { none: 0, sm: 12, md: 16, lg: 22 },
+    radius: { none: 0, sm: 12, md: 16, lg: 22, pill: 999 },
+    tilt: 0,
     borderWidth: { hairline: 1, thin: 1, thick: 2 },
     container: 'card',
     elevation: 'none',

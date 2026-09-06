@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { isPebbleVoiceOn } from './pebble';
+import { voicedContent, VITALS_DEVIATION_TITLE } from './pebbleModel';
 import { isoDay } from '@basalt/core-data';
 import { loadDeviation, getMyPair, loadCoop } from '@basalt/analytics';
 import { supabase } from './supabase';
@@ -61,11 +63,13 @@ async function runBackgroundWork(): Promise<void> {
     const r = await loadDeviation(supabase);
     if (!r.ok || r.data.headline === null) return;
     await AsyncStorage.setItem(ILLNESS_LAST_KEY, today);
+    const v = voicedContent({
+      id: 'vitals-deviation',
+      title: VITALS_DEVIATION_TITLE,
+      body: `${r.data.headline} — open Recover for the numbers.`,
+    }, await isPebbleVoiceOn());
     await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Out of your range',
-        body: `${r.data.headline} — open Recover for the numbers.`,
-      },
+      content: { title: v.title, body: v.body, data: { icon: v.icon } },
       trigger: null,
     });
   } catch { /* absence of a notification is the honest failure mode */ }

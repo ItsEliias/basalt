@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { THEMES, THEME_IDS, DEFAULT_THEME, type ThemeId } from '../themes';
 import { INVARIANTS } from '../contract';
 import { contrastRatio, relativeLuminance } from '../contrast';
+import { capState, overCapSuffix } from '../../format';
 
 const SURFACES = ['bg', 'surface', 'surface2'] as const;
 // Object.keys() always types as string[] regardless of the record's key
@@ -12,11 +13,15 @@ const ids = Object.keys(THEMES) as ThemeId[];
 describe('theme contract conformance', () => {
   it.each(ids)('%s implements every contract key', (id) => {
     const t = THEMES[id];
-    expect(Object.keys(t.surfaces).sort()).toEqual(
+    // Required keys are pinned exactly; the V3.4 theme-scoped tokens
+    // (surfaces.gradient, fill.domainGround/On) are optional declarations.
+    const OPTIONAL_SURFACE = new Set(['gradient']);
+    const OPTIONAL_FILL = new Set(['domainGround', 'domainGroundOn']);
+    expect(Object.keys(t.surfaces).filter((k) => !OPTIONAL_SURFACE.has(k)).sort()).toEqual(
       ['bg', 'border', 'borderStrong', 'surface', 'surface2']);
     expect(Object.keys(t.text).sort()).toEqual(
       ['accent', 'carbs', 'faint', 'fat', 'ink', 'ink2', 'mute', 'protein', 'recovery', 'warn']);
-    expect(Object.keys(t.fill).sort()).toEqual(
+    expect(Object.keys(t.fill).filter((k) => !OPTIONAL_FILL.has(k)).sort()).toEqual(
       ['accent', 'accentOn', 'carbs', 'faint', 'fat', 'mark', 'markOn', 'protein', 'recovery', 'warnBg']);
     expect(Object.keys(t.typography.scale).length).toBe(8);
     expect(t.shape.container).toBeDefined();
@@ -51,7 +56,9 @@ describe('contrast invariants', () => {
     // accentOn/markOn are text drawn ON the fill, not marks meant to read
     // against the app's background surfaces — they're checked against their
     // own fill below, in "every on-colour is readable on its own fill".
-    const skip = new Set(['accentOn', 'markOn', 'warnBg']);
+    // domainGround/On are pair-checked in their own test — a pastel ground
+    // is a surface, not a mark on the app background.
+    const skip = new Set(['accentOn', 'markOn', 'warnBg', 'domainGround', 'domainGroundOn']);
     for (const s of SURFACES) {
       for (const [key, value] of Object.entries(t.fill)) {
         if (skip.has(key)) continue;
@@ -90,6 +97,48 @@ describe('sizing invariants', () => {
   it.each(ids)('%s: over-cap never relies on colour alone', (id) => {
     // 'color' would fail WCAG 1.4.1 and the honesty rule that over-cap is stated plainly.
     expect(THEMES[id].expression.overCap).not.toBe('color');
+  });
+
+  it.each(ids)('%s: domainGround pairs clear the text floor', (id) => {
+    // Theme-scoped expression: pastel domain grounds carry TEXT (the
+    // on-colour), so the pair is held to 4.5:1 like mark/markOn.
+    const t = THEMES[id];
+    if (!t.fill.domainGround) return;
+    expect(t.fill.domainGroundOn, `${id} declares domainGround without domainGroundOn`).toBeDefined();
+    for (const d of ['protein', 'carbs', 'fat', 'recovery'] as const) {
+      expect(contrastRatio(t.fill.domainGroundOn![d], t.fill.domainGround[d]),
+        `${id} ${d} ground/on`).toBeGreaterThanOrEqual(INVARIANTS.minTextContrast);
+    }
+  });
+
+  it.each(ids)('%s: a surface gradient must carry every text colour at BOTH ends', (id) => {
+    const t = THEMES[id];
+    if (!t.surfaces.gradient) return;
+    for (const [key, value] of Object.entries(t.text)) {
+      for (const end of [t.surfaces.gradient.from, t.surfaces.gradient.to]) {
+        expect(contrastRatio(value, end), `${id} text.${key} on gradient end ${end}`)
+          .toBeGreaterThanOrEqual(INVARIANTS.minTextContrast);
+      }
+    }
+  });
+
+  it.each(ids)('%s: ring/dial meters must state over-cap in words', (id) => {
+    // A ring can only show 100% — it cannot draw 41/36. The words are the
+    // honest channel, so they are mandatory, not stylistic.
+    const t = THEMES[id];
+    if (t.shape.meter !== 'ring' && t.shape.meter !== 'dial') return;
+    expect(['word', 'all']).toContain(t.expression.overCap);
+    const s = capState(41, 36);
+    const suffix = overCapSuffix(s.over, t.expression.overCap, s.overBy, (n: number) => n.toFixed(0));
+    expect(suffix).toMatch(/over/);
+  });
+
+  it.each(ids)('%s: tilt is capped at 2° and forbidden with a mono data face', (id) => {
+    const t = THEMES[id];
+    expect(Math.abs(t.shape.tilt)).toBeLessThanOrEqual(2);
+    if (/mono/i.test(t.typography.data)) {
+      expect(t.shape.tilt, `${id}: tilted mono columns don't align`).toBe(0);
+    }
   });
 
   it.each(ids)('%s: luminance-picked status-bar icons are legible on bg', (id) => {

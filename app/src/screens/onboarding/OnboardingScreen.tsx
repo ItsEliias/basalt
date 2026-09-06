@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { mono, CTA, ObDots, ObQuestion, ObSub, ObOption, ObInput, ObInRow, ObChipLabel, ObNote, ChipRow, ChipGroup, useTheme, ScaledText as Text } from '@basalt/ui';
+import { mono, CTA, ObDots, ObQuestion, ObSub, ObOption, ObInput, ObInRow, ObChipLabel, ObNote, ChipRow, ChipGroup, useTheme, ScaledText as Text, type ThemeId } from '@basalt/ui';
 import { saveProfile, saveTargets, addWeightEntry } from '@basalt/core-data';
 import { computeTargets } from '@basalt/nutrition';
 import { supabase } from '../../lib/supabase';
@@ -13,10 +13,15 @@ import {
   EQUIPMENT_OPTIONS, JOB_OPTIONS, EXERCISE_OPTIONS, SLEEP_OPTIONS, STRESS_OPTIONS,
   MOTIVATION_OPTIONS, CHECKIN_OPTIONS, isImperial, type OnboardingState,
 } from './model';
+import { ThemePickerList } from '../settings/ThemePicker';
+import { selectTheme, SAMPLE_PREVIEW, type PickerState } from '../settings/themePickerModel';
+import { loadExpressiveFonts } from '../../lib/expressiveFonts';
+import { THEME_IDS } from '@basalt/ui';
 
-// The 8-step intake (prototype v11.1). Every step skippable, everything
-// editable later, no paywall anywhere near here. The CTA is a fixed footer —
-// its reachability contract lives in layout.ts and is regression-tested.
+// The 9-step intake (prototype v11.1 + the V3.4 theme step). Every step
+// skippable, everything editable later, no paywall anywhere near here. The
+// CTA is a fixed footer — its reachability contract lives in layout.ts and
+// is regression-tested.
 
 export function OnboardingScreen() {
   const { theme } = useTheme();
@@ -26,6 +31,11 @@ export function OnboardingScreen() {
   const [state, setState] = useState<OnboardingState>(initialState);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The theme step's previews need the expressive typefaces registered.
+  useEffect(() => {
+    if (step === TOTAL_STEPS) for (const id of THEME_IDS) void loadExpressiveFonts(id);
+  }, [step]);
 
   const patch = (p: Partial<OnboardingState>) => setState((s) => ({ ...s, ...p }));
   const toggle = (key: 'goals' | 'conditions' | 'medications' | 'allergies' | 'diets' | 'equipment' | 'motivations', value: string) =>
@@ -190,7 +200,7 @@ export function OnboardingScreen() {
         return (
           <>
             <ObQuestion>Your life, roughly.</ObQuestion>
-            <ObSub>Last one. Activity outside training changes your energy needs more than most workouts do.</ObSub>
+            <ObSub>Activity outside training changes your energy needs more than most workouts do.</ObSub>
             <ScrollView style={styles.scroll}>
               <ObChipLabel>Your days are mostly…</ObChipLabel>
               {single(state.job, (job) => patch({ job }), JOB_OPTIONS)}
@@ -208,6 +218,23 @@ export function OnboardingScreen() {
             </ScrollView>
           </>
         );
+      case 9: {
+        const pickerState: PickerState = { selected: (state.theme as ThemeId | null) ?? null };
+        return (
+          <>
+            <ObQuestion>How should it look?</ObQuestion>
+            <ObSub>Previews use sample numbers. Minimal is the default — leave it, or pick one now. You can change this any time in Settings.</ObSub>
+            <View style={styles.pickerWrap}>
+              <ThemePickerList
+                current="minimal"
+                state={pickerState}
+                data={SAMPLE_PREVIEW}
+                onSelect={(id) => patch({ theme: selectTheme(pickerState, id, 'minimal').selected })}
+              />
+            </View>
+          </>
+        );
+      }
       default:
         return null;
     }
@@ -249,6 +276,7 @@ const styles = StyleSheet.create({
   skip: { fontFamily: mono, fontSize: 11, letterSpacing: 1 },
   step: { flex: 1, minHeight: 0 },
   scroll: { flex: 1, marginTop: 16, marginBottom: 10 },
+  pickerWrap: { flex: 1, marginTop: 12, marginHorizontal: -12 },
   error: { fontSize: 12.5, lineHeight: 18 },
   footer: {},
 });

@@ -164,6 +164,12 @@ describe('resolveFontFamily — bundled weight-specific family resolution', () =
     'Jost_300Light', 'Jost_400Regular', 'Jost_500Medium',
     'IBMPlexMono_300Light', 'IBMPlexMono_400Regular', 'IBMPlexMono_500Medium',
     'CormorantGaramond_300Light', 'CormorantGaramond_400Regular', 'CormorantGaramond_500Medium',
+    // V3.4 expressive themes (loaded lazily per theme — see app/src/lib/expressiveFonts.ts)
+    'Baloo2_600SemiBold', 'Baloo2_700Bold', 'Baloo2_800ExtraBold',
+    'Nunito_900Black',
+    'LilitaOne_400Regular',
+    'Poppins_500Medium', 'Poppins_600SemiBold', 'Poppins_700Bold',
+    'Fredoka_500Medium', 'Fredoka_600SemiBold', 'Fredoka_700Bold',
   ]);
 
   it('builds the {Family}_{weight}{WeightName} string expo-font registers', () => {
@@ -177,6 +183,11 @@ describe('resolveFontFamily — bundled weight-specific family resolution', () =
     expect(resolveFontFamily('Archivo Black', 400)).toBe('ArchivoBlack_400Regular');
     expect(resolveFontFamily('Archivo Black', 600)).toBe('ArchivoBlack_400Regular');
     expect(resolveFontFamily('Archivo Black', 900)).toBe('ArchivoBlack_400Regular');
+  });
+
+  it('Lilita One (single shipped weight) resolves the same way', () => {
+    expect(resolveFontFamily('Lilita One', 700)).toBe('LilitaOne_400Regular');
+    expect(resolveFontFamily('Lilita One', 900)).toBe('LilitaOne_400Regular');
   });
 
   describe('against every real theme value', () => {

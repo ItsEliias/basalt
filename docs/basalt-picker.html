@@ -1,0 +1,527 @@
+<title>Basalt Theme Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Baloo+2:wght@600;800&family=Fredoka:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Lilita+One&family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{--shell:#191A1D;--well:#212327;--rule:#33363C;--s-ink:#EEEFF1;--s-ink2:#A9ADB5;--s-faint:#787C85;--marker:#3E9B78;
+ --ui:'Archivo',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+body{margin:0;background:var(--shell);color:var(--s-ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;line-height:1.5}
+.page{padding:40px 0 72px}
+.head{max-width:760px;padding:0 28px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--marker);margin:0 0 12px}
+h1{font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-.02em;margin:0 0 14px;line-height:1.12;text-wrap:balance}
+.intro{font-size:15.5px;color:var(--s-ink2);margin:0 0 16px;max-width:62ch}
+.intro strong{color:var(--s-ink);font-weight:600}
+.rail{display:flex;gap:22px;overflow-x:auto;padding:24px 28px}
+.col{flex:0 0 322px;display:flex;flex-direction:column;gap:14px}
+.col h2{font-size:17px;font-weight:600;margin:0}
+.col p{font-size:13.5px;color:var(--s-ink2);margin:0}
+.bezel{background:var(--well);border:1px solid var(--rule);border-radius:22px;padding:9px}
+.phone{width:304px;height:620px;border-radius:15px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.laws{max-width:760px;padding:0 28px;margin:12px auto 0}
+.laws h2{font-size:19px;font-weight:600;margin:0 0 10px}
+.laws p{font-size:14.5px;color:var(--s-ink2);margin:0 0 12px;max-width:66ch}
+.laws strong{color:var(--s-ink);font-weight:600}
+.laws code{font-family:var(--mono);font-size:12px;color:var(--marker)}
+
+/* settings shell (Minimal theme) */
+.sp{background:#0F1115;color:#F4F5F6;font-family:'Archivo',sans-serif}
+.sp .sp-h{display:flex;justify-content:space-between;padding:16px 16px 8px;font-size:13px;color:#9AA3AF}
+.sp .sp-h span{font-weight:600;color:#F4F5F6}
+.sp .sp-sub{padding:0 16px 10px;font-size:11.5px;color:#7A828E;line-height:1.4}
+.sp .sp-list{flex:1;overflow:hidden;padding:0 12px}
+.trow{display:flex;gap:10px;align-items:center;padding:8px;border:1px solid #262B34;border-radius:10px;margin-bottom:8px;background:#16181D;position:relative}
+.trow.sel{border-color:#3E9B78}
+.thumb{width:60px;height:118px;border-radius:5px;overflow:hidden;flex:none;background:#000}
+.tscale{transform:scale(.19);transform-origin:0 0;width:304px;height:620px}
+.tinfo{flex:1;min-width:0}
+.tinfo b{font-size:13px;font-weight:600;display:block}
+.tinfo span{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7A828E;display:block}
+.tinfo p{margin:4px 0 0;font-size:10.5px;line-height:1.35;color:#C2C8D2}
+.tinfo em{display:block;font-style:normal;font-size:9.5px;color:#7A828E;margin-top:3px}
+.tick{width:22px;height:22px;border-radius:50%;border:1px solid #262B34;flex:none;display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:700;color:#0F1115}
+.trow.sel .tick{background:#3E9B78;border-color:#3E9B78}
+.sp .sp-bar{display:flex;justify-content:space-between;align-items:center;margin:0 12px 12px;padding:10px 12px 10px 14px;background:#16181D;border:1px solid #262B34;border-radius:10px;font-size:12px;color:#C2C8D2}
+.sp .sp-bar b{background:#3E9B78;color:#0F1115;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700}
+.sp .sp-peb{display:flex;gap:12px;align-items:center;padding:6px 16px 14px}
+.sp .sp-peb svg{width:58px;height:46px;flex:none}
+.sp .sp-peb b{font-size:15px;display:block}
+.sp .sp-peb span{font-size:11.5px;color:#9AA3AF;line-height:1.35}
+.sp .sp-tog{display:flex;justify-content:space-between;align-items:center;margin:0 16px;padding:12px 0;border-top:1px solid #262B34;font-size:13px}
+.sp .sp-tog i{width:38px;height:22px;border-radius:99px;background:#262B34;position:relative;flex:none}
+.sp .sp-tog i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#9AA3AF}
+.sp .sp-tog i.on{background:#3E9B78}
+.sp .sp-tog i.on::after{left:19px;background:#0F1115}
+.sp .sp-law{margin:4px 16px 0;padding:10px 12px;border-left:2px solid #3E9B78;font-size:11px;line-height:1.45;color:#9AA3AF}
+.sp .sp-lab{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#7A828E;margin:16px 16px 8px}
+.notif{display:flex;gap:10px;margin:0 12px 8px;padding:10px;background:#1C1F26;border-radius:12px;font-size:11px;line-height:1.35}
+.notif .n-ic{width:34px;height:34px;border-radius:9px;background:#F3FBF9;display:grid;place-items:center;flex:none;overflow:hidden}
+.notif .n-ic svg{width:30px;height:24px}
+.notif .n-ic.b{background:#F4F5F6;color:#0F1115;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px}
+.notif b{display:block;font-size:11px;font-weight:600}
+.notif span{display:block;color:#C2C8D2}
+.notif em{display:block;font-style:normal;color:#3E9B78;font-weight:600;margin-top:4px}
+.notif.plain{opacity:.7}
+
+/* minimal thumb */
+.mn{background:#0F1115;color:#F4F5F6;font-family:'Archivo',sans-serif}
+.mn .mn-h{display:flex;justify-content:space-between;padding:18px 18px 10px;font-size:15px;font-weight:600}
+.mn .mn-h span{color:#9AA3AF;font-weight:400;font-family:'JetBrains Mono',monospace;font-size:12px}
+.mn .mn-s{padding:0 18px}
+.mn .mn-l{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;color:#9AA3AF;margin-top:12px}
+.mn .mn-n{font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:500;margin:4px 0 16px}
+.mn .mn-r{display:flex;justify-content:space-between;padding:11px 0;border-top:1px solid #262B34;font-size:14px}
+.mn .mn-r b{font-family:'JetBrains Mono',monospace;font-weight:500}
+.mn .mn-r.ov b{color:#DE7A63}
+
+/* B1 marshmallow */
+.mm{background:#FFF7F1;color:#3B2F3A;font-family:'Nunito',sans-serif}
+.mm .mm-h{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 10px}
+.mm .mm-h small{display:block;font-size:12px;font-weight:700;color:#A08C9E}
+.mm .mm-h b{font-size:24px;font-weight:900;letter-spacing:-.02em}
+.mm .mm-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FFC2D1,#C8F0E4)}
+.mm .mm-s{flex:1;padding:4px 16px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.mm .mm-hero{background:#FFF;border-radius:28px;padding:18px 18px 16px;box-shadow:0 10px 24px rgba(120,80,100,.12)}
+.mm .mm-hero span{font-size:12px;font-weight:800;color:#A08C9E}
+.mm .mm-hero b{display:block;font-size:48px;font-weight:900;line-height:1.05;letter-spacing:-.03em}
+.mm .mm-hero em{font-style:normal;font-size:12px;font-weight:700;color:#A08C9E}
+.mm .mm-pill{height:14px;border-radius:99px;background:#F3E6EC;margin-top:12px;overflow:hidden}
+.mm .mm-pill i{display:block;height:100%;border-radius:99px;background:#FF8FB1}
+.mm .mm-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mm .mm-c{border-radius:22px;padding:13px 14px;box-shadow:0 6px 16px rgba(120,80,100,.08)}
+.mm .mm-c span{font-size:11.5px;font-weight:800;opacity:.7}
+.mm .mm-c b{display:block;font-size:26px;font-weight:900;line-height:1.1;margin-top:2px}
+.mm .mm-c em{font-style:normal;font-size:11px;font-weight:700;opacity:.7}
+.mm .pk{background:#FFE1EA}.mm .mt{background:#DDF6EE}.mm .pc{background:#FFE7D3}.mm .sk{background:#DFEDFF}
+.mm .mm-c.ov{outline:3px solid #FF8A5B;outline-offset:-3px}
+.mm .mm-list{background:#FFF;border-radius:22px;padding:4px 14px;box-shadow:0 6px 16px rgba(120,80,100,.08)}
+.mm .mm-r{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:14px;font-weight:700;border-bottom:1.5px dashed #F1E4EA}
+.mm .mm-r:last-child{border:0}
+.mm .mm-r i{width:10px;height:10px;border-radius:50%;display:block}
+.mm .mm-r i.pk{background:#FF8FB1}.mm .mm-r i.mt{background:#5FCBA8}
+.mm .mm-r b{margin-left:auto;font-weight:900}
+.mm .mm-n{display:flex;align-items:center;margin:8px 14px 14px;background:#FFF;border-radius:99px;padding:8px 6px;box-shadow:0 8px 20px rgba(120,80,100,.14)}
+.mm .mm-n span{flex:1;text-align:center;font-size:11.5px;font-weight:800;color:#B7A5B4}
+.mm .mm-n .on{color:#3B2F3A}
+.mm .mm-n .mm-plus{flex:0 0 44px;height:44px;border-radius:50%;background:#FF8FB1;color:#FFF;font-size:24px;line-height:44px;font-weight:900}
+
+/* B2 candy rings */
+.cr{background:#FFFFFF;color:#2B2438;font-family:'Fredoka',sans-serif}
+.cr .cr-h{display:flex;justify-content:space-between;align-items:baseline;padding:18px 20px 6px}
+.cr .cr-h b{font-size:24px;font-weight:700}
+.cr .cr-h span{font-size:13px;color:#9A93A8;font-weight:500}
+.cr .cr-s{flex:1;padding:6px 16px;overflow:hidden}
+.cr .cr-hero{display:flex;align-items:center;gap:8px}
+.cr .cr-stack{position:relative;width:150px;height:150px;flex:none}
+.cr .cr-in,.cr .cr-mid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.cr .cr-in svg{width:150px;height:150px}
+.cr .cr-mid{flex-direction:column}
+.cr .cr-mid b{font-size:15px;font-weight:700;line-height:1}
+.cr .cr-mid span{font-size:10px;color:#9A93A8}
+.cr .cr-key{display:flex;flex-direction:column;gap:9px;font-size:12px;font-weight:500;color:#5D5670}
+.cr .cr-key div{display:flex;align-items:center;gap:6px}
+.cr .cr-key i{width:10px;height:10px;border-radius:50%;display:block}
+.cr .cr-key b{font-weight:700;color:#2B2438}
+.cr .cr-warn{margin:12px 0;background:#FFF1E6;color:#B24E1F;border-radius:16px;padding:10px 14px;font-size:12.5px;font-weight:500}
+.cr .cr-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.cr .cr-tiles div{background:#F6F4FA;border-radius:18px;padding:12px 14px}
+.cr .cr-tiles span{font-size:11px;color:#9A93A8;font-weight:500}
+.cr .cr-tiles b{display:block;font-size:22px;font-weight:700}
+.cr .cr-r{display:flex;justify-content:space-between;padding:9px 4px;font-size:14px;font-weight:500;border-top:1px solid #EFEDF4}
+.cr .cr-r b{font-weight:700}
+.cr .cr-n{display:flex;padding:12px 0 16px;border-top:1px solid #EFEDF4}
+.cr .cr-n span{flex:1;text-align:center;font-size:12px;font-weight:600;color:#B5AFC4}
+.cr .cr-n .on{color:#FF5C8A}
+
+/* B3 blob */
+.bl{background:#F7F5FF;color:#2E2A45;font-family:'Quicksand',sans-serif}
+.bl .bl-b1,.bl .bl-b2{position:absolute;border-radius:60% 40% 55% 45%/50% 60% 40% 50%;filter:blur(2px);opacity:.75}
+.bl .bl-b1{width:260px;height:220px;right:-90px;top:-70px;background:radial-gradient(circle at 30% 30%,#FFD1DF,#FFB1C8)}
+.bl .bl-b2{width:200px;height:180px;left:-80px;top:160px;background:radial-gradient(circle at 60% 40%,#C9F3E6,#9FE4CE)}
+.bl .bl-h,.bl .bl-s,.bl .bl-n{position:relative}
+.bl .bl-h{display:flex;justify-content:space-between;align-items:baseline;padding:20px 20px 8px}
+.bl .bl-h b{font-size:22px;font-weight:700}
+.bl .bl-h span{font-size:12px;font-weight:600;color:#8B85A6}
+.bl .bl-s{flex:1;padding:0 18px;overflow:hidden}
+.bl .bl-hero{margin:10px 0 18px}
+.bl .bl-hero span{font-size:13px;font-weight:700;color:#8B85A6}
+.bl .bl-hero b{display:block;font-size:60px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.bl .bl-hero em{font-style:normal;font-size:13px;font-weight:700;color:#8B85A6}
+.bl .bl-mac{display:flex;gap:10px;margin-bottom:16px}
+.bl .bl-m{flex:1;text-align:center}
+.bl .bl-blob{height:64px;margin:0 auto 6px;width:64px;border-radius:55% 45% 50% 50%/45% 55% 45% 55%;
+ background:linear-gradient(to top,var(--c) var(--p),#FFF var(--p));border:3px solid #FFF;box-shadow:0 6px 14px rgba(80,60,120,.12)}
+.bl .bl-m span{display:block;font-size:11px;font-weight:700;color:#8B85A6}
+.bl .bl-m b{font-size:16px;font-weight:700}
+.bl .bl-m b i{font-style:normal;font-size:11px;color:#8B85A6}
+.bl .bl-m.ov b{color:#D9612F}
+.bl .bl-card{background:rgba(255,255,255,.85);border-radius:24px;padding:12px 16px}
+.bl .bl-card>span{font-size:11px;font-weight:700;color:#8B85A6}
+.bl .bl-r{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:600}
+.bl .bl-r b{font-weight:700}
+.bl .bl-n{display:flex;padding:12px 0 16px}
+.bl .bl-n span{flex:1;text-align:center;font-size:12px;font-weight:700;color:#A9A3C1}
+.bl .bl-n .on{color:#2E2A45}
+
+/* B4 clay */
+.cl{background:#ECE8FF;color:#2F2A4A;font-family:'Baloo 2',sans-serif}
+.cl .cl-h{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 8px}
+.cl .cl-h b{font-size:24px;font-weight:800}
+.cl .cl-btn{width:36px;height:36px;border-radius:14px;background:#F6F3FF;display:grid;place-items:center;font-style:normal;font-size:16px;
+ box-shadow:6px 6px 14px rgba(90,70,150,.18),inset 3px 3px 6px #FFF,inset -3px -3px 6px rgba(90,70,150,.12)}
+.cl .cl-s{flex:1;padding:4px 14px;display:flex;flex-direction:column;gap:11px;overflow:hidden}
+.cl .cl-card{border-radius:24px;padding:14px 16px;background:#F6F3FF;
+ box-shadow:8px 8px 18px rgba(90,70,150,.18),inset 4px 4px 8px #FFF,inset -4px -4px 8px rgba(90,70,150,.12)}
+.cl .cl-card span{font-size:12px;font-weight:700;opacity:.65}
+.cl .cl-card b{display:block;font-size:30px;font-weight:800;line-height:1.05}
+.cl .cl-card.big b{font-size:48px}
+.cl .cl-card em{font-style:normal;font-size:11.5px;font-weight:700;opacity:.65}
+.cl .cl-track{height:16px;border-radius:99px;margin-top:10px;background:#E4DEFB;box-shadow:inset 3px 3px 6px rgba(90,70,150,.2)}
+.cl .cl-track i{display:block;height:100%;border-radius:99px;background:#8F7CFF;box-shadow:inset -2px -2px 4px rgba(0,0,0,.15),inset 2px 2px 4px rgba(255,255,255,.5)}
+.cl .cl-g{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.cl .cl-g .cl-card{padding:12px 14px}
+.cl .vi{background:#E5DDFF}.cl .mi{background:#DCF5EC}.cl .pe{background:#FFE3D6}.cl .ye{background:#FFF3C9}
+.cl .cl-card.ov{box-shadow:8px 8px 18px rgba(90,70,150,.18),inset 4px 4px 8px #FFF,inset -4px -4px 8px rgba(90,70,150,.12),0 0 0 3px #F0805A}
+.cl .cl-r{display:flex;justify-content:space-between;padding:8px 6px;font-size:14px;font-weight:700}
+.cl .cl-r b{font-weight:800}
+.cl .cl-n{display:flex;margin:6px 14px 14px;background:#F6F3FF;border-radius:20px;padding:9px 4px;
+ box-shadow:8px 8px 18px rgba(90,70,150,.18),inset 4px 4px 8px #FFF}
+.cl .cl-n span{flex:1;text-align:center;font-size:12px;font-weight:800;color:#A79FC4}
+.cl .cl-n .on{color:#2F2A4A}
+
+/* B5 sticker */
+.st{background:#7FC8FF;color:#1B2340;font-family:'Nunito',sans-serif}
+.st .st-h{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 6px}
+.st .st-h b{font-family:'Lilita One',sans-serif;font-size:30px;color:#FFF;-webkit-text-stroke:1.5px #1B2340;text-shadow:3px 3px 0 #1B2340}
+.st .st-tag{background:#FFF;border:3px solid #1B2340;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:900;transform:rotate(4deg)}
+.st .st-s{flex:1;padding:6px 14px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.st .st-card{border-radius:22px;padding:12px 14px;border:3px solid #1B2340;box-shadow:0 0 0 4px #FFF,4px 4px 0 4px #1B2340}
+.st .st-card span{font-size:10.5px;font-weight:900;letter-spacing:.06em}
+.st .st-card b{display:block;font-family:'Lilita One',sans-serif;font-size:32px;line-height:1.05}
+.st .st-card b i{font-style:normal;font-size:16px;opacity:.6}
+.st .st-card em{font-style:normal;font-size:11px;font-weight:800;opacity:.7}
+.st .st-card.hero{background:#FFE14D;transform:rotate(-1.5deg)}
+.st .st-card.hero b{font-size:52px}
+.st .st-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.st .pk{background:#FF9FC2;transform:rotate(1.2deg)}.st .ye{background:#B4F08C;transform:rotate(-1deg)}
+.st .or{background:#FF9A5B;transform:rotate(.8deg)}.st .wh{background:#FFF}
+.st .st-card.list{padding:4px 14px}
+.st .st-r{display:flex;justify-content:space-between;padding:9px 0;font-size:13px;font-weight:800;border-bottom:2px dashed #C9D3E6}
+.st .st-r:last-child{border:0}
+.st .st-n{display:flex;margin:6px 12px 12px;background:#FFF;border:3px solid #1B2340;border-radius:99px;padding:8px 4px;box-shadow:3px 3px 0 #1B2340}
+.st .st-n span{flex:1;text-align:center;font-size:10.5px;font-weight:900;letter-spacing:.04em;color:#8E99B8}
+.st .st-n .on{color:#1B2340}
+
+/* B6 pop */
+.pp{background:#FFFFFF;color:#20163A;font-family:'Nunito',sans-serif}
+.pp .pp-h{display:flex;justify-content:space-between;align-items:baseline;padding:16px 18px 0;background:#FF6B57;color:#FFF}
+.pp .pp-h b{font-family:'Fredoka',sans-serif;font-size:22px;font-weight:700}
+.pp .pp-h span{font-size:12px;font-weight:800;opacity:.85}
+.pp .pp-s{flex:1;overflow:hidden;position:relative}
+.pp .pp-hero{background:#FF6B57;color:#FFF;padding:8px 18px 22px;border-radius:0 0 36px 36px}
+.pp .pp-hero span{font-size:13px;font-weight:800;opacity:.9}
+.pp .pp-hero b{display:block;font-family:'Fredoka',sans-serif;font-size:72px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.pp .pp-chips{display:flex;gap:8px;margin-top:10px}
+.pp .pp-chips i{font-style:normal;background:rgba(255,255,255,.22);border-radius:99px;padding:5px 10px;font-size:11.5px;font-weight:800}
+.pp .pp-mac{padding:16px 18px 6px;display:flex;flex-direction:column;gap:10px}
+.pp .pp-m{display:grid;grid-template-columns:54px 1fr 60px;align-items:center;gap:10px;font-size:12.5px;font-weight:800}
+.pp .pp-m b{text-align:right;font-weight:900}
+.pp .pp-m.ov b{color:#E8521F}
+.pp .pp-bar{height:14px;border-radius:99px;background:#F1EEF8;overflow:hidden}
+.pp .pp-bar i{display:block;height:100%;border-radius:99px}
+.pp .pp-r{display:flex;justify-content:space-between;margin:0 18px;padding:9px 0;font-size:14px;font-weight:700;border-top:1px solid #F1EEF8}
+.pp .pp-r b{font-weight:900}
+.pp .pp-fab{position:absolute;right:16px;bottom:10px;background:#6C5CE7;color:#FFF;border-radius:99px;padding:13px 18px;
+ font-family:'Fredoka',sans-serif;font-size:15px;font-weight:700;box-shadow:0 10px 22px rgba(108,92,231,.4)}
+.pp .pp-n{display:flex;margin:0 14px 14px;background:#20163A;border-radius:99px;padding:10px 4px}
+.pp .pp-n span{flex:1;text-align:center;font-size:12px;font-weight:800;color:#8C82B4}
+.pp .pp-n .on{color:#FFF}
+
+/* B7 pebble */
+.pb{background:#F3FBF9;color:#1F3330;font-family:'Varela Round',sans-serif}
+.pb .pb-h{display:flex;justify-content:space-between;align-items:baseline;padding:18px 18px 6px}
+.pb .pb-h b{font-size:22px}
+.pb .pb-h span{font-size:12px;color:#7E9A95}
+.pb .pb-s{flex:1;padding:0 14px;overflow:hidden}
+.pb .pb-talk{display:flex;align-items:flex-end;gap:8px;margin:4px 0 10px}
+.pb .pb-bub{flex:1;background:#FFF;border-radius:18px 18px 18px 4px;padding:10px 12px;font-size:12px;line-height:1.4;
+ box-shadow:0 4px 12px rgba(40,90,80,.1)}
+.pb .pb-hero{background:#3AA8A0;color:#FFF;border-radius:22px;padding:12px 16px;display:flex;justify-content:space-between;align-items:baseline}
+.pb .pb-hero span{font-size:12px;opacity:.9}
+.pb .pb-hero b{font-size:36px;line-height:1}
+.pb .pb-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.pb .pb-c{background:#FFF;border-radius:18px;padding:10px 12px;box-shadow:0 4px 12px rgba(40,90,80,.08)}
+.pb .pb-c span{display:block;font-size:11px;color:#7E9A95}
+.pb .pb-c b{font-size:22px;display:inline-block;margin-top:2px}
+.pb .pb-c i{font-style:normal;font-size:11px;color:#7E9A95;margin-left:2px}
+.pb .pb-c.ov b{color:#D9553C}
+.pb .pb-t{height:8px;border-radius:99px;background:#E6F1EE;margin-top:8px;overflow:hidden}
+.pb .pb-t u{display:block;height:100%;border-radius:99px}
+.pb .pb-r{display:flex;justify-content:space-between;padding:8px 6px;font-size:13.5px;border-top:1px solid #E1EDEA}
+.pb .pb-n{display:flex;padding:12px 0 16px;background:#FFF;border-top:1px solid #E1EDEA}
+.pb .pb-n span{flex:1;text-align:center;font-size:12px;color:#9DB3AE}
+.pb .pb-n .on{color:#3AA8A0}
+
+/* B8 soft */
+.sf{background:#E9EAF3;color:#2A2C3E;font-family:'Poppins',sans-serif}
+.sf .sf-h{display:flex;justify-content:space-between;align-items:baseline;padding:18px 20px 6px}
+.sf .sf-h b{font-size:21px;font-weight:600}
+.sf .sf-h span{font-size:12px;color:#8A8DA5}
+.sf .sf-s{flex:1;padding:0 16px;overflow:hidden}
+.sf .sf-dial{position:relative;width:164px;height:164px;margin:6px auto 12px;border-radius:50%;
+ box-shadow:10px 10px 22px rgba(90,95,140,.25),-10px -10px 22px #FFF}
+.sf .sf-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.sf .sf-mid b{font-size:30px;font-weight:700;line-height:1}
+.sf .sf-mid span{font-size:11px;color:#8A8DA5}
+.sf .sf-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.sf .sf-c{border-radius:20px;padding:12px 10px;text-align:center;box-shadow:8px 8px 18px rgba(90,95,140,.22),-8px -8px 18px #FFF}
+.sf .sf-c span{font-size:10.5px;color:#8A8DA5;font-weight:500}
+.sf .sf-c b{display:block;font-size:22px;font-weight:700;line-height:1.1}
+.sf .sf-c em{font-style:normal;font-size:10.5px;color:#8A8DA5}
+.sf .sf-c.ov b{color:#D9553C}
+.sf .sf-in{border-radius:20px;padding:4px 14px;box-shadow:inset 6px 6px 14px rgba(90,95,140,.2),inset -6px -6px 14px #FFF}
+.sf .sf-r{display:flex;justify-content:space-between;padding:9px 0;font-size:13px;font-weight:500}
+.sf .sf-r b{font-weight:700}
+.sf .sf-n{display:flex;margin:8px 16px 14px;border-radius:99px;padding:10px 4px;box-shadow:8px 8px 18px rgba(90,95,140,.22),-8px -8px 18px #FFF}
+.sf .sf-n span{flex:1;text-align:center;font-size:11.5px;font-weight:600;color:#9C9FB8}
+.sf .sf-n .on{color:#7C6CF0}
+
+/* B9 gummy */
+.gm{background:#1B1233;color:#FFF;font-family:'Baloo 2',sans-serif}
+.gm .gm-h{display:flex;justify-content:space-between;align-items:baseline;padding:16px 18px 6px}
+.gm .gm-h b{font-size:24px;font-weight:800}
+.gm .gm-h span{font-size:12px;color:#A99BD6;font-weight:600}
+.gm .gm-s{flex:1;padding:4px 14px;display:flex;flex-direction:column;gap:11px;overflow:hidden}
+.gm .gm-card{border-radius:24px;padding:14px 16px;position:relative;overflow:hidden;
+ box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 8px 20px rgba(0,0,0,.35)}
+.gm .gm-card::after{content:"";position:absolute;left:8%;right:8%;top:6px;height:34%;border-radius:99px;
+ background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0));pointer-events:none}
+.gm .gm-card span{font-size:12px;font-weight:700;opacity:.85}
+.gm .gm-card b{display:block;font-size:30px;font-weight:800;line-height:1.05}
+.gm .gm-card em{font-style:normal;font-size:11.5px;font-weight:700;opacity:.85}
+.gm .lead{background:linear-gradient(160deg,#8B5CF6,#5B3FD1);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 14px 34px rgba(139,92,246,.55)}
+.gm .lead b{font-size:50px}
+.gm .gm-t{height:14px;border-radius:99px;background:rgba(0,0,0,.28);margin-top:10px;overflow:hidden}
+.gm .gm-t i{display:block;height:100%;border-radius:99px;background:linear-gradient(180deg,#FFF,#DDD3FF)}
+.gm .gm-g{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.gm .gm-g .gm-card{padding:12px 14px}
+.gm .pk{background:linear-gradient(160deg,#FF6FA3,#E23D7B)}.gm .cy{background:linear-gradient(160deg,#3FD3E0,#1F9DB8)}
+.gm .or{background:linear-gradient(160deg,#FFA94D,#E6702E)}.gm .gr{background:linear-gradient(160deg,#5DE39A,#2BB56E)}
+.gm .gm-card.ov{box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 0 0 3px #FFF,0 8px 20px rgba(0,0,0,.35)}
+.gm .gm-r{display:flex;justify-content:space-between;padding:8px 6px;font-size:14px;font-weight:700;color:#DCD3F5}
+.gm .gm-r b{color:#FFF;font-weight:800}
+.gm .gm-n{display:flex;margin:6px 14px 14px;background:#2A1F4D;border-radius:99px;padding:10px 4px;box-shadow:inset 0 2px 0 rgba(255,255,255,.12)}
+.gm .gm-n span{flex:1;text-align:center;font-size:12px;font-weight:800;color:#8C7FBF}
+.gm .gm-n .on{color:#FFF}
+
+/* B10 bento */
+.bn{background:#F6F5F2;color:#25242B;font-family:'Rubik',sans-serif}
+.bn .bn-h{display:flex;justify-content:space-between;align-items:baseline;padding:18px 18px 8px}
+.bn .bn-h b{font-size:22px;font-weight:700}
+.bn .bn-h span{font-size:12px;color:#8E8D98;font-weight:500}
+.bn .bn-s{flex:1;padding:4px 14px;overflow:hidden}
+.bn .bn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bn .bn-t{border-radius:22px;padding:14px 15px}
+.bn .w2{grid-column:span 2}
+.bn .bn-t span{font-size:11.5px;font-weight:500;opacity:.7}
+.bn .bn-t b{display:block;font-size:28px;font-weight:700;line-height:1.1;margin-top:2px}
+.bn .lav b{font-size:48px}
+.bn .bn-t em{font-style:normal;font-size:11px;font-weight:500;opacity:.7}
+.bn .lav{background:#DCD6FF}.bn .pk{background:#FFD9E4}.bn .mt{background:#CFF2E4}.bn .pc{background:#FFE3CC}.bn .sk{background:#D6E9FF}.bn .wh{background:#FFF}
+.bn .bn-t.ov{box-shadow:inset 0 0 0 3px #F0805A}
+.bn .bn-r{display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px;font-weight:500;border-top:1px solid #EFEEF4}
+.bn .bn-r b{font-size:13.5px;margin:0;display:inline;font-weight:700}
+.bn .bn-n{display:flex;margin:8px 14px 14px;background:#FFF;border-radius:99px;padding:10px 4px;box-shadow:0 6px 16px rgba(30,30,50,.08)}
+.bn .bn-n span{flex:1;text-align:center;font-size:12px;font-weight:500;color:#A2A1AD}
+.bn .bn-n .on{color:#25242B;font-weight:700}
+
+
+:focus-visible{outline:2px solid var(--marker);outline-offset:3px}
+</style>
+<div class="page">
+ <div class="head">
+  <p class="eyebrow">Design review · volume eight</p>
+  <h1>Theme picker and Pebble</h1>
+  <p class="intro">Settings › Appearance › Theme shows every theme as a <strong>live preview of the
+  Today screen using the user's own numbers</strong>, not a name in a list. Tap to select, green tick,
+  Confirm applies it. The same component runs in onboarding. Pebble is a separate toggle, off by default.</p>
+ </div>
+ <div class="rail">
+  <section class="col"><h2>1 · Browse</h2><p>Real Today screen rendered per theme at 0.19 scale, name, strap, one line, and what it uses that Minimal doesn't.</p><div class="bezel"><div class="phone sp"><div class="sp-h">‹ Appearance<span>Theme</span></div>
+<div class="sp-sub">Previews use your own numbers from today. Nothing changes until you confirm.</div>
+<div class="sp-list"><div class="trow"><div class="thumb"><div class="tscale"><div class="phone mn"><div class="mn-h">Today<span>22 Aug</span></div><div class="mn-s">
+<div class="mn-l">ENERGY REMAINING</div><div class="mn-n">2,029</div>
+<div class="mn-r"><span>Protein</span><b>142 / 180</b></div><div class="mn-r"><span>Carbs</span><b>210 / 240</b></div>
+<div class="mn-r ov"><span>Fat</span><b>41 / 36 · over</b></div><div class="mn-r"><span>Almonds</span><b>85</b></div><div class="mn-r"><span>Jasmine rice</span><b>195</b></div></div></div></div></div>
+ <div class="tinfo"><b>Minimal</b><span>current · default</span><p>Hairlines, mono numerals, nothing decorative.</p></div>
+ <i class="tick"></i></div><div class="trow"><div class="thumb"><div class="tscale"><div class="phone cl">
+ <div class="cl-h"><b>Today</b><i class="cl-btn">⚙</i></div>
+ <div class="cl-s">
+  <div class="cl-card big"><span>Energy left</span><b>2,029</b>
+   <div class="cl-track"><i style="width:27%"></i></div></div>
+  <div class="cl-g">
+   <div class="cl-card vi"><span>Protein</span><b>142</b><em>/180</em></div>
+   <div class="cl-card mi"><span>Carbs</span><b>210</b><em>/240</em></div>
+   <div class="cl-card pe ov"><span>Fat</span><b>41</b><em>/36 over</em></div>
+   <div class="cl-card ye"><span>Steps</span><b>8,412</b><em>today</em></div>
+  </div>
+  <div class="cl-r">Almonds<b>85</b></div><div class="cl-r">Jasmine rice<b>195</b></div>
+ </div>
+ <div class="cl-n"><span class="on">Today</span><span>Log</span><span>Train</span><span>Rest</span></div></div></div></div>
+ <div class="tinfo"><b>Clay</b><span>baloo 2 · claymorphism</span><p>Pressable pastel cards, extruded surfaces.</p><em>Uses: soft shadows, rounded cards</em></div>
+ <i class="tick"></i></div><div class="trow"><div class="thumb"><div class="tscale"><div class="phone st">
+ <div class="st-h"><b>TODAY!</b><span class="st-tag">22 AUG</span></div>
+ <div class="st-s">
+  <div class="st-card hero"><span>ENERGY LEFT</span><b>2,029</b><em>kcal</em></div>
+  <div class="st-row">
+   <div class="st-card pk"><span>PROTEIN</span><b>142</b><em>/180</em></div>
+   <div class="st-card ye"><span>CARBS</span><b>210</b><em>/240</em></div>
+  </div>
+  <div class="st-card or ov"><span>FAT · OVER BY 5</span><b>41<i>/36</i></b></div>
+  <div class="st-card wh list"><div class="st-r">Almonds<b>85</b></div><div class="st-r">Jasmine rice<b>195</b></div></div>
+ </div>
+ <div class="st-n"><span class="on">TODAY</span><span>LOG</span><span>TRAIN</span><span>REST</span></div></div></div></div>
+ <div class="tinfo"><b>Sticker</b><span>lilita one · die-cut</span><p>White halos, tilted cards, poster type.</p><em>Uses: tilt, hard offsets</em></div>
+ <i class="tick"></i></div><div class="trow"><div class="thumb"><div class="tscale"><div class="phone gm">
+ <div class="gm-h"><b>Today</b><span>22 Aug</span></div>
+ <div class="gm-s">
+  <div class="gm-card lead"><span>Energy left</span><b>2,029</b><em>kcal</em>
+   <div class="gm-t"><i style="width:27%"></i></div></div>
+  <div class="gm-g">
+   <div class="gm-card pk"><span>Protein</span><b>142</b><em>/180</em></div>
+   <div class="gm-card cy"><span>Carbs</span><b>210</b><em>/240</em></div>
+   <div class="gm-card or ov"><span>Fat</span><b>41</b><em>/36 over</em></div>
+   <div class="gm-card gr"><span>Steps</span><b>8,412</b><em>today</em></div>
+  </div>
+  <div class="gm-r">Almonds<b>85</b></div><div class="gm-r">Jasmine rice<b>195</b></div>
+ </div>
+ <div class="gm-n"><span class="on">Today</span><span>Log</span><span>Train</span><span>Rest</span></div></div></div></div>
+ <div class="tinfo"><b>Gummy</b><span>baloo 2 · glossy dark</span><p>Gradient tiles with a top sheen on violet.</p><em>Uses: gradients, glow</em></div>
+ <i class="tick"></i></div><div class="trow"><div class="thumb"><div class="tscale"><div class="phone sf">
+ <div class="sf-h"><b>Today</b><span>22 Aug</span></div>
+ <div class="sf-s">
+  <div class="sf-dial"><svg viewBox="0 0 164 164" width="164" height="164" aria-hidden="true"><circle cx="82.0" cy="82.0" r="70" fill="none" stroke="#DCDDE8" stroke-width="12"/><circle cx="82.0" cy="82.0" r="70" fill="none" stroke="#7C6CF0" stroke-width="12" stroke-linecap="round" stroke-dasharray="439.8" stroke-dashoffset="321.1" transform="rotate(-90 82.0 82.0)"/></svg><div class="sf-mid"><b>2,029</b><span>kcal left</span></div></div>
+  <div class="sf-g">
+   <div class="sf-c"><span>Protein</span><b>142</b><em>/180</em></div>
+   <div class="sf-c"><span>Carbs</span><b>210</b><em>/240</em></div>
+   <div class="sf-c ov"><span>Fat</span><b>41</b><em>/36</em></div>
+  </div>
+  <div class="sf-in"><div class="sf-r">Almonds<b>85</b></div><div class="sf-r">Jasmine rice<b>195</b></div></div>
+ </div>
+ <div class="sf-n"><span class="on">Today</span><span>Log</span><span>Train</span><span>Rest</span></div></div></div></div>
+ <div class="tinfo"><b>Soft</b><span>poppins · neumorphic</span><p>One pale material, extruded and inset.</p><em>Uses: soft shadows, dial</em></div>
+ <i class="tick"></i></div><div class="trow"><div class="thumb"><div class="tscale"><div class="phone cr">
+ <div class="cr-h"><b>Today</b><span>22 Aug</span></div>
+ <div class="cr-s">
+  <div class="cr-hero">
+   <div class="cr-stack"><svg viewBox="0 0 150 150" width="150" height="150" aria-hidden="true"><circle cx="75.0" cy="75.0" r="66" fill="none" stroke="#FFE1EA" stroke-width="11"/><circle cx="75.0" cy="75.0" r="66" fill="none" stroke="#FF5C8A" stroke-width="11" stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="112.0" transform="rotate(-90 75.0 75.0)"/></svg><div class="cr-in"><svg viewBox="0 0 150 150" width="150" height="150" aria-hidden="true"><circle cx="75.0" cy="75.0" r="52" fill="none" stroke="#FFF0D0" stroke-width="11"/><circle cx="75.0" cy="75.0" r="52" fill="none" stroke="#FFB020" stroke-width="11" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="68.6" transform="rotate(-90 75.0 75.0)"/></svg></div>
+    <div class="cr-in"><svg viewBox="0 0 150 150" width="150" height="150" aria-hidden="true"><circle cx="75.0" cy="75.0" r="38" fill="none" stroke="#D7F7EE" stroke-width="11"/><circle cx="75.0" cy="75.0" r="38" fill="none" stroke="#2ED3A5" stroke-width="11" stroke-linecap="round" stroke-dasharray="238.8" stroke-dashoffset="31.0" transform="rotate(-90 75.0 75.0)"/></svg></div>
+    <div class="cr-mid"><b>2,029</b><span>left</span></div></div>
+   <div class="cr-key"><div><i style="background:#FF5C8A"></i>Energy <b>73%</b></div>
+    <div><i style="background:#FFB020"></i>Protein <b>142/180</b></div>
+    <div><i style="background:#2ED3A5"></i>Carbs <b>210/240</b></div></div>
+  </div>
+  <div class="cr-warn"><b>Fat 41 / 36</b> — 5 g over today</div>
+  <div class="cr-tiles"><div><span>Steps</span><b>8,412</b></div><div><span>Sleep</span><b>7h 10</b></div></div>
+  <div class="cr-r">Almonds<b>85</b></div><div class="cr-r">Jasmine rice<b>195</b></div>
+ </div>
+ <div class="cr-n"><span class="on">Today</span><span>Log</span><span>Train</span><span>Rest</span></div></div></div></div>
+ <div class="tinfo"><b>Candy Rings</b><span>fredoka · rings</span><p>Nested rings, warm brights on white.</p><em>Uses: ring meters</em></div>
+ <i class="tick"></i></div></div></div></div></section>
+  <section class="col"><h2>2 · Selected</h2><p>Green tick on the row, sticky Confirm bar. Back or another tap discards. Nothing restyles until Confirm.</p><div class="bezel"><div class="phone sp"><div class="sp-h">‹ Appearance<span>Theme</span></div>
+<div class="sp-sub">Previews use your own numbers from today. Nothing changes until you confirm.</div>
+<div class="sp-list"><div class="trow"><div class="thumb"><div class="tscale"><div class="phone mn"><div class="mn-h">Today<span>22 Aug</span></div><div class="mn-s">
+<div class="mn-l">ENERGY REMAINING</div><div class="mn-n">2,029</div>
+<div class="mn-r"><span>Protein</span><b>142 / 180</b></div><div class="mn-r"><span>Carbs</span><b>210 / 240</b></div>
+<div class="mn-r ov"><span>Fat</span><b>41 / 36 · over</b></div><div class="mn-r"><span>Almonds</span><b>85</b></div><div class="mn-r"><span>Jasmine rice</span><b>195</b></div></div></div></div></div>
+ <div class="tinfo"><b>Minimal</b><span>current · default</span><p>Hairlines, mono numerals, nothing decorative.</p></div>
+ <i class="tick"></i></div><div class="trow sel"><div class="thumb"><div class="tscale"><div class="phone cl">
+ <div class="cl-h"><b>Today</b><i class="cl-btn">⚙</i></div>
+ <div class="cl-s">
+  <div class="cl-card big"><span>Energy left</span><b>2,029</b>
+   <div class="cl-track"><i style="width:27%"></i></div></div>
+  <div class="cl-g">
+   <div class="cl-card vi"><span>Protein</span><b>142</b><em>/180</em></div>
+   <div class="cl-card mi"><span>Carbs</span><b>210</b><em>/240</em></div>
+   <div class="cl-card pe ov"><span>Fat</span><b>41</b><em>/36 over</em></div>
+   <div class="cl-card ye"><span>Steps</span><b>8,412</b><em>today</em></div>
+  </div>
+  <div class="cl-r">Almonds<b>85</b></div><div class="cl-r">Jasmine rice<b>195</b></div>
+ </div>
+ <div class="cl-n"><span class="on">Today</span><span>Log</span><span>Train</span><span>Rest</span></div></div></div></div>
+ <div class="tinfo"><b>Clay</b><span>baloo 2 · claymorphism</span><p>Pressable pastel cards, extruded surfaces.</p><em>Uses: soft shadows, rounded cards</em></div>
+ <i class="tick">✓</i></div><div class="trow"><div class="thumb"><div class="tscale"><div class="phone st">
+ <div class="st-h"><b>TODAY!</b><span class="st-tag">22 AUG</span></div>
+ <div class="st-s">
+  <div class="st-card hero"><span>ENERGY LEFT</span><b>2,029</b><em>kcal</em></div>
+  <div class="st-row">
+   <div class="st-card pk"><span>PROTEIN</span><b>142</b><em>/180</em></div>
+   <div class="st-card ye"><span>CARBS</span><b>210</b><em>/240</em></div>
+  </div>
+  <div class="st-card or ov"><span>FAT · OVER BY 5</span><b>41<i>/36</i></b></div>
+  <div class="st-card wh list"><div class="st-r">Almonds<b>85</b></div><div class="st-r">Jasmine rice<b>195</b></div></div>
+ </div>
+ <div class="st-n"><span class="on">TODAY</span><span>LOG</span><span>TRAIN</span><span>REST</span></div></div></div></div>
+ <div class="tinfo"><b>Sticker</b><span>lilita one · die-cut</span><p>White halos, tilted cards, poster type.</p><em>Uses: tilt, hard offsets</em></div>
+ <i class="tick"></i></div><div class="trow"><div class="thumb"><div class="tscale"><div class="phone gm">
+ <div class="gm-h"><b>Today</b><span>22 Aug</span></div>
+ <div class="gm-s">
+  <div class="gm-card lead"><span>Energy left</span><b>2,029</b><em>kcal</em>
+   <div class="gm-t"><i style="width:27%"></i></div></div>
+  <div class="gm-g">
+   <div class="gm-card pk"><span>Protein</span><b>142</b><em>/180</em></div>
+   <div class="gm-card cy"><span>Carbs</span><b>210</b><em>/240</em></div>
+   <div class="gm-card or ov"><span>Fat</span><b>41</b><em>/36 over</em></div>
+   <div class="gm-card gr"><span>Steps</span><b>8,412</b><em>today</em></div>
+  </div>
+  <div class="gm-r">Almonds<b>85</b></div><div class="gm-r">Jasmine rice<b>195</b></div>
+ </div>
+ <div class="gm-n"><span class="on">Today</span><span>Log</span><span>Train</span><span>Rest</span></div></div></div></div>
+ <div class="tinfo"><b>Gummy</b><span>baloo 2 · glossy dark</span><p>Gradient tiles with a top sheen on violet.</p><em>Uses: gradients, glow</em></div>
+ <i class="tick"></i></div></div>
+<div class="sp-bar"><span>Clay selected</span><b>Confirm</b></div></div></div></section>
+  <section class="col"><h2>3 · Pebble</h2><p>Three toggles and the one law that makes a mascot survive your own research: proposals with actions, never commentary.</p><div class="bezel"><div class="phone sp"><div class="sp-h">‹ Settings<span>Pebble</span></div>
+<div class="sp-peb"><svg viewBox="0 0 80 64" width="80" height="64" aria-label="Pebble, the Basalt mascot">
+<path d="M12 40 C8 18 30 6 46 8 C66 10 76 26 72 42 C68 58 50 62 36 60 C22 58 14 52 12 40Z" fill="#3F4756"/>
+<path d="M22 22 C30 14 44 12 56 16" stroke="#59627A" stroke-width="3" fill="none" stroke-linecap="round"/>
+<circle cx="32" cy="32" r="5" fill="#FFF"/><circle cx="52" cy="32" r="5" fill="#FFF"/>
+<circle cx="33.5" cy="33" r="2.4" fill="#111"/><circle cx="53.5" cy="33" r="2.4" fill="#111"/>
+<path d="M36 44 C40 48 46 48 50 44" stroke="#111" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<circle cx="24" cy="40" r="3.5" fill="#FF9AAE" opacity=".8"/><circle cx="60" cy="40" r="3.5" fill="#FF9AAE" opacity=".8"/></svg><div><b>Pebble</b><span>Off by default. Pebble only speaks when there's something to do.</span></div></div>
+<div class="sp-tog"><span>Show Pebble in the app</span><i class="on"></i></div>
+<div class="sp-tog"><span>Notifications come from Pebble</span><i class="on"></i></div>
+<div class="sp-tog"><span>Pebble on Trends and data screens</span><i></i></div>
+<div class="sp-law">Pebble never comments on how you did. Every message is a proposal with an action, and you can dismiss any of them. Turning Pebble off keeps the same notifications in Basalt's plain voice.</div>
+<div class="sp-lab">Example notifications</div>
+<div class="notif"><div class="n-ic"><svg viewBox="0 0 80 64" width="80" height="64" aria-label="Pebble, the Basalt mascot">
+<path d="M12 40 C8 18 30 6 46 8 C66 10 76 26 72 42 C68 58 50 62 36 60 C22 58 14 52 12 40Z" fill="#3F4756"/>
+<path d="M22 22 C30 14 44 12 56 16" stroke="#59627A" stroke-width="3" fill="none" stroke-linecap="round"/>
+<circle cx="32" cy="32" r="5" fill="#FFF"/><circle cx="52" cy="32" r="5" fill="#FFF"/>
+<circle cx="33.5" cy="33" r="2.4" fill="#111"/><circle cx="53.5" cy="33" r="2.4" fill="#111"/>
+<path d="M36 44 C40 48 46 48 50 44" stroke="#111" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<circle cx="24" cy="40" r="3.5" fill="#FF9AAE" opacity=".8"/><circle cx="60" cy="40" r="3.5" fill="#FF9AAE" opacity=".8"/></svg></div><div><b>Pebble · Basalt</b><span>Protein's 38 g short with dinner left. Want the two quickest options?</span><em>Show options · Not tonight</em></div></div>
+<div class="notif"><div class="n-ic"><svg viewBox="0 0 80 64" width="80" height="64" aria-label="Pebble, the Basalt mascot">
+<path d="M12 40 C8 18 30 6 46 8 C66 10 76 26 72 42 C68 58 50 62 36 60 C22 58 14 52 12 40Z" fill="#3F4756"/>
+<path d="M22 22 C30 14 44 12 56 16" stroke="#59627A" stroke-width="3" fill="none" stroke-linecap="round"/>
+<circle cx="32" cy="32" r="5" fill="#FFF"/><circle cx="52" cy="32" r="5" fill="#FFF"/>
+<circle cx="33.5" cy="33" r="2.4" fill="#111"/><circle cx="53.5" cy="33" r="2.4" fill="#111"/>
+<path d="M36 44 C40 48 46 48 50 44" stroke="#111" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<circle cx="24" cy="40" r="3.5" fill="#FF9AAE" opacity=".8"/><circle cx="60" cy="40" r="3.5" fill="#FF9AAE" opacity=".8"/></svg></div><div><b>Pebble · Basalt</b><span>Readiness is low (58, ±6). Swap today's session for the lighter version?</span><em>Swap · Keep plan</em></div></div>
+<div class="notif plain"><div class="n-ic b">B</div><div><b>Basalt</b><span>Protein 38 g short with dinner left.</span><em>Show options · Not tonight</em></div></div>
+</div></div></section>
+ </div>
+ <div class="laws">
+  <h2>What changes in the contract</h2>
+  <p><strong>Forbidden list becomes two lists.</strong> Globally forbidden stays: XP, confetti, streak
+  shaming, fake precision, narration of results, hidden formulas. <strong>Theme-scoped expression</strong>
+  is new: rings, gradients, glow, soft shadow, tilt, pastel grounds — each gated by a token, each
+  allowed only where a theme declares it. Minimal declares none of them, so the default app is
+  untouched.</p>
+  <p><strong>Ring rule.</strong> <code>meter: 'ring'</code> is legal, but a ring can only show 100%.
+  Over-cap must also render in words next to the ring. That's a conformance test, not a guideline.</p>
+  <p><strong>Pebble rule.</strong> Pebble may only render when a proposal with an action exists.
+  No proposal, no Pebble. Off, every message ships in Basalt's plain voice with identical actions —
+  the mascot is a voice setting, never a content setting.</p>
+ </div>
+</div>

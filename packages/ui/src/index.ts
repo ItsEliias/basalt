@@ -18,3 +18,5 @@ export * from './components/body-figure';
 export * from './components/tab-icons';
 export * from './components/groundGlow';
 export * from './components/scaledText';
+export * from './components/meters';
+export * from './pebble/Pebble';
