@@ -41,12 +41,22 @@
         "android.permission.health.READ_ELEVATION_GAINED",
         "android.permission.health.READ_SPEED",
         "android.permission.health.READ_POWER"
-      ]
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F1115"
+      }
     },
     "plugins": [
       "react-native-health-connect",
       "@maplibre/maplibre-react-native",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#3E9B78"
+        }
+      ],
       "./plugins/withForegroundServiceTypes.js",
       "./plugins/withNotifeeMavenRepo.js",
       "./plugins/withHealthConnectQueries.js",
@@ -66,8 +76,8 @@
           "widgets": [
             {
               "name": "BasaltToday",
-              "label": "Basalt — Today",
-              "description": "Energy remaining and water, as of your last open — never invented.",
+              "label": "Basalt \u2014 Today",
+              "description": "Energy remaining and water, as of your last open \u2014 never invented.",
               "minWidth": "180dp",
               "minHeight": "80dp",
               "updatePeriodMillis": 1800000
@@ -101,7 +111,7 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "bluetoothAlwaysPermission": "Basalt uses Bluetooth to read weigh-ins from your smart scale — only when you ask it to."
+          "bluetoothAlwaysPermission": "Basalt uses Bluetooth to read weigh-ins from your smart scale \u2014 only when you ask it to."
         }
       ],
       [
@@ -111,6 +121,7 @@
           "enableMicrophonePermission": false
         }
       ]
-    ]
+    ],
+    "icon": "./assets/icon.png"
   }
 }
