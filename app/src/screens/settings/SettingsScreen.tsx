@@ -20,6 +20,9 @@ import { HIDEABLE_SECTIONS } from '../today/model';
 import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgroundWork';
 import { getPebbleSettings, setPebbleSettings } from '../../lib/pebble';
 import { PEBBLE_DEFAULTS, type PebbleSettings } from '../../lib/pebbleModel';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { buildFeedbackMailto } from '../../lib/feedbackModel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { zipSync, strToU8 } from 'fflate';
 import {
@@ -560,6 +563,25 @@ export function SettingsScreen() {
       <Card>
         <ReceiptHeader label="Account" />
         <ReceiptRow name={session?.user.email ?? '—'} meta="free plan" />
+        <Pressable
+          onPress={() => {
+            const androidC = Platform.OS === 'android'
+              ? (Platform.constants as { Model?: string; Release?: string })
+              : {};
+            void Linking.openURL(buildFeedbackMailto({
+              version: Constants.expoConfig?.version ?? null,
+              build: Constants.nativeBuildVersion ?? null,
+              theme: profile?.theme ?? 'minimal',
+              model: androidC.Model ?? null,
+              androidRelease: androidC.Release ?? null,
+            }));
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Send feedback"
+        >
+          <ReceiptRow name="Send feedback" meta="opens your mail app — nothing is sent silently" value="→" valueColor={theme.text.faint} />
+        </Pressable>
         <Pressable
           onPress={() => void Linking.openURL('https://basalt.itseliias.com/privacy/')}
           hitSlop={8}

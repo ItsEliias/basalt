@@ -197,3 +197,15 @@ Legend: each line is a checkbox; note failures inline with device + Android vers
       Track cycle button enables the card
 - [ ] Water tile shows 'Nothing logged yet · target ml' before first entry
 - [ ] Guided timer: countdown at hero size while counting; readable at 2 m
+
+### 26 · Play closed-test additions (2026-09-07)
+- [ ] Settings › Account › Send feedback: opens the mail client with
+      to=itseliiasstudy@gmail.com, subject "Basalt feedback v0.1.0", and the
+      body pre-filled with app version+build, active theme, device model and
+      Android version — all correct for THIS device, nothing sent silently
+      (the row itself is theme-token styled; check a non-Minimal theme too)
+- [ ] Settings › Account › Privacy policy: opens basalt.itseliias.com/privacy
+      in the browser
+- [ ] Delete account (QA/burner account only!): completes with "sign-in
+      record" gone — signing in again with the same credentials fails
+      (deletion is unconditional as of 2026-09-07)
