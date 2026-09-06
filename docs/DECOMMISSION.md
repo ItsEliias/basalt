@@ -7,10 +7,15 @@ dedicated project when a trigger fires.
 
 ## Triggers — migrate when the FIRST of these happens
 
-1. **First external tester** (anyone who isn't the developer signs up).
-2. **Store submission** (Play or App Store — the delete-account conditionality must go before
-   review).
-3. **Resumed Arise schema work** (any Arise migration activity in the shared project).
+(Amended 2026-09-07: the Play **closed test** runs on the shared project by
+decision — external testers during that window do NOT trigger this runbook.
+The delete-account conditionality is already gone: deletion is unconditional
+as of the same date, and Arise tables carry no FKs to auth.users, so an auth
+deletion orphans Arise rows without touching them.)
+
+1. **Production access on Google Play** (after the 14-day closed test) — the
+   dedicated project must be live before promotion past closed testing.
+2. **Resumed Arise schema work** (any Arise migration activity in the shared project).
 
 ## Runbook
 

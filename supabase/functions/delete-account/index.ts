@@ -6,10 +6,13 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 // 2. Deletes every basalt_ row belonging to them (service role bypasses RLS;
 //    children cascade from parents, but each table is deleted explicitly so
 //    the wipe stays complete even if an FK ever changes).
-// 3. Shared-project caveat: this Supabase project also hosts the Arise app
-//    with the same auth pool. The auth user record is deleted ONLY when the
-//    caller has no Arise rows — otherwise deleting it would destroy their
-//    Arise account too. The response says plainly which happened.
+// 3. The auth record is deleted UNCONDITIONALLY (Play account-deletion
+//    compliance). The project is shared with the Arise app until the
+//    decommission: Arise tables carry no foreign keys to auth.users
+//    (verified 2026-09-07), so deleting the auth record orphans any Arise
+//    rows without touching them — and this function never touches
+//    un-prefixed tables. An account that also used Arise loses sign-in;
+//    accepted for the closed test, resolved for good by the decommission.
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -64,21 +67,6 @@ const TWO_SIDED: { table: string; columns: string[] }[] = [
 
 // Private storage buckets holding the user's files under a `${uid}/` prefix.
 const BASALT_BUCKETS = ['basalt-food-photos', 'basalt-progress-photos', 'basalt-recipe-photos'];
-
-// Arise-app tables sharing this project's auth pool; user_profiles keys on id.
-const ARISE_TABLES: { table: string; column: string }[] = [
-  { table: 'user_profiles', column: 'id' },
-  { table: 'daily_logs', column: 'user_id' },
-  { table: 'food_entries', column: 'user_id' },
-  { table: 'workout_logs', column: 'user_id' },
-  { table: 'step_logs', column: 'user_id' },
-  { table: 'sleep_logs', column: 'user_id' },
-  { table: 'walks', column: 'user_id' },
-  { table: 'weight_entries', column: 'user_id' },
-  { table: 'wellbeing_logs', column: 'user_id' },
-  { table: 'habits', column: 'user_id' },
-  { table: 'habit_logs', column: 'user_id' },
-];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -147,32 +135,26 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 3. Delete the auth record only when no Arise data depends on it.
-  let hasAriseData = false;
-  for (const { table, column } of ARISE_TABLES) {
-    const { count, error } = await admin
-      .from(table)
-      .select('*', { count: 'exact', head: true })
-      .eq(column, uid);
-    if (!error && (count ?? 0) > 0) {
-      hasAriseData = true;
-      break;
-    }
-  }
-
-  let authDeleted = false;
-  if (!hasAriseData) {
-    const { error } = await admin.auth.admin.deleteUser(uid);
-    authDeleted = !error;
+  // 3. Delete the auth record — unconditionally. If this fails the caller
+  // must know: their rows are gone but the account is not, which is a
+  // compliance-relevant half-state we refuse to report as success.
+  const { error: authError } = await admin.auth.admin.deleteUser(uid);
+  if (authError) {
+    return new Response(
+      JSON.stringify({
+        dataDeleted: true,
+        authDeleted: false,
+        error: `Every Basalt row is gone, but deleting the sign-in record failed: ${authError.message}. Try again or contact support.`,
+      }),
+      { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } },
+    );
   }
 
   return new Response(
     JSON.stringify({
       dataDeleted: true,
-      authDeleted,
-      note: authDeleted
-        ? 'Every Basalt row and your sign-in record are gone.'
-        : 'Every Basalt row is gone. Your sign-in record remains because this account also holds Arise data.',
+      authDeleted: true,
+      note: 'Every Basalt row and your sign-in record are gone.',
     }),
     { headers: { ...CORS, 'Content-Type': 'application/json' } },
   );
