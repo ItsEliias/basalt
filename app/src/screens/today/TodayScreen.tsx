@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
@@ -10,6 +10,13 @@ import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
+import { loadReadiness } from '@basalt/analytics';
+import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
+import {
+  PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
+  macroShortfallProposal, readinessSwapProposal, sleepDebtProposal,
+  type PebbleSettings,
+} from '../../lib/pebbleModel';
 import { Image } from 'react-native';
 import { signedPhotoUrls, mealBudgets, trainingDayTarget } from '@basalt/nutrition';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -110,7 +117,9 @@ async function loadToday(): Promise<TodayData> {
   };
 }
 
-export function TodayScreen() {
+export function TodayScreen({ onOpenTab }: {
+  onOpenTab?: (tab: 'log' | 'train' | 'recover') => void;
+} = {}) {
   const { theme } = useTheme();
   const targets = useAppStore((s) => s.targets);
   const profile = useAppStore((s) => s.profile);
@@ -123,6 +132,10 @@ export function TodayScreen() {
   // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
   const layout = profile?.todayLayout ?? 'ledger';
 
+  const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
+  const [pebbleDismissed, setPebbleDismissed] = useState<string[]>([]);
+  const [readinessScore, setReadinessScore] = useState<number | null>(null);
+
   const refresh = useCallback(async () => {
     setData(await loadToday());
     // Tile hide/show — hiding is omission; re-read so Settings changes land.
@@ -131,6 +144,14 @@ export function TodayScreen() {
       setHidden(new Set(raw ? (JSON.parse(raw) as string[]) : []));
     } catch {
       setHidden(new Set());
+    }
+    // Pebble: settings + today's dismissals; readiness only when it can show.
+    const pebble = await getPebbleSettings();
+    setPebbleSettings(pebble);
+    setPebbleDismissed(await dismissedToday(todayISO()));
+    if (pebble.showInApp) {
+      const r = await loadReadiness(supabase, new Date());
+      setReadinessScore(r.ok ? r.data.readiness.score : null);
     }
   }, []);
 
@@ -205,6 +226,34 @@ export function TodayScreen() {
         )
       : null;
 
+  // Pebble — proposals with actions, never commentary. Candidates come
+  // from engine values already on this screen; macro proposals stay silent
+  // under Hide-the-numbers. pebbleVisible enforces the law: no proposal or
+  // no opt-in → nothing renders.
+  const pebbleProposal: PebbleProposal | null = data && targets
+    ? pickProposal([
+        readinessSwapProposal({ score: readinessScore, band: null, hasSessionToday: data.sessions.length > 0 }),
+        hideNumbers ? null : macroShortfallProposal({
+          proteinG: data.totals.protein,
+          proteinTargetG: targets.proteinG,
+          entriesLogged: data.entries.length,
+          hour: new Date().getHours(),
+        }),
+        sleepDebtProposal({ sleepHours: data.sleepHours, sleepTargetMin: targets.sleepMin }),
+      ], pebbleDismissed)
+    : null;
+  const shownProposal = pebbleVisible(pebbleSettings, 'today', pebbleProposal) ? pebbleProposal : null;
+
+  const onPebbleAction = (proposal: PebbleProposal, action: PebbleAction) => {
+    if (action.kind === 'dismiss') {
+      void dismissForToday(todayISO(), proposal.id).then(setPebbleDismissed);
+      return;
+    }
+    if (action.kind === 'open-log') onOpenTab?.('log');
+    if (action.kind === 'open-train') onOpenTab?.('train');
+    if (action.kind === 'open-recover') onOpenTab?.('recover');
+  };
+
   // Widget snapshot: written on every Today computation; the widget shows
   // this with its age — never a number the app didn't compute.
   useEffect(() => {
@@ -234,6 +283,7 @@ export function TodayScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
+        <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
         <TileGridThemed>
           {filterTiles(tileSpecs, hidden).map((t) => (
             <Tile
@@ -259,6 +309,8 @@ export function TodayScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
+      <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
       <Card lead>
         {heroMode === 'qualitative' ? (

@@ -124,7 +124,7 @@ function MainShell() {
   };
 
   const body: Record<ViewKey, React.ReactNode> = {
-    today: <TodayScreen />,
+    today: <TodayScreen onOpenTab={setTab} />,
     log: <LogScreen />,
     train: <TrainScreen />,
     recover: <RecoverScreen />,

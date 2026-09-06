@@ -4,6 +4,8 @@ import {
   WEEK_REVIEW_CHANNEL_ID, WEEK_REVIEW_CONTENT, WEEK_REVIEW_NOTIF_ID,
   WEEK_REVIEW_STORAGE_KEY, WEEK_REVIEW_TRIGGER,
 } from './weekReviewNotifModel';
+import { voicedContent } from './pebbleModel';
+import { isPebbleVoiceOn } from './pebble';
 
 // Native wiring for the Sunday 18:00 Week in Review prompt. Enabling is
 // explicit (Settings toggle) and honest about failure: if the OS denies
@@ -23,12 +25,10 @@ export async function enableWeekReviewNotif(): Promise<{ ok: boolean; reason?: s
   if (!perm.granted) {
     return { ok: false, reason: 'Notifications are off for Basalt in system settings.' };
   }
+  const v = voicedContent({ id: WEEK_REVIEW_NOTIF_ID, ...WEEK_REVIEW_CONTENT }, await isPebbleVoiceOn());
   await Notifications.scheduleNotificationAsync({
     identifier: WEEK_REVIEW_NOTIF_ID,
-    content: {
-      title: WEEK_REVIEW_CONTENT.title,
-      body: WEEK_REVIEW_CONTENT.body,
-    },
+    content: { title: v.title, body: v.body, data: { icon: v.icon } },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
       weekday: WEEK_REVIEW_TRIGGER.weekday,

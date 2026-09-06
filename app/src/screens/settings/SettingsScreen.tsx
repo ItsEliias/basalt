@@ -3,7 +3,7 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup, kgText, groupInt, THEME_IDS, THEMES, type ThemeId, mono, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup, kgText, groupInt, THEME_IDS, THEMES, type ThemeId, mono, useTheme, Pebble, ScaledText as Text } from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { ImportSheet } from './ImportSheet';
 import { ThemePickerModal } from './ThemePicker';
@@ -18,6 +18,8 @@ import { shareDoctorReport } from '../../lib/doctorReport';
 import { logThemeLayoutEvent } from '../../lib/instrumentation';
 import { HIDEABLE_SECTIONS } from '../today/model';
 import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgroundWork';
+import { getPebbleSettings, setPebbleSettings } from '../../lib/pebble';
+import { PEBBLE_DEFAULTS, type PebbleSettings } from '../../lib/pebbleModel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { zipSync, strToU8 } from 'fflate';
 import {
@@ -70,6 +72,13 @@ export function SettingsScreen() {
   useEffect(() => {
     void isIllnessNotifEnabled().then(setIllnessNotif);
   }, []);
+  const [pebble, setPebble] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
+  useEffect(() => {
+    void getPebbleSettings().then(setPebble);
+  }, []);
+  const patchPebble = (patch: Partial<PebbleSettings>) => {
+    void setPebbleSettings(patch).then(setPebble);
+  };
   useEffect(() => {
     void AsyncStorage.getItem('basalt.hiddenToday').then((raw) => {
       try { setHiddenToday(raw ? (JSON.parse(raw) as string[]) : []); } catch { setHiddenToday([]); }
@@ -418,6 +427,59 @@ export function SettingsScreen() {
         <SrcNote>The energy hero is the day's anchor and always shows · hidden sections still record — everything stays in your ledger and exports</SrcNote>
       </Card>
 
+      {/* ── Pebble ─────────────────────────────────────────────────── */}
+      <Card>
+        <ReceiptHeader label="Pebble" summary="off by default" />
+        <View style={styles.pebbleIntro}>
+          <Pebble size={56} />
+          <Text style={[styles.pebbleBlurb, { color: theme.text.faint }]}>
+            Pebble only speaks when there's something to do.
+          </Text>
+        </View>
+        <ReceiptRow
+          name="Show Pebble in the app"
+          meta="proposals with actions, never commentary"
+          right={
+            <Switch
+              value={pebble.showInApp}
+              onValueChange={(v) => patchPebble({ showInApp: v })}
+              trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+              thumbColor={theme.text.ink}
+              accessibilityLabel="Show Pebble in the app"
+            />
+          }
+        />
+        <ReceiptRow
+          name="Notifications come from Pebble"
+          meta={pebble.showInApp ? 'same messages, Pebble voice' : 'needs Pebble on first'}
+          right={
+            <Switch
+              value={pebble.notifVoice}
+              disabled={!pebble.showInApp}
+              onValueChange={(v) => patchPebble({ notifVoice: v })}
+              trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+              thumbColor={theme.text.ink}
+              accessibilityLabel="Notifications come from Pebble"
+            />
+          }
+        />
+        <ReceiptRow
+          name="Pebble on Trends and data screens"
+          meta="default off even when Pebble is on"
+          last
+          right={
+            <Switch
+              value={pebble.onDataScreens}
+              onValueChange={(v) => patchPebble({ onDataScreens: v })}
+              trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+              thumbColor={theme.text.ink}
+              accessibilityLabel="Pebble on Trends and data screens"
+            />
+          }
+        />
+        <SrcNote>Pebble never comments on how you did. Every message is a proposal with an action, and you can dismiss any of them. Turning Pebble off keeps the same notifications in Basalt's plain voice.</SrcNote>
+      </Card>
+
       {/* ── Your data ──────────────────────────────────────────────── */}
       <SharingSection />
 
@@ -665,6 +727,8 @@ type EditorProps = {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
+  pebbleIntro: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  pebbleBlurb: { flex: 1, fontSize: 12, lineHeight: 17 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { MONTHLY_REPORT_CONTENT, voicedContent } from './pebbleModel';
 
 // Monthly behavior-impact prompt — mirrors the Week in Review pattern
 // exactly: opt-in, a fixed factual prompt with NO numbers (a local trigger
@@ -11,13 +12,13 @@ import * as Notifications from 'expo-notifications';
 // app start) keeps rolling it forward while the toggle is on.
 
 export const MONTHLY_REPORT_NOTIF_ID = 'monthly-behavior-report';
+export const MONTHLY_REPORT_CHANNEL_ID = 'monthly-report';
 const STORAGE_KEY = 'basalt.monthlyReportNotif';
-const CHANNEL_ID = 'monthly-report';
+const CHANNEL_ID = MONTHLY_REPORT_CHANNEL_ID;
 
-const CONTENT = {
-  title: 'Last month, from your ledger',
-  body: 'Behavior facts and what moved with what — open Trends to read it.',
-} as const;
+// Content lives in pebbleModel's notification registry so the Pebble
+// voice-parity test walks the real set.
+const CONTENT = MONTHLY_REPORT_CONTENT;
 
 export function nextFirstOfMonth(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth() + 1, 1, 18, 0, 0);
@@ -28,9 +29,11 @@ export async function isMonthlyReportNotifEnabled(): Promise<boolean> {
 }
 
 async function schedule(): Promise<void> {
+  const { isPebbleVoiceOn } = await import('./pebble');
+  const v = voicedContent({ id: MONTHLY_REPORT_NOTIF_ID, ...CONTENT }, await isPebbleVoiceOn());
   await Notifications.scheduleNotificationAsync({
     identifier: MONTHLY_REPORT_NOTIF_ID,
-    content: { title: CONTENT.title, body: CONTENT.body },
+    content: { title: v.title, body: v.body, data: { icon: v.icon } },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: nextFirstOfMonth(new Date()),
