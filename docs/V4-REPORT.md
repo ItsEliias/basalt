@@ -430,3 +430,44 @@ Decisions made without you:
 - **Cloud-photo backfill not built**: flipping cloud sync on uploads new
   captures only; a bulk upload of the existing local vault is a bigger
   consent moment than a switch and is stated plainly in the switch copy.
+
+## Phase 5 — The Basalt-only ones (suite 1142 → 1148; registry: `uncertainty`, basalt group, ON by default)
+
+- **Visible uncertainty** (`packages/nutrition/src/uncertainty.ts`): the
+  nutrition engine already stores entry-level capture provenance — every
+  entry's `source` — so that IS the confidence signal; no schema change.
+  The published model (pinned by test, printed verbatim in-app): barcode
+  ±5%, recipe ±10%, typed ±10%, database match ±15%, synced ±20%, photo
+  and quick-add ±25%, unknown ±25%. The day's range sums every entry at
+  its worst and best, so one loose entry can't hide behind ten tight
+  ones, and the range visibly narrows as capture quality improves. On
+  Today it's one quiet line under the energy hero in all three meter
+  shapes (numeral, dial, rings) — "likely 1,700–2,300 kcal eaten ·
+  narrows as entries are weighed" — and tapping it opens the per-source
+  math applied to today's actual entries plus the explainer, which ends
+  "A stated model, not a measurement." 6 tests.
+- **"Why" everywhere** — the audit: every number on Today / Recover /
+  Trends checked for tap-to-components or a published-source note.
+  Already compliant: Recover readiness (math modal), sleep need (math
+  modal), weight trend ("least-squares fit, not wishful smoothing"),
+  vitals bands (source + day counts); Trends correlations (|r| ≥ 0.45 /
+  n ≥ 30 gates printed, checked-not-shown named), records (Epley e1RM
+  named), big three (published matcher), muscle volume (published band);
+  Today macros/caps/micros/water (own-log srcnotes, "absent means absent
+  data, never zero"). **The one gap found and fixed: the energy hero
+  itself** — the biggest number in the app had no components on tap. It
+  now opens "Energy remaining — the math": target, minus eaten, equals
+  remaining, active energy labelled informational-unless-eat-back, and
+  the target's own stated reason (or a pointer to Profile & Targets).
+
+Decisions made without you:
+- **"Why everywhere" is core, not an Extra** — gating honesty behind a
+  switch would break the published-formulas law. Only the intake range
+  is a (default-on) Extra, because it adds a surface.
+- `uncertainty` defaults ON as a registry-sanctioned basalt-group
+  exception (same mechanism as capture). At the gate run this means one
+  expected diff on Today vs pre-branch main: the range line under the
+  hero. All-off hides it.
+- The hero numeral is now wrapped in a Pressable for the why-tap — the
+  gate diff should treat any pixel shift there as a bug (none expected;
+  the wrapper adds no styling).

@@ -30,7 +30,8 @@ export type ExtraId =
   | 'supplements'
   | 'cycle'
   | 'photos'
-  | 'imports';
+  | 'imports'
+  | 'uncertainty';
 
 export type ExtraOnboarding = {
   /** The question the onboarding screen asks, verbatim. */
@@ -208,6 +209,15 @@ export const EXTRAS: readonly ExtraDef[] = [
     default: false,
     requires: ['pebble'],
   },
+  // ── Basalt — the pitch: ON by default, still honest, still switchable ─
+  {
+    id: 'uncertainty',
+    title: 'Visible uncertainty',
+    oneLiner: 'The day’s intake as a range that narrows as entries are weighed — per-source model published in-app.',
+    group: 'basalt',
+    default: true,
+  },
+
   // ── Depth — "More tools": every one off by default, one shared offer ──
   {
     id: 'mealPlanning',

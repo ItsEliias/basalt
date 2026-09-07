@@ -13,6 +13,8 @@ import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, 
 import { loadReadiness } from '@basalt/analytics';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { SupplementsCard } from '../../components/SupplementsCard';
+import { IntakeRangeNote } from '../../components/IntakeRangeNote';
+import { HeroWhySheet } from '../../components/HeroWhySheet';
 import { StagedPebble, growthScore, stageFor, NarrativeCard, narrativeDateFor, friendsLoggedLine } from '@basalt/extras';
 import { loadGrowthInputs } from '../../lib/growthData';
 import { loadDailySummary } from '../../lib/narrativeData';
@@ -135,6 +137,7 @@ export function TodayScreen({ onOpenTab }: {
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [microWallOpen, setMicroWallOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
   // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
   const layout = profile?.todayLayout ?? 'ledger';
 
@@ -408,6 +411,11 @@ export function TodayScreen({ onOpenTab }: {
                 />
               </View>
               <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+              {data ? (
+                <ExtraSlot id="uncertainty">
+                  <IntakeRangeNote entries={data.entries} />
+                </ExtraSlot>
+              ) : null}
             </>
           ) : theme.shape.meter === 'dial' ? (
             <>
@@ -418,12 +426,24 @@ export function TodayScreen({ onOpenTab }: {
                 label={hero.over ? 'kcal over' : 'kcal left'}
               />
               <Text style={[styles.heroSub, styles.heroSubCentered, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+              {data ? (
+                <ExtraSlot id="uncertainty">
+                  <IntakeRangeNote entries={data.entries} />
+                </ExtraSlot>
+              ) : null}
             </>
           ) : (
           <>
             <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
-            <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
+            <Pressable onPress={() => setWhyOpen(true)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Why this number">
+              <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
+            </Pressable>
             <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+            {data ? (
+              <ExtraSlot id="uncertainty">
+                <IntakeRangeNote entries={data.entries} />
+              </ExtraSlot>
+            ) : null}
             <SegmentedStack
               segments={[
                 { fraction: hero.stack[0]?.fraction ?? 0, fill: theme.fill.protein },
@@ -442,6 +462,16 @@ export function TodayScreen({ onOpenTab }: {
           </>
         ) : null}
       </Card>
+
+      {targets && data ? (
+        <HeroWhySheet
+          open={whyOpen}
+          onClose={() => setWhyOpen(false)}
+          targets={targets}
+          eatenKcal={data.totals.calories}
+          activeKcal={data.activeKcal}
+        />
+      ) : null}
 
       <ExtraSlot id="supplements">
         <SupplementsCard />
