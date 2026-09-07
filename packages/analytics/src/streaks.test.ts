@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { currentAndLongest, monthCells, restAwareDays, REST_ADVISED_BELOW } from './streaks';
+import { currentAndLongest, monthCells, restAwareDays, splitSeriesOnGaps, REST_ADVISED_BELOW } from './streaks';
 import { isoDay } from '@basalt/core-data';
 
 function daysAgoSet(today: Date, offsets: number[]): Set<string> {
@@ -109,5 +109,21 @@ describe('restAwareDays — rest maintains a run, never fabricates one', () => {
 
   it('the rest-advised threshold is published and pinned', () => {
     expect(REST_ADVISED_BELOW).toBe(40);
+  });
+});
+
+describe('splitSeriesOnGaps — no line across a hole in the data', () => {
+  it('splits at >30 days, keeps order, loses nothing', () => {
+    const pts = [
+      { date: '2022-03-11' }, { date: '2022-06-15' },
+      { date: '2024-01-18' }, { date: '2024-02-01' },
+    ];
+    const segs = splitSeriesOnGaps(pts, 30);
+    expect(segs.map((s) => s.length)).toEqual([1, 1, 2]);
+    expect(segs.flat()).toHaveLength(4);
+  });
+  it('a dense series stays one segment', () => {
+    const pts = Array.from({ length: 5 }, (_, i) => ({ date: `2026-09-0${i + 1}` }));
+    expect(splitSeriesOnGaps(pts)).toHaveLength(1);
   });
 });

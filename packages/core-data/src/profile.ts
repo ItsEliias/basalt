@@ -203,6 +203,14 @@ export async function saveTargets(
 }
 
 /** The targets version in force on `date` — latest effective_date ≤ date. */
+/**
+ * Rows whose reason starts with this are HISTORY imported from outside
+ * Basalt — Trends may show them, but they never become the current target
+ * (V4 import rule: the profile computes the current target from the
+ * user's own numbers; a 2022 spreadsheet block must not feed Today).
+ */
+export const IMPORTED_TARGETS_REASON = 'Imported history';
+
 export async function getTargetsFor(
   client: SupabaseClient,
   date: string = todayISO(),
@@ -214,6 +222,7 @@ export async function getTargetsFor(
     .from('basalt_targets')
     .select('*')
     .eq('user_id', u.data)
+    .or(`reason.is.null,reason.not.ilike.${IMPORTED_TARGETS_REASON}%`)
     .lte('effective_date', date)
     .order('effective_date', { ascending: false })
     .limit(1)
@@ -225,6 +234,19 @@ export async function getTargetsFor(
 // ─── Weight entries (feeds the adaptive TDEE loop) ──────────────────────────
 
 export type WeightEntry = { id: string; measuredAt: string; weightKg: number; source: string };
+
+/** Every stored target row, oldest first — history for Trends, imports included. */
+export async function listTargetHistory(client: SupabaseClient): Promise<Result<TargetsRecord[]>> {
+  const u = await currentUserId(client);
+  if (!u.ok) return u;
+  const { data, error } = await client
+    .from('basalt_targets')
+    .select('*')
+    .eq('user_id', u.data)
+    .order('effective_date', { ascending: true });
+  if (error) return err(error.message);
+  return ok((data ?? []).map(mapTargets));
+}
 
 export async function addWeightEntry(
   client: SupabaseClient,

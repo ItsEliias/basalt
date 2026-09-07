@@ -282,3 +282,33 @@ STOP B was answered "continue"; what landed and what's gated:
   notification module). 5 tests.
 - Registry: `social` + `narrative` entries (motivation, off, own
   onboarding screens per the prompt's order).
+
+## Interlude — Cody's import (approved mid-run)
+
+Server side done: social migration applied (RLS summary in the STOP B
+section stands, verified 0 `using (true)`), `date_confidence` added to
+basalt_workout_sessions ('day' default, 'week' for imports),
+delete-account v14 live (social wipe lists), ai-daily-summary v1 live.
+
+Core rules added for the import, all test-pinned:
+- `prEligibleSession` (training): source='import' + date_confidence≠'day'
+  never mints a PR or feeds progression — wired into sessionStore's
+  historyFor (PR mark + suggestions) and Trends' records query.
+- `IMPORTED_TARGETS_REASON` (core-data): rows whose reason starts with
+  "Imported history" are excluded from current-target resolution
+  (null-safe `.or()` filter) but readable via the new
+  `listTargetHistory()` for Trends.
+- `splitSeriesOnGaps` (analytics): a trend line never crosses a
+  >30-day hole; consumed by the Phase 6 profile trend.
+
+`scripts/importCody.ts` (user-run, password from their shell env only):
+account create with stop-if-exists, weight ×8 (source import), two
+target-history rows (fibre derived at 14 g/1000 kcal — logged), 4 splits
+→ 16 session templates (rep ranges + form cues in template notes —
+logged), 87 exercise-weeks → week-dated sessions per the confidence
+rules (high=real set · medium=weight+prescription reps flagged
+estimated · low with reps=machine-setting note, kg null · else raw text
+on the exercise note), 12 recipes (ingredients are truth; >8% stated
+mismatches flagged), favourites only where macros exist (name-only
+skipped and listed — a 0-kcal favourite would be a lie). Dry-run prints
+counts, custom exercises and note-only sets, writes nothing.

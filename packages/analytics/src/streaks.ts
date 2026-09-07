@@ -336,3 +336,32 @@ export async function getStreak(
   if (!active.ok) return active;
   return ok(currentAndLongest(active.data));
 }
+
+/**
+ * Split a dated series wherever consecutive points are more than
+ * `maxGapDays` apart — a trend line must never draw a confident straight
+ * line across a 19-month hole in the data (V4 import rule; consumed by
+ * the Phase 6 profile trend).
+ */
+export function splitSeriesOnGaps<T extends { date: string }>(
+  points: T[],
+  maxGapDays = 30,
+): T[][] {
+  const sorted = [...points].sort((a, b) => a.date.localeCompare(b.date));
+  const segments: T[][] = [];
+  let current: T[] = [];
+  let prev: string | null = null;
+  for (const p of sorted) {
+    if (prev !== null) {
+      const gap = (Date.parse(p.date) - Date.parse(prev)) / 86_400_000;
+      if (gap > maxGapDays) {
+        segments.push(current);
+        current = [];
+      }
+    }
+    current.push(p);
+    prev = p.date;
+  }
+  if (current.length > 0) segments.push(current);
+  return segments;
+}

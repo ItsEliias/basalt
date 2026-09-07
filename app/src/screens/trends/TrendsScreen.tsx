@@ -7,7 +7,7 @@ import {
   loadYearAndChallenge,
   type WeekReview, type CorrelationResult, type YearReview, type MonthlyChallenge,
 } from '@basalt/analytics';
-import { e1rm, bigThree, type BigThree } from '@basalt/training';
+import { e1rm, bigThree, prEligibleSession, type BigThree } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
@@ -152,7 +152,8 @@ export function TrendsScreen() {
         setFullDays(full.ok ? full.data : new Set());
         setAnyDays(any.ok ? any.data : new Set());
 
-        // Records: best e1RM per exercise from real set history.
+        // Records: best e1RM per exercise from real set history. Import
+        // rule: week-dated imported sessions never appear here.
         const { data: sets } = await supabase
           .from('basalt_set_entries')
           .select('weight_kg, reps, set_type, completed_at, session_exercise_id')
@@ -160,9 +161,22 @@ export function TrendsScreen() {
           .limit(2000);
         const { data: exs } = await supabase
           .from('basalt_session_exercises')
-          .select('id, exercise_name')
+          .select('id, exercise_name, session_id')
           .limit(1000);
-        const nameFor = new Map<string, string>((exs ?? []).map((r: any) => [r.id, r.exercise_name]));
+        const { data: sess } = await supabase
+          .from('basalt_workout_sessions')
+          .select('id, source, date_confidence')
+          .limit(1000);
+        const eligibleSession = new Set(
+          (sess ?? [])
+            .filter((r: any) => prEligibleSession(r.source ?? null, r.date_confidence ?? null))
+            .map((r: any) => r.id),
+        );
+        const nameFor = new Map<string, string>(
+          (exs ?? [])
+            .filter((r: any) => eligibleSession.has(r.session_id))
+            .map((r: any) => [r.id, r.exercise_name]),
+        );
         const best = new Map<string, { e1rm: number; date: string }>();
         for (const s of sets ?? []) {
           if ((s as any).set_type === 'warmup') continue;
