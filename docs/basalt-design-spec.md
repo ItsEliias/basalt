@@ -119,17 +119,28 @@ their own guardrails, because calm is the one place gamification does the most d
 
 ## 6. Forbidden
 
-**Since the 2026-09-04 amendment (V3.4) this list is two lists.**
+**Since the 2026-09-04 amendment (V3.4) this list is two lists; the V4
+amendment (§8 Extras) makes it three.**
 
-**Globally forbidden — every theme, no exceptions:** XP/levels/coins/badges-as-currency ·
-confetti · streak shaming · fake precision · narration of results (motivational
-cheerleading, "You're crushing it!", AI summaries that displace data) · hidden formulas ·
-capture paywalls · any mandatory capture modality · sleep stages as anything but display ·
+**Globally forbidden — every theme, every Extra, no exceptions:** streak
+shaming · fake precision · motivational cheerleading that displaces data
+("You're crushing it!") · hidden formulas · capture paywalls · any mandatory
+capture modality · sleep stages as anything but display ·
 emoji in UI copy · dashboard-as-forced-home · low-density big-card diaries that hide
 numbers (the MFP-redesign failure — a density rule, not a corner-radius rule) · upsells
 inside onboarding, countdown timers, pre-selected annual plans, ads to paying users ·
 bright colour without semantic meaning *within a theme's own declared palette* ·
 localStorage in web builds.
+
+**Extras-only — never on by default, never affects a core number:**
+XP/levels/badges · confetti (PR-detected moments only) · streaks (with
+published freeze rules) · mascot growth stages · social
+challenges/leaderboards (friends-only aggregates) · AI narration of a
+completed day (one paragraph, labelled "Generated summary", never a
+notification, never on Trends). Each of these was globally forbidden
+before V4; they are now legal ONLY as registry Extras (§8) — off by
+default, honest inside (published formulas, ranges, real milestones), and
+with every Extra off the app renders pixel-identical to core Basalt.
 
 **Theme-scoped expression — legal only where a theme declares the token for it:**
 rings/circular gauges (`shape.meter: 'ring' | 'dial'` — over-cap words mandatory, see the
@@ -191,6 +202,30 @@ metadata, ghost values) cleared 4.5:1 on `bg` and `surface` but only 4.30:1 on `
 (nested/raised elements) — `text.faint` is now `#848C98`, which clears all three. The
 *fill* use of the same colour (a cap bar's neutral/under-cap state, which only needs 3.0:1)
 keeps the original `#7A828E` unchanged — see `fill.faint` in the contract.
+
+## 8. Extras (V4 amendment)
+
+The Extras framework carries four binding rules:
+
+1. **Default-off.** Every Extra ships off unless its registry entry says
+   otherwise; the only sanctioned default-on groups are capture input
+   methods, glanceability refinements of existing surfaces, and the
+   Basalt-only transparency features — none of which are motivational.
+2. **All-off-identical.** With every Extra off, the app is pixel-identical
+   to core Basalt. Enforced by the all-off snapshot diff run at the end of
+   every phase, not by review.
+3. **Honesty inside Extras.** Published formulas (XP curves and streak
+   rules are public, in-app), ranges not false precision, AI proposes
+   never narrates — except the one Extra whose whole point is narration,
+   which is labelled "Generated summary" and confined to Today. No Extra
+   changes a number the core app shows; Extras add surfaces, never edit
+   data.
+4. **One registry.** `packages/core-data/src/extras/registry.ts` is the
+   list; Settings › Extras, onboarding and every `<ExtraSlot>` derive from
+   it. Nothing else hard-codes an Extra.
+
+The current list lives in the registry file; the report for each V4 phase
+records what was added.
 
 ## 7. Reference files
 

@@ -1,4 +1,5 @@
 import type { ProfileRecord } from '@basalt/core-data';
+import { onboardingExtraScreens } from '@basalt/core-data';
 import type { GoalKey, TargetInput, ActivityLevel, BiologicalSex } from '@basalt/nutrition';
 
 // Onboarding view-model — pure. Options are verbatim from the prototype
@@ -103,7 +104,16 @@ export const initialState: OnboardingState = {
   motivations: [], checkin: null, theme: null,
 };
 
-export const TOTAL_STEPS = 9;
+// V4: after the theme step, one screen per onboarding-flagged Extra (or
+// group) — derived from the registry, never hand-counted here.
+export const EXTRA_SCREENS = onboardingExtraScreens();
+export const CORE_STEPS = 9;
+export const TOTAL_STEPS = CORE_STEPS + EXTRA_SCREENS.length;
+
+/** The extras screen shown at `step`, or null on a core step. */
+export function extraScreenAt(step: number) {
+  return step > CORE_STEPS ? EXTRA_SCREENS[step - CORE_STEPS - 1] ?? null : null;
+}
 
 /** Gym-only skips the home-equipment step (7). */
 export function nextStep(current: number, state: OnboardingState): number {

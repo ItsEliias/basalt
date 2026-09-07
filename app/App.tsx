@@ -28,6 +28,9 @@ import { registerTimerService } from './src/lib/timerService';
 import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
 import { rescheduleMonthlyReportNotif, wireMonthlyReportNotifTap } from './src/lib/monthlyReportNotif';
 import { registerBackgroundWork } from './src/lib/backgroundWork';
+import { ExtrasProvider } from './src/components/ExtrasProvider';
+import { ExtrasIntroModal } from './src/components/ExtrasIntro';
+import { extrasIntroSeen } from './src/lib/extras';
 import { isoDay } from '@basalt/core-data';
 
 // Foreground-service runner must be registered before any notification is
@@ -176,6 +179,18 @@ function Gate() {
   return <MainShell />;
 }
 
+/** Existing users get the Extras offers exactly once after updating. */
+function NewInBasalt() {
+  const profile = useAppStore((s) => s.profile);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!profile) return;
+    void extrasIntroSeen().then((seen) => { if (!seen) setOpen(true); });
+  }, [profile]);
+  if (!profile) return null;
+  return <ExtrasIntroModal open={open} onClose={() => setOpen(false)} />;
+}
+
 export default function App() {
   // The five non-Minimal themes' typography (docs/THEME-SYSTEM-REPORT.md)
   // needs these bundled — resolveTypeface can't return a family expo-font
@@ -249,7 +264,10 @@ export default function App() {
         {/* Icon color must oppose the theme ground — hardcoded "light" made
             the clock and battery invisible on the paper themes. */}
         <StatusBar style={relativeLuminance(theme.surfaces.bg) > 0.5 ? 'dark' : 'light'} />
-        <Gate />
+        <ExtrasProvider>
+          <Gate />
+          <NewInBasalt />
+        </ExtrasProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

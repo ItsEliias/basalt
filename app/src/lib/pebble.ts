@@ -4,17 +4,26 @@ import {
   normalizePebbleSettings, parsePebbleSettings, type PebbleSettings,
 } from './pebbleModel';
 import { revoiceScheduledNotifs } from './pebbleRevoice';
+import { getExtras, setExtraFlag } from './extras';
 
-// Pebble settings live on the device, like every notification toggle —
-// they are a voice preference, not ledger data.
+// Pebble settings live on the device, like every notification toggle.
+// V4: the master switch IS the Pebble Extra — `showInApp` reads from the
+// Extras framework so Settings › Extras and the Pebble card stay one
+// source of truth; voice + data-screen prefs keep their own storage.
 
 export async function getPebbleSettings(): Promise<PebbleSettings> {
-  return parsePebbleSettings(await AsyncStorage.getItem(PEBBLE_STORAGE_KEY));
+  const stored = parsePebbleSettings(await AsyncStorage.getItem(PEBBLE_STORAGE_KEY));
+  const extras = await getExtras();
+  return normalizePebbleSettings({ ...stored, showInApp: extras.pebble });
 }
 
 export async function setPebbleSettings(patch: Partial<PebbleSettings>): Promise<PebbleSettings> {
+  if (patch.showInApp !== undefined) {
+    await setExtraFlag('pebble', patch.showInApp);
+  }
   const next = normalizePebbleSettings({ ...(await getPebbleSettings()), ...patch });
-  await AsyncStorage.setItem(PEBBLE_STORAGE_KEY, JSON.stringify(next));
+  const { showInApp: _extra, ...rest } = next;
+  await AsyncStorage.setItem(PEBBLE_STORAGE_KEY, JSON.stringify({ ...rest, showInApp: next.showInApp }));
   // The voice change applies to anything already sitting in the tray's
   // future: re-schedule the fixed prompts under the new voice.
   await revoiceScheduledNotifs(next.notifVoice);

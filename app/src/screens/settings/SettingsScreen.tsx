@@ -20,6 +20,8 @@ import { HIDEABLE_SECTIONS } from '../today/model';
 import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgroundWork';
 import { getPebbleSettings, setPebbleSettings } from '../../lib/pebble';
 import { PEBBLE_DEFAULTS, type PebbleSettings } from '../../lib/pebbleModel';
+import { EXTRAS, EXTRA_GROUP_TITLES, extraDef, type ExtraGroup, type ExtraId } from '@basalt/core-data';
+import { useExtras } from '../../components/ExtrasProvider';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { buildFeedbackMailto } from '../../lib/feedbackModel';
@@ -81,6 +83,18 @@ export function SettingsScreen() {
   }, []);
   const patchPebble = (patch: Partial<PebbleSettings>) => {
     void setPebbleSettings(patch).then(setPebble);
+  };
+  const extras = useExtras();
+  const flipExtra = async (id: ExtraId, on: boolean) => {
+    const r = await extras.flip(id, on);
+    if (r.turnedOffDependents.length > 0) {
+      Alert.alert(
+        'Also turned off',
+        `${r.turnedOffDependents.map((d) => extraDef(d).title).join(', ')} need${r.turnedOffDependents.length === 1 ? 's' : ''} ${extraDef(id).title} on.`,
+      );
+    }
+    // Pebble's card mirrors the extra — keep its local state in step.
+    if (id === 'pebble') void getPebbleSettings().then(setPebble);
   };
   useEffect(() => {
     void AsyncStorage.getItem('basalt.hiddenToday').then((raw) => {
@@ -430,6 +444,43 @@ export function SettingsScreen() {
         <SrcNote>The energy hero is the day's anchor and always shows · hidden sections still record — everything stays in your ledger and exports</SrcNote>
       </Card>
 
+      {/* ── Extras ─────────────────────────────────────────────────── */}
+      <Card>
+        <ReceiptHeader label="Extras" summary="all off — Basalt is complete without them" />
+        {(Object.keys(EXTRA_GROUP_TITLES) as ExtraGroup[]).map((group) => {
+          const inGroup = EXTRAS.filter((e) => e.group === group);
+          if (inGroup.length === 0) return null;
+          return (
+            <View key={group}>
+              <ObChipLabel>{EXTRA_GROUP_TITLES[group]}</ObChipLabel>
+              {inGroup.map((e, i) => {
+                const deps = e.requires ?? [];
+                const depsOn = deps.every((d) => extras.extras[d]);
+                return (
+                  <ReceiptRow
+                    key={e.id}
+                    name={e.title}
+                    meta={depsOn ? e.oneLiner : `needs ${deps.map((d) => extraDef(d).title).join(' + ')} on first`}
+                    last={i === inGroup.length - 1}
+                    right={
+                      <Switch
+                        value={extras.extras[e.id]}
+                        disabled={!depsOn}
+                        onValueChange={(v) => void flipExtra(e.id, v)}
+                        trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                        thumbColor={theme.text.ink}
+                        accessibilityLabel={`${e.title} extra`}
+                      />
+                    }
+                  />
+                );
+              })}
+            </View>
+          );
+        })}
+        <SrcNote>Every Extra is off by default and honest inside — published formulas, ranges not false precision. With everything off, Basalt is exactly the core app.</SrcNote>
+      </Card>
+
       {/* ── Pebble ─────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Pebble" summary="off by default" />
@@ -444,8 +495,8 @@ export function SettingsScreen() {
           meta="proposals with actions, never commentary"
           right={
             <Switch
-              value={pebble.showInApp}
-              onValueChange={(v) => patchPebble({ showInApp: v })}
+              value={extras.extras.pebble}
+              onValueChange={(v) => void flipExtra('pebble', v)}
               trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
               thumbColor={theme.text.ink}
               accessibilityLabel="Show Pebble in the app"

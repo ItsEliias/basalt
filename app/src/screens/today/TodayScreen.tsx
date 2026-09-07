@@ -11,6 +11,7 @@ import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
 import { loadReadiness } from '@basalt/analytics';
+import { ExtraSlot } from '../../components/ExtrasProvider';
 import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
 import {
   PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
@@ -283,7 +284,9 @@ export function TodayScreen({ onOpenTab }: {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
-        <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+        <ExtraSlot id="pebble">
+          <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+        </ExtraSlot>
         <TileGridThemed>
           {filterTiles(tileSpecs, hidden).map((t) => (
             <Tile
@@ -309,7 +312,9 @@ export function TodayScreen({ onOpenTab }: {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
-      <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+      <ExtraSlot id="pebble">
+        <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+      </ExtraSlot>
 
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
       <Card lead>

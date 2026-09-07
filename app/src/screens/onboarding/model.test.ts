@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   initialState, nextStep, prevStep, buildProfile, buildTargetInput,
   weightKgFrom, heightCmFrom, activityLevelFrom, TOTAL_STEPS,
+  CORE_STEPS, EXTRA_SCREENS, extraScreenAt,
   GOAL_OPTIONS, EQUIPMENT_OPTIONS, HABIT_ROWS, ALLERGY_OPTIONS, DIET_OPTIONS,
   CONDITION_OPTIONS, MEDICATION_OPTIONS,
 } from './model';
@@ -34,11 +35,22 @@ describe('conditional flow — gym skips the equipment step', () => {
     expect(nextStep(TOTAL_STEPS, initialState)).toBe(TOTAL_STEPS);
     expect(prevStep(1, initialState)).toBe(1);
   });
-  it('the theme step (9) follows life for everyone', () => {
-    expect(TOTAL_STEPS).toBe(9);
+  it('the theme step (9) follows life for everyone; extras steps follow it', () => {
+    expect(CORE_STEPS).toBe(9);
+    expect(TOTAL_STEPS).toBe(CORE_STEPS + EXTRA_SCREENS.length);
+    expect(EXTRA_SCREENS.length).toBeGreaterThanOrEqual(1);
     expect(nextStep(8, { ...initialState, place: 'gym' })).toBe(9);
     expect(nextStep(8, { ...initialState, place: 'home' })).toBe(9);
     expect(prevStep(9, { ...initialState, place: 'gym' })).toBe(8);
+  });
+
+  it('extraScreenAt maps steps past the core to registry screens, in order', () => {
+    expect(extraScreenAt(9)).toBeNull();
+    expect(extraScreenAt(1)).toBeNull();
+    for (let i = 0; i < EXTRA_SCREENS.length; i++) {
+      expect(extraScreenAt(CORE_STEPS + 1 + i)).toBe(EXTRA_SCREENS[i]);
+    }
+    expect(extraScreenAt(TOTAL_STEPS + 1)).toBeNull();
   });
 });
 

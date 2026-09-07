@@ -12,7 +12,10 @@ import {
   MEDICATION_OPTIONS, HABIT_ROWS, ALLERGY_OPTIONS, DIET_OPTIONS, PLACE_OPTIONS,
   EQUIPMENT_OPTIONS, JOB_OPTIONS, EXERCISE_OPTIONS, SLEEP_OPTIONS, STRESS_OPTIONS,
   MOTIVATION_OPTIONS, CHECKIN_OPTIONS, isImperial, type OnboardingState,
+  CORE_STEPS, extraScreenAt,
 } from './model';
+import { ExtrasStep } from '../../components/ExtrasIntro';
+import { markExtrasIntroSeen } from '../../lib/extras';
 import { ThemePickerList } from '../settings/ThemePicker';
 import { selectTheme, SAMPLE_PREVIEW, type PickerState } from '../settings/themePickerModel';
 import { loadExpressiveFonts } from '../../lib/expressiveFonts';
@@ -34,7 +37,7 @@ export function OnboardingScreen() {
 
   // The theme step's previews need the expressive typefaces registered.
   useEffect(() => {
-    if (step === TOTAL_STEPS) for (const id of THEME_IDS) void loadExpressiveFonts(id);
+    if (step === CORE_STEPS) for (const id of THEME_IDS) void loadExpressiveFonts(id);
   }, [step]);
 
   const patch = (p: Partial<OnboardingState>) => setState((s) => ({ ...s, ...p }));
@@ -44,8 +47,15 @@ export function OnboardingScreen() {
       return { ...s, [key]: list.includes(value) ? list.filter((x) => x !== value) : [...list, value] } as OnboardingState;
     });
 
+  const finishWithExtras = async () => {
+    await finish(false);
+  };
+
   const finish = async (skipped: boolean) => {
     setBusy(true);
+    // Either way the extras were offered (or deliberately skipped) — the
+    // returning-user "New in Basalt" flow must never replay after this.
+    await markExtrasIntroSeen();
     setError(null);
     const profile = skipped ? { useMetric: true } : buildProfile(state);
     const saved = await saveProfile(supabase, profile);
@@ -235,8 +245,18 @@ export function OnboardingScreen() {
           </>
         );
       }
-      default:
+      default: {
+        const extra = extraScreenAt(step);
+        if (extra) {
+          return (
+            <ExtrasStep
+              screen={extra}
+              onAnswered={() => (step === TOTAL_STEPS ? void finishWithExtras() : setStep(step + 1))}
+            />
+          );
+        }
         return null;
+      }
     }
   };
 
@@ -260,9 +280,16 @@ export function OnboardingScreen() {
       {error ? <Text style={[styles.error, { color: theme.text.fat }]}>{error}</Text> : null}
       <View style={[styles.footer, { paddingBottom: Math.max(34, insets.bottom + 12) }]}>
         <CTA
-          label={busy ? '…' : step === TOTAL_STEPS ? 'Build my targets' : 'Continue'}
+          label={busy ? '…'
+            : step > CORE_STEPS ? 'Skip the extras — build my targets'
+            : step === CORE_STEPS && TOTAL_STEPS === CORE_STEPS ? 'Build my targets'
+            : 'Continue'}
           disabled={busy}
-          onPress={() => (step === TOTAL_STEPS ? void finish(false) : setStep(nextStep(step, state)))}
+          onPress={() => {
+            if (step > CORE_STEPS) { void finishWithExtras(); return; }
+            if (step === CORE_STEPS && TOTAL_STEPS === CORE_STEPS) { void finish(false); return; }
+            setStep(nextStep(step, state));
+          }}
         />
       </View>
     </KeyboardAvoidingView>
