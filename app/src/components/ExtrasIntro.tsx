@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CTA, ObOption, ObQuestion, ObSub, Pebble, PebbleSlot, mono, useTheme, ScaledText as Text,
@@ -72,7 +72,7 @@ export function ExtrasStep({ screen, onAnswered }: {
       <ObSub>Off unless you say yes — and switchable any time in Settings › Extras.</ObSub>
       <View style={styles.body}>
         {grouped ? (
-          <View>
+          <ScrollView style={styles.groupList} contentContainerStyle={styles.groupListContent}>
             {screen.ids.map((id) => {
               const def = extraDef(id as ExtraId);
               return (
@@ -86,7 +86,7 @@ export function ExtrasStep({ screen, onAnswered }: {
                 />
               );
             })}
-          </View>
+          </ScrollView>
         ) : (
           <ExtraPreview kind={screen.preview} />
         )}
@@ -136,6 +136,11 @@ export function ExtrasIntroModal({ open, onClose }: { open: boolean; onClose: ()
 
 const styles = StyleSheet.create({
   body: { flex: 1, marginTop: 18, gap: 16 },
+  // The grouped checklist scrolls; the CTA and "not now" stay pinned
+  // below it (CTA-reachability law — this overflowed on a 1080×2316
+  // phone with the 7-row More-tools group; found at the device session).
+  groupList: { flexShrink: 1, flexGrow: 0 },
+  groupListContent: { paddingBottom: 4 },
   previewBox: { gap: 8, marginBottom: 6 },
   previewNote: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.5 },
   notNow: { fontFamily: mono, fontSize: 12.5, letterSpacing: 1, textAlign: 'center', paddingVertical: 12 },
