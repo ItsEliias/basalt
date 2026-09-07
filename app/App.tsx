@@ -4,27 +4,6 @@ import { BlurTargetView } from 'expo-blur';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
-import { Barlow_400Regular, Barlow_600SemiBold, Barlow_700Bold } from '@expo-google-fonts/barlow';
-import {
-  BarlowCondensed_400Regular,
-  BarlowCondensed_600SemiBold,
-  BarlowCondensed_700Bold,
-} from '@expo-google-fonts/barlow-condensed';
-import { Archivo_400Regular, Archivo_600SemiBold, Archivo_900Black } from '@expo-google-fonts/archivo';
-import { ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
-import { Manrope_400Regular, Manrope_600SemiBold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
-import { Jost_300Light, Jost_400Regular, Jost_500Medium } from '@expo-google-fonts/jost';
-import {
-  IBMPlexMono_300Light,
-  IBMPlexMono_400Regular,
-  IBMPlexMono_500Medium,
-} from '@expo-google-fonts/ibm-plex-mono';
-import {
-  CormorantGaramond_300Light,
-  CormorantGaramond_400Regular,
-  CormorantGaramond_500Medium,
-} from '@expo-google-fonts/cormorant-garamond';
 import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { expressiveFontsReady, loadExpressiveFonts } from './src/lib/expressiveFonts';
@@ -202,16 +181,37 @@ export default function App() {
   // needs these bundled — resolveTypeface can't return a family expo-font
   // hasn't registered yet, so first paint waits on this the same way it
   // already waits on session/profile below.
+  // Per-file requires, deliberately: importing an @expo-google-fonts INDEX
+  // makes Metro bundle the package's entire family — every weight and
+  // italic (~15 MB of dead assets in the 0.1.0 AAB audit). Only the faces
+  // the six original themes declare ship; expressive themes load theirs
+  // lazily in lib/expressiveFonts.ts, per-file for the same reason.
   const [fontsLoaded] = useFonts({
-    Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold,
-    Barlow_400Regular, Barlow_600SemiBold, Barlow_700Bold,
-    BarlowCondensed_400Regular, BarlowCondensed_600SemiBold, BarlowCondensed_700Bold,
-    Archivo_400Regular, Archivo_600SemiBold, Archivo_900Black,
-    ArchivoBlack_400Regular,
-    Manrope_400Regular, Manrope_600SemiBold, Manrope_800ExtraBold,
-    Jost_300Light, Jost_400Regular, Jost_500Medium,
-    IBMPlexMono_300Light, IBMPlexMono_400Regular, IBMPlexMono_500Medium,
-    CormorantGaramond_300Light, CormorantGaramond_400Regular, CormorantGaramond_500Medium,
+    Nunito_400Regular: require('@expo-google-fonts/nunito/400Regular/Nunito_400Regular.ttf'),
+    Nunito_700Bold: require('@expo-google-fonts/nunito/700Bold/Nunito_700Bold.ttf'),
+    Nunito_800ExtraBold: require('@expo-google-fonts/nunito/800ExtraBold/Nunito_800ExtraBold.ttf'),
+    Barlow_400Regular: require('@expo-google-fonts/barlow/400Regular/Barlow_400Regular.ttf'),
+    Barlow_600SemiBold: require('@expo-google-fonts/barlow/600SemiBold/Barlow_600SemiBold.ttf'),
+    Barlow_700Bold: require('@expo-google-fonts/barlow/700Bold/Barlow_700Bold.ttf'),
+    BarlowCondensed_400Regular: require('@expo-google-fonts/barlow-condensed/400Regular/BarlowCondensed_400Regular.ttf'),
+    BarlowCondensed_600SemiBold: require('@expo-google-fonts/barlow-condensed/600SemiBold/BarlowCondensed_600SemiBold.ttf'),
+    BarlowCondensed_700Bold: require('@expo-google-fonts/barlow-condensed/700Bold/BarlowCondensed_700Bold.ttf'),
+    Archivo_400Regular: require('@expo-google-fonts/archivo/400Regular/Archivo_400Regular.ttf'),
+    Archivo_600SemiBold: require('@expo-google-fonts/archivo/600SemiBold/Archivo_600SemiBold.ttf'),
+    Archivo_900Black: require('@expo-google-fonts/archivo/900Black/Archivo_900Black.ttf'),
+    ArchivoBlack_400Regular: require('@expo-google-fonts/archivo-black/400Regular/ArchivoBlack_400Regular.ttf'),
+    Manrope_400Regular: require('@expo-google-fonts/manrope/400Regular/Manrope_400Regular.ttf'),
+    Manrope_600SemiBold: require('@expo-google-fonts/manrope/600SemiBold/Manrope_600SemiBold.ttf'),
+    Manrope_800ExtraBold: require('@expo-google-fonts/manrope/800ExtraBold/Manrope_800ExtraBold.ttf'),
+    Jost_300Light: require('@expo-google-fonts/jost/300Light/Jost_300Light.ttf'),
+    Jost_400Regular: require('@expo-google-fonts/jost/400Regular/Jost_400Regular.ttf'),
+    Jost_500Medium: require('@expo-google-fonts/jost/500Medium/Jost_500Medium.ttf'),
+    IBMPlexMono_300Light: require('@expo-google-fonts/ibm-plex-mono/300Light/IBMPlexMono_300Light.ttf'),
+    IBMPlexMono_400Regular: require('@expo-google-fonts/ibm-plex-mono/400Regular/IBMPlexMono_400Regular.ttf'),
+    IBMPlexMono_500Medium: require('@expo-google-fonts/ibm-plex-mono/500Medium/IBMPlexMono_500Medium.ttf'),
+    CormorantGaramond_300Light: require('@expo-google-fonts/cormorant-garamond/300Light/CormorantGaramond_300Light.ttf'),
+    CormorantGaramond_400Regular: require('@expo-google-fonts/cormorant-garamond/400Regular/CormorantGaramond_400Regular.ttf'),
+    CormorantGaramond_500Medium: require('@expo-google-fonts/cormorant-garamond/500Medium/CormorantGaramond_500Medium.ttf'),
   });
 
   // Settings → Display. Falls back to the ThemeProvider's own defaults
