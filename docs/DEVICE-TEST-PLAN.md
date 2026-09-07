@@ -244,3 +244,16 @@ Shots: `docs/report-assets/release-0.1.0/`.
       claims dishonest here
 - [ ] Delete-account full run (§26) — needs a burner account; deletion is
       Edge-deployed (v13) + pinned by 8 deletion-coverage tests
+
+## §28 — 0.2.0 pre-tester device session (V4, pending — the hard stop)
+
+The full checklist lives in `docs/BASALT-PRE-TESTERS-PROMPT.md` §2 and is
+not duplicated here. Record results + screenshot paths under this
+section when the session runs: (1) defaults-vs-main gate with the five
+expected diffs listed there, (2) all-off informational run, (3)
+Extra-by-Extra smoke, (4) on-device crisis-path checks from every text
+entry point with Extras on AND off, (5) onboarding end-to-end incl. the
+two multi-select offers, (6) rich walk notification + pause on the lock
+screen, (7) both home-screen widgets placed, (8) meditation foreground
+service with the screen off (also closes the §27 FGS gap on a physical
+phone).

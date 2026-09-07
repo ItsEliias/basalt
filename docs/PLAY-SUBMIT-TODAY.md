@@ -51,8 +51,12 @@ banners up.
 1. Testing → Closed testing → create track `closed-alpha-1`.
 2. Upload the AAB:
    `app/android/app/build/outputs/bundle/release/app-release.aab`
-   (versionCode 2 / 0.2.0, upload-key signed; opt in to Play App Signing
-   when prompted — the upload key is exactly for this).
+   (**96.2 MB**, versionCode 2 / 0.2.0 — verified via bundletool dump —
+   upload-key signed; opt in to Play App Signing when prompted — the
+   upload key is exactly for this). Device-session install artifact:
+   `basalt-0.2.0-universal.apk` (157.9 MB, universal = all ABIs, built
+   from this AAB with bundletool 1.18.2 + the upload key, same pipeline
+   as 0.1.0).
 3. Release notes (0.2.0):
 
    > First closed test — the honest health ledger, now with Extras.
