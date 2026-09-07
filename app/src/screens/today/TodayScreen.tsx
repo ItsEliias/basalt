@@ -11,7 +11,9 @@ import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
 import { loadReadiness } from '@basalt/analytics';
-import { ExtraSlot } from '../../components/ExtrasProvider';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { StagedPebble, growthScore, stageFor } from '@basalt/extras';
+import { loadGrowthInputs } from '../../lib/growthData';
 import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
 import {
   PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
@@ -134,6 +136,12 @@ export function TodayScreen({ onOpenTab }: {
   const layout = profile?.todayLayout ?? 'ledger';
 
   const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
+  const growsOn = useExtra('pebbleGrows');
+  const [growthStage, setGrowthStage] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  useEffect(() => {
+    if (!growsOn) { setGrowthStage(null); return; }
+    void loadGrowthInputs(supabase).then((g) => g && setGrowthStage(stageFor(growthScore(g))));
+  }, [growsOn]);
   const [pebbleDismissed, setPebbleDismissed] = useState<string[]>([]);
   const [readinessScore, setReadinessScore] = useState<number | null>(null);
 
@@ -285,7 +293,11 @@ export function TodayScreen({ onOpenTab }: {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
         <ExtraSlot id="pebble">
-          <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+          <PebbleSlot
+            proposal={shownProposal}
+            onAction={onPebbleAction}
+            mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
+          />
         </ExtraSlot>
         <TileGridThemed>
           {filterTiles(tileSpecs, hidden).map((t) => (
@@ -313,7 +325,11 @@ export function TodayScreen({ onOpenTab }: {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
       <ExtraSlot id="pebble">
-        <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+        <PebbleSlot
+          proposal={shownProposal}
+          onAction={onPebbleAction}
+          mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
+        />
       </ExtraSlot>
 
       {/* ── Hero: energy remaining ─────────────────────────────────── */}

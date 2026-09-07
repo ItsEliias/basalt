@@ -14,6 +14,8 @@ import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
 import { CoopCard } from './CoopCard';
 import { loadWeeklyVolume, type WeeklyVolumeReport } from '../../lib/weeklyVolumeData';
 import { volumeLine } from '@basalt/training';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { StreaksCard, XpCard, type BadgeInputs } from '@basalt/extras';
 
 // Trends — everything here is computed from the ledger or absent. Gaps stay
 // gray, streak resets don't shame, and there are no charts until there is
@@ -37,6 +39,40 @@ export function TrendsScreen() {
   const challengeEnabled = useAppStore((s) => s.profile?.challengeEnabled ?? false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [monthly, setMonthly] = useState<MonthlyBehaviorReport | null>(null);
+
+  // V4 motivation Extras — loaded only while their toggles are on.
+  const streaksOn = useExtra('streaks');
+  const xpOn = useExtra('xp');
+  const [trainDays, setTrainDays] = useState<Set<string> | null>(null);
+  const [sleepDays, setSleepDays] = useState<Set<string> | null>(null);
+  const [xpInputs, setXpInputs] = useState<BadgeInputs | null>(null);
+  useEffect(() => {
+    if (!streaksOn) return;
+    void activeDaysFor(supabase, 'workout', { restAware: true }).then((r) => r.ok && setTrainDays(r.data));
+    void supabase
+      .from('basalt_sleep_sessions')
+      .select('date')
+      .gte('date', new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10))
+      .limit(400)
+      .then(({ data }) => setSleepDays(new Set((data ?? []).map((r: { date: string }) => r.date))));
+  }, [streaksOn]);
+  useEffect(() => {
+    if (!xpOn) return;
+    void (async () => {
+      const count = async (table: string) => {
+        const { count: c } = await supabase.from(table).select('*', { count: 'exact', head: true });
+        return c ?? 0;
+      };
+      const [entries, sessions, walks, sleepRecords] = await Promise.all([
+        count('basalt_food_entries'), count('basalt_workout_sessions'),
+        count('basalt_walks'), count('basalt_sleep_sessions'),
+      ]);
+      const { data: walkRows } = await supabase.from('basalt_walks').select('distance_m').limit(2000);
+      const totalWalkKm = (walkRows ?? []).reduce((s2: number, r: { distance_m: number | null }) => s2 + (Number(r.distance_m) || 0), 0) / 1000;
+      const run = fullDays ? currentAndLongest(fullDays, new Date()).longest : 0;
+      setXpInputs({ entries, sessions, walks, sleepRecords, totalWalkKm, longestCompleteLogRun: run });
+    })();
+  }, [xpOn, fullDays]);
 
   const load = useCallback(() => {
     setLoadFailed(false);
@@ -182,6 +218,22 @@ export function TrendsScreen() {
           </SrcNote>
         </Card>
       ) : null}
+
+      {/* ── V4 motivation Extras — off means these cards don't exist ── */}
+      <ExtraSlot id="streaks">
+        {anyDays && trainDays && sleepDays ? (
+          <Card>
+            <StreaksCard logging={anyDays} training={trainDays} sleep={sleepDays} />
+          </Card>
+        ) : null}
+      </ExtraSlot>
+      <ExtraSlot id="xp">
+        {xpInputs ? (
+          <Card>
+            <XpCard inputs={xpInputs} />
+          </Card>
+        ) : null}
+      </ExtraSlot>
 
       {/* ── Records — from real set history ────────────────────────── */}
       <Card>

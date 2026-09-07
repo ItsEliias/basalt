@@ -12,6 +12,9 @@
 export type ExtraGroup = 'capture' | 'motivation' | 'glanceability' | 'depth' | 'basalt';
 
 export type ExtraId =
+  | 'streaks'
+  | 'xp'
+  | 'pebbleGrows'
   | 'capturePhoto'
   | 'captureVoice'
   | 'captureBarcode'
@@ -40,8 +43,8 @@ export type ExtraDef = {
   requires?: ExtraId[];
   /** Android permissions the Extra will request at first use. */
   permissions?: string[];
-  /** When true, this Extra is offered as part of its group's single screen. */
-  groupOnboarding?: boolean;
+  /** Extras sharing an onboardingGroup share one offer screen. */
+  onboardingGroup?: string;
 };
 
 export const EXTRA_GROUP_TITLES: Record<ExtraGroup, string> = {
@@ -62,7 +65,7 @@ export const EXTRAS: readonly ExtraDef[] = [
     group: 'capture',
     default: true,
     permissions: ['android.permission.CAMERA'],
-    groupOnboarding: true,
+    onboardingGroup: 'capture',
     onboarding: {
       question: 'How do you want to capture food? All of these are optional — typing always works.',
       yesLabel: 'Keep the ticked ones',
@@ -77,7 +80,7 @@ export const EXTRAS: readonly ExtraDef[] = [
     group: 'capture',
     default: true,
     permissions: ['android.permission.RECORD_AUDIO'],
-    groupOnboarding: true,
+    onboardingGroup: 'capture',
     onboarding: {
       question: 'How do you want to capture food? All of these are optional — typing always works.',
       yesLabel: 'Keep the ticked ones',
@@ -92,7 +95,7 @@ export const EXTRAS: readonly ExtraDef[] = [
     group: 'capture',
     default: true,
     permissions: ['android.permission.CAMERA'],
-    groupOnboarding: true,
+    onboardingGroup: 'capture',
     onboarding: {
       question: 'How do you want to capture food? All of these are optional — typing always works.',
       yesLabel: 'Keep the ticked ones',
@@ -106,13 +109,51 @@ export const EXTRAS: readonly ExtraDef[] = [
     oneLiner: 'Drag your recent foods onto a plate and size the portions — commits as ordinary entries.',
     group: 'capture',
     default: true,
-    groupOnboarding: true,
+    onboardingGroup: 'capture',
     onboarding: {
       question: 'How do you want to capture food? All of these are optional — typing always works.',
       yesLabel: 'Keep the ticked ones',
       noLabel: 'Just typing, thanks',
       preview: 'capture',
     },
+  },
+
+  // ── Motivation — all off by default, all honest inside ────────────────
+  {
+    id: 'streaks',
+    title: 'Streaks',
+    oneLiner: 'Day runs for logging, training and sleep — two automatic freezes a week, rules published on Trends.',
+    group: 'motivation',
+    default: false,
+    onboardingGroup: 'sxb',
+    onboarding: {
+      question: 'Streaks, XP and badges? Formulas published, freezes automatic, rest days never break training.',
+      yesLabel: 'Turn them on',
+      noLabel: 'Not now',
+      preview: 'sxb',
+    },
+  },
+  {
+    id: 'xp',
+    title: 'XP, levels & badges',
+    oneLiner: 'XP from real actions with the formula printed in-app; badges only for real milestones; confetti only on PRs.',
+    group: 'motivation',
+    default: false,
+    onboardingGroup: 'sxb',
+    onboarding: {
+      question: 'Streaks, XP and badges? Formulas published, freezes automatic, rest days never break training.',
+      yesLabel: 'Turn them on',
+      noLabel: 'Not now',
+      preview: 'sxb',
+    },
+  },
+  {
+    id: 'pebbleGrows',
+    title: 'Pebble grows',
+    oneLiner: 'Five stages from a published 30-day consistency score — regression is allowed and visible.',
+    group: 'motivation',
+    default: false,
+    requires: ['pebble'],
   },
   {
     id: 'pebble',
@@ -220,23 +261,22 @@ export type OnboardingExtraScreen = {
 /** The screens the Extras onboarding shows, in registry order. */
 export function onboardingExtraScreens(): OnboardingExtraScreen[] {
   const screens: OnboardingExtraScreen[] = [];
-  const grouped = new Set<ExtraGroup>();
+  const byGroup = new Map<string, OnboardingExtraScreen>();
   for (const e of EXTRAS) {
     if (!e.onboarding) continue;
-    if (e.groupOnboarding) {
-      if (grouped.has(e.group)) {
-        screens.find((s) => s.ids.some((i) => extraDef(i).group === e.group))!.ids.push(e.id);
-        continue;
-      }
-      grouped.add(e.group);
+    if (e.onboardingGroup) {
+      const existing = byGroup.get(e.onboardingGroup);
+      if (existing) { existing.ids.push(e.id); continue; }
     }
-    screens.push({
+    const screen: OnboardingExtraScreen = {
       ids: [e.id],
       question: e.onboarding.question,
       yesLabel: e.onboarding.yesLabel,
       noLabel: e.onboarding.noLabel,
       preview: e.onboarding.preview,
-    });
+    };
+    if (e.onboardingGroup) byGroup.set(e.onboardingGroup, screen);
+    screens.push(screen);
   }
   return screens;
 }

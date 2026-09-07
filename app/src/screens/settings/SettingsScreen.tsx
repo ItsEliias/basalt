@@ -21,7 +21,9 @@ import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgro
 import { getPebbleSettings, setPebbleSettings } from '../../lib/pebble';
 import { PEBBLE_DEFAULTS, type PebbleSettings } from '../../lib/pebbleModel';
 import { EXTRAS, EXTRA_GROUP_TITLES, extraDef, type ExtraGroup, type ExtraId } from '@basalt/core-data';
-import { useExtras } from '../../components/ExtrasProvider';
+import { ExtraSlot, useExtra, useExtras } from '../../components/ExtrasProvider';
+import { GROWTH_RULES, StagedPebble, growthScore, scoreText, stageFor } from '@basalt/extras';
+import { loadGrowthInputs, type GrowthInputs } from '../../lib/growthData';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { buildFeedbackMailto } from '../../lib/feedbackModel';
@@ -85,6 +87,11 @@ export function SettingsScreen() {
     void setPebbleSettings(patch).then(setPebble);
   };
   const extras = useExtras();
+  const growsOn = useExtra('pebbleGrows');
+  const [growth, setGrowth] = useState<GrowthInputs | null>(null);
+  useEffect(() => {
+    if (growsOn) void loadGrowthInputs(supabase).then(setGrowth);
+  }, [growsOn]);
   const flipExtra = async (id: ExtraId, on: boolean) => {
     const r = await extras.flip(id, on);
     if (r.turnedOffDependents.length > 0) {
@@ -532,6 +539,24 @@ export function SettingsScreen() {
           }
         />
         <SrcNote>Pebble never comments on how you did. Every message is a proposal with an action, and you can dismiss any of them. Turning Pebble off keeps the same notifications in Basalt's plain voice.</SrcNote>
+        <ExtraSlot id="pebbleGrows">
+          {growth ? (() => {
+            const score = growthScore(growth);
+            return (
+              <View style={styles.growthRow}>
+                <StagedPebble stage={stageFor(score)} size={56} />
+                <View style={styles.growthText}>
+                  <Text style={{ color: theme.text.ink, fontSize: 13.5, fontWeight: '600' }}>
+                    Stage {stageFor(score)} of 5 · consistency {scoreText(score)}
+                  </Text>
+                  <Text style={{ color: theme.text.faint, fontSize: 11, lineHeight: 15, marginTop: 3 }}>
+                    {GROWTH_RULES.join(' ')}
+                  </Text>
+                </View>
+              </View>
+            );
+          })() : null}
+        </ExtraSlot>
       </Card>
 
       {/* ── Your data ──────────────────────────────────────────────── */}
@@ -808,6 +833,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   pebbleIntro: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  growthRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 12 },
+  growthText: { flex: 1 },
   pebbleBlurb: { flex: 1, fontSize: 12, lineHeight: 17 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {

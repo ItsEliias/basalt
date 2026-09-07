@@ -82,9 +82,13 @@ ML Kit (no new native dependency; secrets stay server-side). What landed:
   also renders `<ExtraSlot` (or is the provider/registry) — LogScreen
   qualifies; anything else fails the suite.
 
-**Note for the all-off run:** capture extras default ON, so the
-pre-tester diff session must flip every Extra off in Settings › Extras
-first — "all off" is a deliberate state, not the fresh-install state.
+**Gate semantics (amended by the user, 2026-09-07):** the pass/fail
+invariant is **"fresh install with every Extra at its registry default
+renders identically to pre-branch main"** — capture extras default on,
+and hiding barcode/photo/plate under a deliberate all-off is an
+*expected* difference from main, not a bug. The pre-tester session
+records BOTH runs (defaults, and all-off) in this report; only the
+defaults run gates.
 
 Device verification of the new surfaces (plate drag, mode hiding,
 checklist onboarding screen) rides the same deferred session as the
@@ -104,3 +108,141 @@ therefore: registry entries + ExtraSlot gating for the capture methods
 (on by default), the genuinely new plate builder, and a decision on
 ML Kit on-device OCR vs the existing server-side label mode — all
 pending the stop-point answer.
+
+## Phase 2 — Motivation (streaks, XP, Pebble grows landed; HALTED at STOP POINT B; suite 1083 → 1103)
+
+- **Streaks with freezes** (`packages/extras/src/streaks`): freeze-aware
+  runs for logging / training / sleep-logged. Two freezes per Mon–Sun
+  ISO week, auto-applied oldest-first, no banking; a freeze only ever
+  BRIDGES two real days (runs neither start with nor consist of frozen
+  days — the first implementation let freezes leak past run edges; the
+  tests caught it). Rest days never break training: the host passes the
+  core engine's rest-aware day set. Frozen days are listed on the card,
+  and the rules render verbatim from `STREAK_RULES` on Trends. 8 tests.
+- **XP, levels, badges, confetti** (`packages/extras/src/xp` +
+  `motivation/Cards.tsx`): XP = entries×5 + sessions×25 + walks×15 +
+  sleep×10, printed on the card from the same constants the code uses
+  (test-pinned); level curve written down (250·n·(n−1)) with exact
+  boundary tests; three badges, real milestones only (10 sessions,
+  100 km walked, 30-day complete-log run) with their "how" printed.
+  Confetti: 22 token-coloured pieces, 1.2 s, PRs only — it fires off
+  the SAME quiet e1RM PR detection the sets table already renders, in
+  SessionTab, gated by the xp Extra. 7 tests.
+- **Pebble grows** (`packages/extras/src/growth`): one published score —
+  (logging + training + sleep days) ÷ 90 over the rolling 30 days —
+  five stages at 0/20/40/60/80%, regression is the same pure function
+  (test asserts the fall). Five staged SVGs, same character with more
+  detail (stage 3 IS the classic Pebble; 1–2 quieter, 4 facets, 5 a
+  sprout). Surfaces: the Settings Pebble card (stage + score + rules)
+  and the Today bubble's mascot swaps to the staged pebble via a new
+  optional `mascot` prop on the core PebbleSlot (inert when unused —
+  all-defaults rendering unchanged). Requires the pebble Extra
+  (registry-enforced). 4 tests + the app-side window-constant pin.
+- Registry: `streaks` + `xp` share one onboarding screen via the new
+  `onboardingGroup` field ("Streaks, XP and badges?" — one yes);
+  `pebbleGrows` is Settings-only (matches the prompt's onboarding
+  order). Trends hosts the cards inside ExtraSlots and loads their
+  data only while the toggles are on.
+
+### STOP POINT B — social schema + RLS, for review before anything is applied
+
+Pattern follows V3's co-op law: **cross-account data is only ever
+published aggregates written by the owner's own device** — no policy
+grants any read into another user's raw tables. Proposed objects (all
+`basalt_`-prefixed, nothing applied yet):
+
+```sql
+-- 1 · Invites: private to their owner; redemption ONLY via definer RPC.
+create table basalt_friend_invites (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  code text not null unique,               -- 8-char, single-use
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '7 days',
+  redeemed_by uuid references auth.users(id),
+  redeemed_at timestamptz
+);
+-- RLS: select/insert/delete where owner_id = auth.uid(). No update policy.
+
+-- 2 · Friendships: ordered pair (user_a < user_b), created by the RPC.
+create table basalt_friends (
+  user_a uuid not null references auth.users(id) on delete cascade,
+  user_b uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_a, user_b),
+  check (user_a < user_b)
+);
+-- RLS: select where auth.uid() in (user_a, user_b);
+--      delete where auth.uid() in (user_a, user_b) (unfriend, either side);
+--      NO insert policy — only basalt_redeem_friend_invite(code) writes it:
+--      security definer fn validating code, expiry, not-self, not-already-
+--      friends; marks the invite redeemed in the same transaction.
+
+-- 3 · Challenges: friends-only, three published kinds.
+create table basalt_challenges (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('steps','sessions','logged_days')),
+  starts_on date not null,
+  ends_on date not null,
+  created_at timestamptz not null default now(),
+  check (ends_on >= starts_on and ends_on <= starts_on + 31)
+);
+-- RLS: select where basalt_is_challenge_member(id);
+--      insert where creator_id = auth.uid();
+--      delete where creator_id = auth.uid().
+
+create table basalt_challenge_members (
+  challenge_id uuid not null references basalt_challenges(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null,              -- self-chosen at join, the ONLY name shared
+  joined_at timestamptz not null default now(),
+  primary key (challenge_id, user_id)
+);
+-- RLS: select where basalt_is_challenge_member(challenge_id);
+--      insert where user_id = auth.uid() AND friends-with-creator
+--      (exists on basalt_friends for (uid, creator) pair);
+--      delete where user_id = auth.uid().
+-- basalt_is_challenge_member(cid): security definer, stable —
+--   exists(select 1 from basalt_challenge_members where challenge_id = cid
+--          and user_id = auth.uid()) — definer breaks the self-referential
+--   policy recursion.
+
+-- 4 · Progress: the owner's device UPSERTS its own aggregate; members read.
+create table basalt_challenge_progress (
+  challenge_id uuid not null references basalt_challenges(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day date not null,
+  value numeric not null,                  -- steps count / session count / logged-day 0-1
+  updated_at timestamptz not null default now(),
+  primary key (challenge_id, user_id, day)
+);
+-- RLS: select where basalt_is_challenge_member(challenge_id);
+--      insert/update where user_id = auth.uid(). No delete policy needed
+--      (cascade covers it); add delete where user_id = auth.uid() for tidiness.
+
+-- 5 · "3 friends logged today": one boolean per day, self-published.
+create table basalt_friend_days (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day date not null,
+  logged boolean not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, day)
+);
+-- RLS: insert/update where user_id = auth.uid();
+--      select where user_id = auth.uid() OR an accepted basalt_friends row
+--      pairs auth.uid() with user_id.
+```
+
+**The exact columns another user can ever see of yours:** your half of a
+friendship row (`user_a/user_b`, `created_at`) · a challenge's `kind`,
+`starts_on`, `ends_on` · your self-chosen `display_name` + `joined_at` ·
+your per-day aggregate `value` for a challenge you both joined · your
+per-day `logged` boolean. **Never:** food entries, weights, sleep,
+vitals, photos, or any row of any other `basalt_` table. Deletion: every
+table cascades from `auth.users` and will be appended to BOTH wipe
+lists (Edge + SQL) in the same migration — the deletion-coverage test
+fails the suite otherwise.
+
+Awaiting review; the daily-narrative Extra (last in the phase order)
+also waits behind this stop.

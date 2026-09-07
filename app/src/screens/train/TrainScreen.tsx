@@ -19,6 +19,8 @@ import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
 import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './model';
 import { OutdoorTab } from './OutdoorTab';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { ConfettiBurst } from '@basalt/extras';
 import { RacePlanCard } from './RacePlanCard';
 import { AdaptSheet } from './AdaptSheet';
 import { loadDeloadSignals } from '../../lib/periodizationData';
@@ -54,6 +56,17 @@ function SessionTab() {
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
+  // Confetti on PRs only (XP Extra): fires when a committed set's quiet PR
+  // mark appears — the same detection the sets table already renders.
+  const xpOn = useExtra('xp');
+  const prTotal = session.exercises.reduce(
+    (n: number, ex: SessionExerciseState) => n + ex.rows.filter((r) => r.committed && r.isPr).length, 0);
+  const lastPrTotal = useRef(prTotal);
+  const [confettiKey, setConfettiKey] = useState(0);
+  useEffect(() => {
+    if (xpOn && prTotal > lastPrTotal.current) setConfettiKey((k) => k + 1);
+    lastPrTotal.current = prTotal;
+  }, [prTotal, xpOn]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [rpeOpen, setRpeOpen] = useState(false);
   const [adaptOpen, setAdaptOpen] = useState(false);
@@ -274,6 +287,11 @@ function SessionTab() {
 
   return (
     <>
+      {confettiKey > 0 ? (
+        <ExtraSlot id="xp">
+          <ConfettiBurst key={confettiKey} />
+        </ExtraSlot>
+      ) : null}
       <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <View style={session.exercises.length === 0 ? { opacity: 0.4 } : null}>

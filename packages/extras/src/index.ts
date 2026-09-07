@@ -1,2 +1,7 @@
 export * from './plate/model';
 export * from './plate/PlateBuilder';
+export * from './streaks/model';
+export * from './xp/model';
+export * from './growth/model';
+export * from './growth/StagedPebble';
+export * from './motivation/Cards';
