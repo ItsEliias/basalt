@@ -9,3 +9,6 @@ export * from './social/model';
 export * from './social/SocialCard';
 export * from './narrative/model';
 export * from './narrative/NarrativeCard';
+export * from './programmes/templates';
+export * from './programmes/checkin';
+export * from './coach/model';

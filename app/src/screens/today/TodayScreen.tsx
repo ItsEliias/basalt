@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
@@ -14,6 +14,7 @@ import { loadReadiness } from '@basalt/analytics';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { SupplementsCard } from '../../components/SupplementsCard';
 import { IntakeRangeNote } from '../../components/IntakeRangeNote';
+import { CoachCard } from '../../components/CoachCard';
 import { HeroWhySheet } from '../../components/HeroWhySheet';
 import { StagedPebble, growthScore, stageFor, NarrativeCard, narrativeDateFor, friendsLoggedLine } from '@basalt/extras';
 import { loadGrowthInputs } from '../../lib/growthData';
@@ -472,6 +473,26 @@ export function TodayScreen({ onOpenTab }: {
           activeKcal={data.activeKcal}
         />
       ) : null}
+
+      <ExtraSlot id="coach">
+        <CoachCard
+          numbers={{
+            todayKcal: data ? Math.round(data.totals.calories) : null,
+            targetKcal: targets?.calories ?? null,
+            proteinG: data ? Math.round(data.totals.protein) : null,
+            proteinTargetG: targets?.proteinG ?? null,
+            trendWeightKg: null,
+            sleepDebtMin: null,
+            readiness: null,
+            sessionsThisWeek: null,
+          }}
+          onAction={(kind) => {
+            if (kind === 'open-recover') onOpenTab?.('recover');
+            else if (kind === 'open-train') onOpenTab?.('train');
+            else Alert.alert('The plan', 'Settings › Nutrition plan — every number a range, formulas published.');
+          }}
+        />
+      </ExtraSlot>
 
       <ExtraSlot id="supplements">
         <SupplementsCard />

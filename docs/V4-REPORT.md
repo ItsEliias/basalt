@@ -471,3 +471,96 @@ Decisions made without you:
 - The hero numeral is now wrapped in a Pressable for the why-tap — the
   gate diff should treat any pixel shift there as a bug (none expected;
   the wrapper adds no styling).
+
+## Phase 6 — Profile & Targets · Programmes · Coach (suite 1148 → 1175)
+
+### 6a — Profile & Targets (core)
+
+- **Placement decision**: the Nutrition plan is a card in **Settings,
+  directly under the Profile card** — every input it reads (sex, height,
+  DOB, activity) is edited right above it, and the existing "Daily
+  targets" row stays as the quick summary.
+- **Engine** (`packages/nutrition/src/plan.ts`): every number a range
+  from a published formula — Mifflin-St Jeor ±10% × activity, then the
+  chosen rate; protein 1.6–2.2 g/kg; fat 20–35% of energy; carbs the
+  remainder; fibre 14 g/1,000 kcal; sugar <10%; sodium <2,300 mg; water
+  by weight. Weight input is the **7-day trend (3+ weigh-ins), never a
+  single reading** — fewer weigh-ins fall back to the latest one,
+  labelled as such on the card.
+- **Rails in code, reasons in words** (all test-pinned): energy floor
+  1,200 F / 1,500 M / 1,500 unspecified with "adequate nutrition
+  unlikely" wording; rate cap 1%/wk loss / 0.5%/wk gain — a request past
+  the cap is clamped and the only words are "slow down"; an under-18 DOB
+  hides the plan entirely ("Logging still works fully"); "Estimates, not
+  medical advice." renders with the plan; **no BMI category labels ever**
+  — a source-scan test sweeps app + packages for category words.
+- **Overrides**: tap any range row → set a custom value; it lands as a
+  targets version with a stated reason and the computed range stays on
+  the card. "Apply midpoints as targets" writes the whole plan with the
+  formula in the reason. 10 tests.
+
+**Worked example (as requested; sex assumed male for the arithmetic,
+stated in the test):** 30 y, 82 kg, 178 cm, moderately active, −0.5%/wk →
+BMR 1,788 · TDEE 2,494–3,048 · rate −451 kcal/day · **energy
+2,043–2,597 kcal** (midpoint 2,320) · protein 131–180 g · fat 52–90 g ·
+carbs 222–307 g · fibre 32 g · sugar cap 58 g · sodium cap 2,300 mg ·
+water 2,600 ml. Pinned verbatim in `plan.test.ts`.
+
+### 6b — Programmes (Extra, depth group, off)
+
+- **Templates as data** (`packages/extras/src/programmes/templates.ts`):
+  8-week recomposition (3 strength + 2 walks, −0.25%/wk), Strength block
+  (6 wk, 4 days, maintenance), Walking base (4 wk, 5 walks). Adding a
+  template is adding an entry.
+- **Weekly check-in — exactly ONE proposal**, rules in a stated order
+  (each pinned): (1) trend past the safety cap → ONLY "slow down", no
+  target change, no praise; (2) ≥half the sessions missed →
+  swap-lighter, "rather than adjusting food"; (3) no trend → hold with
+  the why; (4) >0.15%/wk off the programme's rate → one bounded
+  ±100–150 kcal step citing both rates; (5) on track → hold. Accepting
+  an adjust writes a targets version with the check-in's own words as
+  the reason. 9 tests.
+- **Programme card** (Train tab, above the core Program card): week
+  strip, trend corridor (published band: rate-moved start ± 0.3 kg noise
+  ± 25% of expected change — "information, not failure"), check-in with
+  Accept/Ignore, stop.
+- **Share-as-challenge RLS, 5 lines**: sharing reuses the Phase-2 social
+  tables unchanged — a `basalt_challenges` row (creator-scoped insert) +
+  self-insert membership; friends join via the friendship-checked member
+  policy; progress is each device publishing its OWN session counts to
+  `basalt_challenge_progress` (self-scoped writes, member-scoped reads
+  via the security-definer helper); zero `using (true)` anywhere; food
+  and weight rows remain unreadable by any other user. No new tables, no
+  new policies — the applied migration `basalt_program_templates` only
+  adds nullable columns to the self-scoped `basalt_programs`.
+
+### 6c — Pebble Coach (Extra, basalt group, off, requires Pebble)
+
+- **Hard limits on-device, before any network call**
+  (`packages/extras/src/coach/model.ts`, pinned by 8 tests): medical →
+  "one for a doctor" + doctor-report pointer; dosing → never a dose;
+  disordered-eating (outranks everything) → coaching declines and points
+  to the Butterfly Foundation / a GP, "will not coach restriction".
+  Deflection copy is itself scanned: no pseudo-diagnosis, no mg, no
+  cheer. A source-scan pins "never initiates" — the module contains no
+  notification or scheduling code.
+- **Grounded answers**: `pebble-coach` Edge Function (v1 deployed,
+  claude-sonnet-5) receives ONLY the numbers the client chose to send,
+  answers in plain sentences, lists `citedNumbers` rendered under every
+  reply ("NUMBERS USED · …"), and may propose at most one action from
+  {open-recover, open-plan, open-train} → rendered Accept/Ignore, never
+  an edit. Malformed replies are parsed defensively.
+- Contract: design-spec **§9 Targets published + Rails + Coach** added.
+
+Decisions made without you:
+- The plan's rate preference lives in device storage (`basalt.planRatePct`)
+  — the resulting targets sync as versions; the knob itself is per-device.
+- Coach grounding from Today currently sends intake/protein vs targets;
+  readiness/sleep-debt slots exist and are sent as null (stated as "not
+  recorded" by the coach) until a cheap loader is worth it.
+- The coach card self-gates (`<ExtraSlot id="coach">` inside the
+  component) — the extras-lint rule caught the first version and the fix
+  makes the gate travel with the file.
+- The crisis detector (Phase 7) will be wired IN FRONT of the coach's
+  text entry point, as the spec orders; the coach ships this phase with
+  its own guards only.

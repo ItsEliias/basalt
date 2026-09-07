@@ -227,6 +227,36 @@ The Extras framework carries four binding rules:
 The current list lives in the registry file; the report for each V4 phase
 records what was added.
 
+## 9. Targets published + Rails + Coach (V4 Phase 6 amendment)
+
+**§Targets published.** Every nutrition target the app computes is a RANGE
+from a formula stated in-app, in words, next to the number: Mifflin-St
+Jeor ±10% × activity factor for energy (then the user's chosen rate),
+protein 1.6–2.2 g/kg, fat 20–35% of energy, carbs the remainder, fibre
+14 g/1,000 kcal, sugar under 10% of energy, sodium under 2,300 mg, water
+by body weight. Any target may be overridden with a custom value — the
+computed range stays visible beside it, always. The plan's weight input is
+the 7-day trend, never a single reading.
+
+**§Rails.** Safety rails live in engine code with their reasons rendered
+in words, pinned by test: energy floor 1,200 kcal (stated female) /
+1,500 kcal (stated male or unspecified); rate cap 1% of body weight per
+week for loss and 0.5% for gain — a request beyond the cap is clamped and
+the only coaching allowed is "slow down"; an under-18 date of birth hides
+the plan entirely (logging keeps working); the line "Estimates, not
+medical advice." renders wherever the plan does; and **no BMI category
+label may ever appear** — enforced by a source-scan test across app and
+packages.
+
+**§Coach.** The coach (an Extra, requiring Pebble) answers only when
+asked — it never initiates. Every answer cites the exact stored numbers it
+used, by name. It may propose exactly one action, rendered as
+Accept / Ignore through the normal proposal path — it never edits data.
+Hard limits, each pinned by test: no diagnosis, no dosing, disordered-
+eating signals end coaching and point to help, medical questions get
+"one for a doctor". The crisis path (§Wellbeing, Phase 7) runs before the
+coach sees any text.
+
 ## 7. Reference files
 
 `basalt-app-prototype.html` (v11 — source of truth: all components live, 5 tabs + settings + 8-step onboarding) · `basalt-master-roadmap.md` (scope & phasing) · `basalt-feature-adoption-matrix.md` (feature detail + sources) · `health-app-migration-report.md` (code audit: what ports from Arise/Oathbound) · `ui-benchmark-review.md` (market rationale).

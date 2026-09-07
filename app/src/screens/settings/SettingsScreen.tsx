@@ -16,6 +16,7 @@ import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
 import { HydrationCard } from './HydrationCard';
+import { PlanCard } from './PlanCard';
 import { ConnectedServicesCard } from './ConnectedServicesCard';
 import { cancelAllHydrationReminders } from '../../lib/hydrationReminders';
 import { setSupplementsReminderHour } from '../../lib/supplementsReminder';
@@ -323,6 +324,8 @@ export function SettingsScreen() {
       </Card>
 
       {/* ── Preferences ────────────────────────────────────────────── */}
+      <PlanCard />
+
       <Card>
         <ReceiptHeader label="Preferences" />
         <ObChipLabel>Check-ins</ObChipLabel>

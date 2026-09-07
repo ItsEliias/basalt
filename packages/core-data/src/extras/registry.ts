@@ -31,7 +31,9 @@ export type ExtraId =
   | 'cycle'
   | 'photos'
   | 'imports'
-  | 'uncertainty';
+  | 'uncertainty'
+  | 'programmes'
+  | 'coach';
 
 export type ExtraOnboarding = {
   /** The question the onboarding screen asks, verbatim. */
@@ -306,6 +308,20 @@ export const EXTRAS: readonly ExtraDef[] = [
     },
   },
   {
+    id: 'programmes',
+    title: 'Programmes',
+    oneLiner: 'Template blocks with a weekly check-in that proposes exactly one thing — hold, one bounded step, or slow down.',
+    group: 'depth',
+    default: false,
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+  {
     id: 'imports',
     title: 'Connected services',
     oneLiner: 'Strava, Garmin and Oura imports with source attribution — sessions and sleep, never edited.',
@@ -320,6 +336,14 @@ export const EXTRAS: readonly ExtraDef[] = [
     },
   },
 
+  {
+    id: 'coach',
+    title: 'Pebble Coach',
+    oneLiner: 'Ask about your own numbers — answers cite exactly what they used, propose at most one action, never edit anything.',
+    group: 'basalt',
+    default: false,
+    requires: ['pebble'],
+  },
   {
     id: 'pebble',
     title: 'Pebble',

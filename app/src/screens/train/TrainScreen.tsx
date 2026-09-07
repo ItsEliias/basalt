@@ -22,6 +22,7 @@ import { OutdoorTab } from './OutdoorTab';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { ConfettiBurst } from '@basalt/extras';
 import { RacePlanCard } from './RacePlanCard';
+import { ProgrammeCard } from './ProgrammeCard';
 import { AdaptSheet } from './AdaptSheet';
 import { loadDeloadSignals } from '../../lib/periodizationData';
 import { timerServiceFailed } from '../../lib/timerService';
@@ -181,6 +182,10 @@ function SessionTab() {
         </Card>
 
         {/* ── Program — the mesocycle, phase + planned rest ──────────── */}
+        <ExtraSlot id="programmes">
+          <ProgrammeCard />
+        </ExtraSlot>
+
         <Card>
           <ReceiptHeader
             label="Program"

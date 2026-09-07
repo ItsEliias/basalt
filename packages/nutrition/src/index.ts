@@ -24,3 +24,4 @@ export * from './fill-gap';
 export * from './cooking-mode';
 export * from './supplements';
 export * from './uncertainty';
+export * from './plan';
