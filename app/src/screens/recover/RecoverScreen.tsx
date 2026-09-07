@@ -21,7 +21,7 @@ import { writeThroughOutbox } from '../../lib/outbox';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requestWidgetUpdate } from 'react-native-android-widget';
-import { useExtra } from '../../components/ExtrasProvider';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { READINESS_SNAPSHOT_KEY } from '../../widgets/handler';
 import { BasaltReadinessWidget, parseReadinessSnapshot } from '../../widgets/BasaltReadinessWidget';
 
@@ -60,7 +60,7 @@ function VitalsTab() {
   const [activeFast, setActiveFast] = useState<Fast | null>(null);
   const [recentFasts, setRecentFasts] = useState<Fast[]>([]);
   const [fastNow, setFastNow] = useState(Date.now());
-  const fastingEnabled = profile?.fastingEnabled ?? false;
+  const fastingEnabled = useExtra('fasting');
   const [loadFailed, setLoadFailed] = useState(false);
   const [sleepNeed, setSleepNeed] = useState<SleepNeedReport | null>(null);
   const [needMathOpen, setNeedMathOpen] = useState(false);
@@ -247,7 +247,9 @@ function VitalsTab() {
         </Card>
       ) : null}
 
-      <ProgressPhotosCard />
+      <ExtraSlot id="photos">
+        <ProgressPhotosCard />
+      </ExtraSlot>
 
       {/* ── Fasting — opt-in window timer, information not advice ──── */}
       {fastingEnabled ? (
@@ -446,7 +448,9 @@ function VitalsTab() {
       ) : null}
 
       {/* ── Cycle — opt-in, facts vs labelled estimates ────────────── */}
-      <CycleCard />
+      <ExtraSlot id="cycle">
+        <CycleCard />
+      </ExtraSlot>
 
       {/* ── Camera-HRV tuning bench — dev builds only for now ──────── */}
       {__DEV__ ? (

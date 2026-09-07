@@ -3,37 +3,45 @@ import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, mono, ScaledText as Text } from '@basalt/ui';
-import {
-  addProgressPhoto, listProgressPhotos, signedProgressUrls, type ProgressPhoto, type ProgressPose,
-} from '@basalt/core-data';
-import { supabase } from '../../lib/supabase';
+import { Switch } from 'react-native';
+import { Card, EmptyState, SrcNote, ReceiptHeader, CTA, ChipRow, ReceiptRow, mono, ScaledText as Text } from '@basalt/ui';
+import { type ProgressPose } from '@basalt/core-data';
 import { useTheme } from '@basalt/ui';
+import {
+  PHOTOS_CLOUD_WARNING, isCloudSyncOn, listPhotoRecords, savePhoto, setCloudSync,
+  type PhotoRecord,
+} from '../../lib/progressPhotoStore';
 
-// Progress photo vault — private bucket, ghost-overlay alignment against
-// the previous photo of the same pose, side-by-side compare. Photos are
-// excluded from exports by default; nothing here is ever shared.
+// Progress photos, local-first — photos stay on this phone unless the
+// separate cloud switch is flipped, with the trade stated in plain words.
+// Ghost-overlay alignment against the previous photo of the same pose,
+// side-by-side AND overlay compare. Excluded from exports by default;
+// nothing here is ever shared.
 
 const POSES: ProgressPose[] = ['front', 'side', 'back'];
 
 export function ProgressPhotosCard() {
   const { theme } = useTheme();
-  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
-  const [urls, setUrls] = useState<Map<string, string>>(new Map());
+  const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [pose, setPose] = useState<ProgressPose>('front');
   const [capturing, setCapturing] = useState(false);
   const [comparing, setComparing] = useState(false);
+  const [overlay, setOverlay] = useState(false);
+  const [cloud, setCloud] = useState(false);
 
   const refresh = async () => {
-    const r = await listProgressPhotos(supabase);
-    if (!r.ok) return;
-    setPhotos(r.data);
-    const signed = await signedProgressUrls(supabase, r.data.map((p) => p.storagePath));
-    if (signed.ok) setUrls(signed.data);
+    setPhotos(await listPhotoRecords());
   };
   useEffect(() => {
     void refresh();
+    void isCloudSyncOn().then(setCloud);
   }, []);
+
+  const flipCloud = async (on: boolean) => {
+    await setCloudSync(on);
+    setCloud(on);
+    void refresh();
+  };
 
   const ofPose = photos.filter((p) => p.pose === pose);
   const latest = ofPose[ofPose.length - 1] ?? null;
@@ -41,13 +49,13 @@ export function ProgressPhotosCard() {
 
   return (
     <Card>
-      <ReceiptHeader label="Progress photos" summary="private vault · never shared · out of exports unless you say so" />
+      <ReceiptHeader label="Progress photos" summary={cloud ? 'this phone + private cloud copy' : 'this phone only'} />
       <ChipRow options={POSES.map((p) => `${p} (${photos.filter((x) => x.pose === p).length})`)}
         value={`${pose} (${ofPose.length})`}
         onChange={(v) => setPose(v.split(' ')[0] as ProgressPose)} />
-      {latest && urls.get(latest.storagePath) ? (
+      {latest ? (
         <View style={styles.previewRow}>
-          <Image source={{ uri: urls.get(latest.storagePath)! }} style={[styles.preview, { backgroundColor: theme.surfaces.surface2 }]} />
+          <Image source={{ uri: latest.uri }} style={[styles.preview, { backgroundColor: theme.surfaces.surface2 }]} />
           <Text style={[styles.previewMeta, { color: theme.text.ink2 }]}>
             {`latest · ${new Date(latest.takenAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}\n${ofPose.length} ${ofPose.length === 1 ? 'photo' : 'photos'} of this pose`}
           </Text>
@@ -61,12 +69,26 @@ export function ProgressPhotosCard() {
           <Text style={[styles.link, { color: theme.text.faint }]}>COMPARE FIRST ↔ LATEST →</Text>
         </Pressable>
       ) : null}
-      <SrcNote>{`Alignment guides + a ghost of your previous ${pose} photo · angle tags · stored privately, shown only to you via short-lived links`}</SrcNote>
+      <ReceiptRow
+        name="Cloud sync"
+        meta={PHOTOS_CLOUD_WARNING}
+        last
+        right={
+          <Switch
+            value={cloud}
+            onValueChange={(v) => void flipCloud(v)}
+            trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+            thumbColor={theme.text.ink}
+            accessibilityLabel="Cloud sync for progress photos"
+          />
+        }
+      />
+      <SrcNote>{`Alignment guides + a ghost of your previous ${pose} photo · never shared, out of exports unless you say so`}</SrcNote>
 
       <CaptureSheet
         open={capturing}
         pose={pose}
-        ghostUrl={latest ? urls.get(latest.storagePath) ?? null : null}
+        ghostUrl={latest?.uri ?? null}
         onClose={() => setCapturing(false)}
         onCaptured={() => {
           setCapturing(false);
@@ -77,12 +99,26 @@ export function ProgressPhotosCard() {
       <Modal visible={comparing} transparent animationType="fade" onRequestClose={() => setComparing(false)}>
         <Pressable style={styles.dim} onPress={() => setComparing(false)} />
         <View style={[styles.compareSheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }]}>
-          <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>{pose.toUpperCase()} — FIRST vs LATEST</Text>
+          <View style={styles.compareHead}>
+            <Text style={[styles.sheetTitle, { color: theme.text.mute }]}>{pose.toUpperCase()} — FIRST vs LATEST</Text>
+            <Pressable onPress={() => setOverlay(!overlay)} hitSlop={10} accessibilityRole="button">
+              <Text style={[styles.sheetTitle, { color: theme.text.carbs }]}>{overlay ? 'SIDE BY SIDE' : 'OVERLAY'}</Text>
+            </Pressable>
+          </View>
+          {overlay && earliest && latest ? (
+            <View style={styles.overlayBox}>
+              <Image source={{ uri: earliest.uri }} style={[styles.overlayImg, { backgroundColor: theme.surfaces.surface2 }]} />
+              <Image source={{ uri: latest.uri }} style={[styles.overlayImg, styles.overlayTop]} />
+              <Text style={[styles.compareDate, { color: theme.text.mute }]}>
+                {`first under, latest over at half strength — ${new Date(earliest.takenAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} → ${new Date(latest.takenAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`}
+              </Text>
+            </View>
+          ) : (
           <View style={styles.compareRow}>
             {[earliest, latest].map((p, i) =>
-              p && urls.get(p.storagePath) ? (
+              p ? (
                 <View key={p.id} style={{ flex: 1 }}>
-                  <Image source={{ uri: urls.get(p.storagePath)! }} style={[styles.compareImg, { backgroundColor: theme.surfaces.surface2 }]} />
+                  <Image source={{ uri: p.uri }} style={[styles.compareImg, { backgroundColor: theme.surfaces.surface2 }]} />
                   <Text style={[styles.compareDate, { color: theme.text.mute }]}>
                     {new Date(p.takenAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </Text>
@@ -92,6 +128,7 @@ export function ProgressPhotosCard() {
               ),
             )}
           </View>
+          )}
         </View>
       </Modal>
     </Card>
@@ -128,7 +165,7 @@ function CaptureSheet({ open, pose, ghostUrl, onClose, onCaptured }: {
           { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true },
         );
         if (small.base64) {
-          const saved = await addProgressPhoto(supabase, pose, small.base64);
+          const saved = await savePhoto(pose, small.base64);
           if (saved.ok) onCaptured();
         }
       }
@@ -186,6 +223,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 34,
   },
   compareRow: { flexDirection: 'row', gap: 12, marginTop: 14 },
+  compareHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  overlayBox: { marginTop: 14, gap: 6 },
+  overlayImg: { width: '100%', aspectRatio: 3 / 4, borderRadius: 10 },
+  overlayTop: { position: 'absolute', top: 0, left: 0, opacity: 0.5 },
   compareImg: { width: '100%', aspectRatio: 3 / 4, borderRadius: 10 },
   compareDate: { fontFamily: mono, fontSize: 11, textAlign: 'center', marginTop: 6 },
   captureRoot: { flex: 1, backgroundColor: '#000' },

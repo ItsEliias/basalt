@@ -12,6 +12,7 @@ import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, 
 } from './model';
 import { loadReadiness } from '@basalt/analytics';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { SupplementsCard } from '../../components/SupplementsCard';
 import { StagedPebble, growthScore, stageFor, NarrativeCard, narrativeDateFor, friendsLoggedLine } from '@basalt/extras';
 import { loadGrowthInputs } from '../../lib/growthData';
 import { loadDailySummary } from '../../lib/narrativeData';
@@ -441,6 +442,10 @@ export function TodayScreen({ onOpenTab }: {
           </>
         ) : null}
       </Card>
+
+      <ExtraSlot id="supplements">
+        <SupplementsCard />
+      </ExtraSlot>
 
       <ExtraSlot id="social">
         {friendsLoggedLine(friendsCount) ? (

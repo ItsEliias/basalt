@@ -58,6 +58,8 @@ const BASALT_TABLES = [
   'basalt_cycle_entries',
   'basalt_ppg_calibration',
   'basalt_pair_days',
+  'basalt_supplement_checks',
+  'basalt_supplements',
 ];
 
 // Tables where the user can be EITHER party — keyed on their own columns,

@@ -23,7 +23,14 @@ export type ExtraId =
   | 'captureVoice'
   | 'captureBarcode'
   | 'capturePlate'
-  | 'pebble';
+  | 'pebble'
+  | 'mealPlanning'
+  | 'fasting'
+  | 'hydration'
+  | 'supplements'
+  | 'cycle'
+  | 'photos'
+  | 'imports';
 
 export type ExtraOnboarding = {
   /** The question the onboarding screen asks, verbatim. */
@@ -201,6 +208,108 @@ export const EXTRAS: readonly ExtraDef[] = [
     default: false,
     requires: ['pebble'],
   },
+  // ── Depth — "More tools": every one off by default, one shared offer ──
+  {
+    id: 'mealPlanning',
+    title: 'Meal planning & grocery list',
+    oneLiner: 'A week plan from your recent foods against your macro gaps; the grocery list aggregates it.',
+    group: 'depth',
+    default: false,
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+  {
+    id: 'fasting',
+    title: 'Fasting timer',
+    oneLiner: 'Start and end fasts on Recover — elapsed time stated plainly, no coaching about hunger.',
+    group: 'depth',
+    default: false,
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+  {
+    id: 'hydration',
+    title: 'Hydration reminders',
+    oneLiner: 'Scheduled nudges to drink water, at hours you set — a reminder, never a guilt trip.',
+    group: 'depth',
+    default: false,
+    permissions: ['android.permission.POST_NOTIFICATIONS'],
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+  {
+    id: 'supplements',
+    title: 'Supplements checklist',
+    oneLiner: 'Your own list, ticked per day — no products suggested, no doses proposed, ever.',
+    group: 'depth',
+    default: false,
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+  {
+    id: 'cycle',
+    title: 'Cycle tracking',
+    oneLiner: 'Log-only dates and symptoms; Trends shows a band and a published average-cycle estimate with its range.',
+    group: 'depth',
+    default: false,
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+  {
+    id: 'photos',
+    title: 'Progress photos',
+    oneLiner: 'Side-by-side and overlay compare. Photos stay on this phone unless you flip cloud sync on, separately.',
+    group: 'depth',
+    default: false,
+    permissions: ['android.permission.CAMERA'],
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+  {
+    id: 'imports',
+    title: 'Connected services',
+    oneLiner: 'Strava, Garmin and Oura imports with source attribution — sessions and sleep, never edited.',
+    group: 'depth',
+    default: false,
+    onboardingGroup: 'depth',
+    onboarding: {
+      question: 'More tools? Each is a quiet screen of its own — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'depth',
+    },
+  },
+
   {
     id: 'pebble',
     title: 'Pebble',

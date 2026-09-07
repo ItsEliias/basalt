@@ -362,3 +362,71 @@ Decisions made without you:
   fake 0.
 - Widget macro line uses the fat target as a cap (matches Today's
   ledger phrasing); protein/carbs render as plain progress.
+
+## Phase 4 — Depth (suite 1128 → 1142; registry: `mealPlanning`, `fasting`, `hydration`, `supplements`, `cycle`, `photos`, `imports` — all off, one shared "More tools" multi-select offer)
+
+- **Already-built features moved into Extras**: meal planning + grocery
+  (V3's PlannerTab — the Log sub-tab now appears only with the Extra on),
+  fasting timer (was a profile toggle in Settings, now the `fasting`
+  Extra; the old toggle row is gone), cycle tracking (`cycle` ExtraSlot
+  around the Recover card), progress photos (`photos` ExtraSlot).
+- **Hydration reminders** (new): pick hours (08:00–22:00, every 2 h
+  offered) on a Settings card inside the ExtraSlot; one daily
+  notification per hour via expo-notifications. Copy is pinned by test:
+  "You asked for a reminder at HH:00. Nothing is logged unless you log
+  it." Turning the Extra off cancels every scheduled notification.
+  5 tests.
+- **Supplements checklist** (new): `basalt_supplements` +
+  `basalt_supplement_checks` (RLS self-only, applied; both wipe paths
+  extended — deletion guard 8/8; delete-account v15 deployed). Card on
+  Today: your list, per-day ticks, add in your own words, long-press to
+  remove; optional single daily reminder (off/08/12/20). The law is
+  printed on the card and source-scan-tested: Basalt never suggests a
+  product or proposes a dose. 3 tests.
+- **Progress photos, local-first**: photos now save to the app's private
+  documents directory by default — this phone only. Cloud sync is a
+  separate switch on the card with the trade in plain words (upload of
+  NEW photos to the private bucket; photos taken before the flip stay
+  where they were taken). Compare gained an overlay mode (first under,
+  latest over at half strength) beside side-by-side.
+- **Connected services** (`imports` Extra): Strava / Garmin / Oura OAuth
+  built end-to-end and dormant — authorize URLs, `basalt://oauth/<service>`
+  deep-link redirect (scheme hand-added to the manifest + app.json),
+  token exchange in a new `oauth-exchange` Edge Function (v1 deployed;
+  returns a plain-words 501 until its secrets exist), imports writing
+  through the service layer with `source` + `ext_id` dedup (re-import is
+  a no-op). Rows say "Coming soon — needs developer registration" until
+  `EXPO_PUBLIC_*_CLIENT_ID` env vars exist. `docs/REGISTRATIONS.md` has
+  the exact registrations, scopes and redirect URIs. 5 tests.
+- **Doctor export**: 30 → 90 days, plus a Food-intake section — daily
+  energy as a RANGE over logged days (min–max, median, median protein),
+  with "unlogged days are absent, not zero" printed as the source line.
+  HRV/RHR bands were already in. 5 tests (2 new).
+
+Decisions made without you:
+- **Doctor export stays core** (not in the `imports`/depth Extras): it
+  already shipped in Settings on main, and access to your own data is a
+  right, not a tool. Extended in place.
+- **Demotions change the defaults render vs pre-branch main** — the gate
+  run will show exactly four expected diffs, all ordered by this phase's
+  "off by default" header: Log loses the Planner sub-tab, Recover loses
+  the empty Cycle opt-in card and the Progress-photos card, Settings
+  loses the old fasting toggle (it moved under Extras). Every other
+  screen must still diff clean; anything else is a bug.
+- **`profiles.fasting_enabled` is orphaned, not dropped**: the Extra is
+  now the only gate. The column stays (additive-only migrations) and
+  nothing reads it.
+- **OAuth tokens live in AsyncStorage** (app-private), not a new
+  SecureStore native dep — same no-new-native-deps rule as ML Kit.
+  Client secrets never touch the device at all.
+- **Garmin's pull is registered-work**: their Health API is push-based
+  behind an approved program; the authorize flow is built, and the row +
+  REGISTRATIONS.md say the webhook Edge Function is scoped for when the
+  approval lands.
+- **Fasting gained no notification**: it's a live timer card on Recover;
+  a scheduled "you are fasting" push would be a nudge, not a reminder
+  the user configured. Hydration and supplements carry the scheduled
+  notifications for this group.
+- **Cloud-photo backfill not built**: flipping cloud sync on uploads new
+  captures only; a bulk upload of the existing local vault is a bigger
+  consent moment than a switch and is stated plainly in the switch copy.

@@ -15,6 +15,10 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
+import { HydrationCard } from './HydrationCard';
+import { ConnectedServicesCard } from './ConnectedServicesCard';
+import { cancelAllHydrationReminders } from '../../lib/hydrationReminders';
+import { setSupplementsReminderHour } from '../../lib/supplementsReminder';
 import { logThemeLayoutEvent } from '../../lib/instrumentation';
 import { HIDEABLE_SECTIONS } from '../today/model';
 import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgroundWork';
@@ -104,6 +108,10 @@ export function SettingsScreen() {
     }
     // Pebble's card mirrors the extra — keep its local state in step.
     if (id === 'pebble') void getPebbleSettings().then(setPebble);
+    // Turning a reminder-bearing Extra off cancels its notifications —
+    // no orphaned nudges.
+    if (id === 'hydration' && !on) void cancelAllHydrationReminders();
+    if (id === 'supplements' && !on) void setSupplementsReminderHour(null);
   };
   useEffect(() => {
     void AsyncStorage.getItem('basalt.hiddenToday').then((raw) => {
@@ -338,16 +346,6 @@ export function SettingsScreen() {
             last
           />
         </Pressable>
-        <ObChipLabel>Fasting module</ObChipLabel>
-        <Pressable onPress={() => void save({ fastingEnabled: !(profile?.fastingEnabled ?? false) })} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name="Fasting timer"
-            meta="a window timer with documented stages — information, not medical advice. Off unless you want it."
-            value={profile?.fastingEnabled ? 'on' : 'off'}
-            valueColor={profile?.fastingEnabled ? theme.text.carbs : theme.text.faint}
-            last
-          />
-        </Pressable>
         <ObChipLabel>Monthly challenge</ObChipLabel>
         <Pressable onPress={() => void save({ challengeEnabled: !(profile?.challengeEnabled ?? false) })} disabled={busy !== null} hitSlop={8}>
           <ReceiptRow
@@ -489,6 +487,14 @@ export function SettingsScreen() {
         })}
         <SrcNote>Every Extra is off by default and honest inside — published formulas, ranges not false precision. With everything off, Basalt is exactly the core app.</SrcNote>
       </Card>
+
+      <ExtraSlot id="hydration">
+        <HydrationCard />
+      </ExtraSlot>
+
+      <ExtraSlot id="imports">
+        <ConnectedServicesCard />
+      </ExtraSlot>
 
       {/* ── Pebble ─────────────────────────────────────────────────── */}
       <Card>

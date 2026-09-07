@@ -73,10 +73,12 @@ type ScanState =
 
 export function LogScreen() {
   const [sub, setSub] = useState('Capture');
+  const planningOn = useExtra('mealPlanning');
+  const active = sub === 'Planner' && !planningOn ? 'Capture' : sub;
   return (
     <View style={{ flex: 1 }}>
-      <SubNav items={['Capture', 'Recipes', 'Planner']} active={sub} onChange={setSub} />
-      {sub === 'Capture' ? <CaptureTab /> : sub === 'Recipes' ? <RecipesTab /> : <PlannerTab />}
+      <SubNav items={planningOn ? ['Capture', 'Recipes', 'Planner'] : ['Capture', 'Recipes']} active={active} onChange={setSub} />
+      {active === 'Capture' ? <CaptureTab /> : active === 'Recipes' ? <RecipesTab /> : <PlannerTab />}
     </View>
   );
 }

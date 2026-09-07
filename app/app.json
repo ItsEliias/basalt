@@ -76,16 +76,16 @@
           "widgets": [
             {
               "name": "BasaltToday",
-              "label": "Basalt \u2014 Today",
-              "description": "Energy remaining and water, as of your last open \u2014 never invented.",
+              "label": "Basalt — Today",
+              "description": "Energy remaining and water, as of your last open — never invented.",
               "minWidth": "180dp",
               "minHeight": "80dp",
               "updatePeriodMillis": 1800000
             },
             {
               "name": "BasaltReadiness",
-              "label": "Basalt \u2014 Readiness",
-              "description": "Your last computed readiness, with its age \u2014 no number without components.",
+              "label": "Basalt — Readiness",
+              "description": "Your last computed readiness, with its age — no number without components.",
               "minWidth": "180dp",
               "minHeight": "80dp",
               "updatePeriodMillis": 1800000
@@ -119,7 +119,7 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "bluetoothAlwaysPermission": "Basalt uses Bluetooth to read weigh-ins from your smart scale \u2014 only when you ask it to."
+          "bluetoothAlwaysPermission": "Basalt uses Bluetooth to read weigh-ins from your smart scale — only when you ask it to."
         }
       ],
       [
@@ -130,6 +130,7 @@
         }
       ]
     ],
-    "icon": "./assets/icon.png"
+    "icon": "./assets/icon.png",
+    "scheme": "basalt"
   }
 }
