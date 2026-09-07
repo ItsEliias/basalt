@@ -30,10 +30,19 @@ WHAT IT DOES
 • Trends — rolling analytics computed from your data with the formulas
   published in the app. No number appears that Basalt can't explain.
 
+EXTRAS — OFF UNTIL YOU SAY OTHERWISE
+Streaks, XP and badges, friends and challenges, a daily AI summary,
+home-screen widgets, meal planning, a fasting timer, programmes, a
+number-grounded coach and more all exist — every one an Extra: off by
+default, offered once, switchable any time in Settings › Extras. With
+everything off, Basalt is exactly the quiet core ledger. Formulas for
+streaks and XP are published in-app; no Extra ever changes a number the
+core app shows.
+
 WHAT IT REFUSES TO DO
-No XP, no levels, no badges, no confetti. No ads, no analytics SDKs, no
-tracking. No AI summaries that talk over your data. Nothing is hidden
-behind a paywall — capture is never paid.
+No ads, no analytics SDKs, no tracking. No AI narration that talks over
+your data (the one summary Extra is labelled as generated, and it's off
+by default). Nothing is hidden behind a paywall — capture is never paid.
 
 MIND, WITHOUT SCORES
 An optional daily check-in (mood, energy, stress — words, not faces), an

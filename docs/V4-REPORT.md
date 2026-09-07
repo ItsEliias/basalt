@@ -652,3 +652,45 @@ Decisions made without you:
   crisis matching).
 - **Store listing**: "MIND, WITHOUT SCORES" section with the
   crisis-resources line.
+
+## Release prep — 0.2.0 (versionCode 2)
+
+- **Suite at HEAD: 1,195 tests green** across 8 workspaces (main was
+  1,063 when the branch opened).
+- versionCode 2 / 0.2.0 in `build.gradle` + `app.json`.
+- **Advisor pass after the batch's schema changes**: Basalt-scoped fix
+  applied (`basalt_revoke_anon_rpc` — the two V4 social RPCs are no
+  longer executable by `anon`). Left alone, with reasons: Arise's
+  un-prefixed tables (out of bounds by repo law), `basalt_walks_shared`
+  definer view (V3 sharing design, already documented), the
+  authenticated-callable definer RPCs (that IS the design), and the
+  auth-level leaked-password toggle (shared project — flagged as an
+  owner call in PLAY-SUBMIT-TODAY).
+- **Decision made without you**: `docs/BASALT-PRE-TESTERS-PROMPT.md` was
+  referenced by the batch prompt but did not exist in the repo — I
+  authored it from DEVICE-TEST-PLAN.md + the gate amendment + the
+  submit doc. §1 (machine checks) is executed and ticked; §2 is the
+  device session and remains THE hard stop.
+- **Store assets**: listing.md gains "EXTRAS — OFF UNTIL YOU SAY
+  OTHERWISE" (replacing the now-false "no XP ever" paragraph) and
+  "MIND, WITHOUT SCORES" with the crisis-resources line; 0.2.0 release
+  notes in PLAY-SUBMIT-TODAY list every Extra and state the defaults
+  (capture four + uncertainty ON; everything else OFF). Screenshots
+  flagged for re-shoot at the device session (Extras onboarding + one
+  expressive theme).
+- AAB + universal APK: built from this commit (paths + sizes in
+  PLAY-SUBMIT-TODAY once the build lands below).
+
+### Still waiting on you
+
+1. **The device session** (BASALT-PRE-TESTERS-PROMPT.md §2) — plug the
+   phone in: the defaults-vs-main gate (pass/fail), the all-off run
+   (informational), Extra-by-Extra smoke, on-device crisis checks,
+   onboarding end-to-end, walk notification, all deferred screenshots.
+2. **Cody's import** — the dry-run/real-run outputs of
+   `scripts/importCody.ts` (§2.8); IMPORT-REPORT.md follows your paste.
+3. **Developer registrations** when you want the imports live
+   (docs/REGISTRATIONS.md) and the Anthropic key check for
+   `ai-daily-summary` / `pebble-coach` (both deployed; they 503/501
+   politely without their secrets).
+4. The Supabase leaked-password toggle (shared-project owner call).

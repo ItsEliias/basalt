@@ -35,7 +35,12 @@ banners up.
 
 ## 3 · Store listing (Console → Grow → Store presence)
 
-- Copy from `store-assets/listing.md` verbatim (name, short, full).
+- Copy from `store-assets/listing.md` verbatim (name, short, full —
+  updated for 0.2.0: the Extras section replaced the old "no XP ever"
+  paragraph, and the Mind/crisis-resources section is new).
+- **Screenshots need a re-shoot at the 0.2.0 device session**: the set
+  must show the Extras onboarding offer and at least one expressive
+  theme (BASALT-PRE-TESTERS-PROMPT.md §2.7).
 - Icon: `store-assets/icon-512.png` · Feature graphic:
   `store-assets/feature-graphic.png` · Phone screenshots:
   `store-assets/screenshots/01…06` in order.
@@ -46,10 +51,24 @@ banners up.
 1. Testing → Closed testing → create track `closed-alpha-1`.
 2. Upload the AAB:
    `app/android/app/build/outputs/bundle/release/app-release.aab`
-   (versionCode 1 / 0.1.0, upload-key signed; opt in to Play App Signing
+   (versionCode 2 / 0.2.0, upload-key signed; opt in to Play App Signing
    when prompted — the upload key is exactly for this).
-3. Release notes: "First closed test — the honest health ledger. Full
-   feature set; placeholder icon."
+3. Release notes (0.2.0):
+
+   > First closed test — the honest health ledger, now with Extras.
+   > Everything below is optional, offered once in onboarding and
+   > switchable in Settings › Extras. ON by default: the four capture
+   > methods (photo, voice, barcode+label, plate — typing always works)
+   > and the visible intake-uncertainty range. OFF by default: sounds,
+   > extra home-screen widgets, streaks, XP & badges, friends &
+   > challenges, daily AI summary, Pebble (+ grows, + coach), meal
+   > planning & grocery, fasting timer, hydration reminders, supplements
+   > checklist, cycle tracking, progress photos, connected services
+   > (coming soon), programmes, journal, wind-down, meditation timer.
+   > Also new in core: a Nutrition plan with published range formulas
+   > and safety rails, a Mind check-in (words, not faces), rich walk
+   > lock-screen notification, 90-day doctor report, rings layout — and
+   > an always-on crisis path that no setting can turn off.
 4. Testers: create an email list, add testers, save; copy the opt-in URL
    into the tester email together with the **Instructions for testers**
    block from `store-assets/listing.md` — including the Send-feedback line
@@ -66,3 +85,10 @@ banners up.
   (dedicated Supabase project — the amended trigger), swap the placeholder
   mark for the real logo, and re-check `SUBMISSION-CHECKLIST.md` for the
   tile-provider key.
+
+## Owner call needed (from the 0.2.0 advisor pass)
+
+- Supabase Auth "leaked password protection" is off. Turning it on is
+  one dashboard toggle but affects the SHARED project (Arise signs in
+  through the same auth) — your call, not mine:
+  <https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection>
