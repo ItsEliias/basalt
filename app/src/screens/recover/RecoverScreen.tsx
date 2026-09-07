@@ -6,7 +6,12 @@ import { healthService, labelForPackage, type SleepSessionSummary } from '@basal
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, napCreditLine, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
+import { loadReadiness, loadSleepNeed, loadDeviation, napCreditLine, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
+import { MindCard } from './MindCard';
+import { WindDownCard } from './WindDownCard';
+import { MeditationCard } from './MeditationCard';
+import { JournalCard } from '../../components/JournalCard';
+import { scheduleWindDownOffer } from '../../lib/windDown';
 import { ProgressPhotosCard } from './ProgressPhotos';
 import { CycleCard } from './CycleCard';
 import { PpgDebugSheet } from './PpgDebugSheet';
@@ -54,9 +59,6 @@ function VitalsTab() {
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [readiness, setReadiness] = useState<Awaited<ReturnType<typeof loadReadiness>> | null>(null);
   const [mathOpen, setMathOpen] = useState(false);
-  const [checkinFactors, setCheckinFactors] = useState<string[]>([]);
-  const [checkinMood, setCheckinMood] = useState<number | null>(null);
-  const [checkinSaved, setCheckinSaved] = useState(false);
   const [activeFast, setActiveFast] = useState<Fast | null>(null);
   const [recentFasts, setRecentFasts] = useState<Fast[]>([]);
   const [fastNow, setFastNow] = useState(Date.now());
@@ -83,14 +85,26 @@ function VitalsTab() {
         const w = await listWeightEntries(supabase, 14);
         if (w.ok) setWeights(w.data);
         setReadiness(await loadReadiness(supabase, new Date()));
-        void loadSleepNeed(supabase).then((r) => r.ok && setSleepNeed(r.data));
+        void loadSleepNeed(supabase).then((r) => {
+      if (!r.ok) return;
+      setSleepNeed(r.data);
+      // Wind-down offer (winddown Extra): one-shot at usual bedtime −30
+      // when the debt runs past 90 min — decided fresh on every compute.
+      if (windDownOn) {
+        void supabase
+          .from('basalt_sleep_sessions')
+          .select('bedtime')
+          .order('date', { ascending: false })
+          .limit(14)
+          .then(({ data: rows }) => {
+            void scheduleWindDownOffer({
+              sleepDebtMin: r.data.debt.debtMin,
+              bedtimesIso: (rows ?? []).map((x: any) => x.bedtime).filter(Boolean),
+            });
+          });
+      }
+    });
         void loadDeviation(supabase).then((r) => r.ok && setDeviation(r.data));
-        const c = await getCheckin(supabase, isoDay(new Date()));
-        if (c.ok && c.data) {
-          setCheckinFactors(c.data.factors);
-          setCheckinMood(c.data.mood);
-          setCheckinSaved(true);
-        }
 
         const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
 
@@ -165,6 +179,7 @@ function VitalsTab() {
   const bands = readiness?.ok ? readiness.data.bands : null;
 
   const widgetsOn = useExtra('widgets');
+  const windDownOn = useExtra('winddown');
   useEffect(() => {
     if (!widgetsOn || !ready) return;
     const snap = { score: ready.score, note: ready.note, at: new Date().toISOString() };
@@ -292,41 +307,20 @@ function VitalsTab() {
         </Card>
       ) : null}
 
-      {/* ── Evening check-in — facts for your own correlations ─────── */}
-      <Card>
-        <ReceiptHeader label="Evening check-in" summary={checkinSaved ? 'saved for today' : undefined} />
-        <ChipGroup
-          options={CHECKIN_FACTORS.map((f) => f.label)}
-          values={checkinFactors.map((k) => CHECKIN_FACTORS.find((f) => f.key === k)?.label ?? k)}
-          onToggle={(label) => {
-            const key = CHECKIN_FACTORS.find((f) => f.label === label)?.key;
-            if (!key) return;
-            const next = checkinFactors.includes(key)
-              ? checkinFactors.filter((k) => k !== key)
-              : [...checkinFactors, key];
-            setCheckinFactors(next);
-            setCheckinSaved(true);
-            void writeThroughOutbox(
-              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: next, mood: checkinMood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
-              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: next, mood: checkinMood } },
-            );
-          }}
-        />
-        <ChipRow
-          options={['1', '2', '3', '4', '5']}
-          value={checkinMood !== null ? String(checkinMood) : undefined}
-          onChange={(v) => {
-            const mood = parseInt(v, 10);
-            setCheckinMood(mood);
-            setCheckinSaved(true);
-            void writeThroughOutbox(
-              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: checkinFactors, mood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
-              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: checkinFactors, mood } },
-            );
-          }}
-        />
-        <SrcNote>Facts about today, one row per day · they feed Trends' correlations through the same gates (|r| ≥ 0.45, 30+ days) · never scored, never judged · mood 1–5 optional</SrcNote>
-      </Card>
+      {/* ── Mind — the daily check-in, words not faces (V4 Phase 7) ── */}
+      <MindCard />
+
+      <ExtraSlot id="journal">
+        <JournalCard />
+      </ExtraSlot>
+
+      <ExtraSlot id="winddown">
+        <WindDownCard />
+      </ExtraSlot>
+
+      <ExtraSlot id="meditation">
+        <MeditationCard />
+      </ExtraSlot>
 
       {/* ── Sleep ──────────────────────────────────────────────────── */}
       <Card>

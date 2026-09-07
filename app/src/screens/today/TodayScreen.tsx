@@ -10,7 +10,7 @@ import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
-import { loadReadiness } from '@basalt/analytics';
+import { loadReadiness, listCheckins, stressProposal } from '@basalt/analytics';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { SupplementsCard } from '../../components/SupplementsCard';
 import { IntakeRangeNote } from '../../components/IntakeRangeNote';
@@ -23,7 +23,7 @@ import { friendsLoggedToday, publishToday } from '../../lib/socialData';
 import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
 import {
   PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
-  macroShortfallProposal, readinessSwapProposal, sleepDebtProposal,
+  macroShortfallProposal, readinessSwapProposal, sleepDebtProposal, stressSwapProposal,
   type PebbleSettings,
 } from '../../lib/pebbleModel';
 import { Image } from 'react-native';
@@ -143,6 +143,12 @@ export function TodayScreen({ onOpenTab }: {
   const layout = profile?.todayLayout ?? 'ledger';
 
   const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
+  const [stressWellbeing, setStressWellbeing] = useState<{ text: string } | null>(null);
+  useEffect(() => {
+    void listCheckins(supabase, 7).then((r) => {
+      if (r.ok) setStressWellbeing(stressProposal(r.data, todayISO()));
+    });
+  }, [todayVersion]);
   const growsOn = useExtra('pebbleGrows');
   const widgetsOn = useExtra('widgets');
   const narrativeOn = useExtra('narrative');
@@ -271,6 +277,7 @@ export function TodayScreen({ onOpenTab }: {
   const pebbleProposal: PebbleProposal | null = data && targets
     ? pickProposal([
         readinessSwapProposal({ score: readinessScore, band: null, hasSessionToday: data.sessions.length > 0 }),
+        stressSwapProposal(stressWellbeing),
         hideNumbers ? null : macroShortfallProposal({
           proteinG: data.totals.protein,
           proteinTargetG: targets.proteinG,

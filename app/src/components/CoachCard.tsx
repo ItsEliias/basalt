@@ -4,8 +4,10 @@ import { Card, ReceiptHeader, SrcNote, mono, useTheme, ScaledText as Text } from
 import {
   COACH_SUBLABEL, coachLocalGuard, parseCoachReply, type CoachNumbers, type CoachReply,
 } from '@basalt/extras';
+import { checkCrisis } from '@basalt/core-data';
 import { supabase } from '../lib/supabase';
 import { ExtraSlot } from './ExtrasProvider';
+import { CrisisSheet } from './CrisisSheet';
 
 // Pebble Coach (coach Extra, requires Pebble) — asks only when the user
 // taps send; the device-side guard runs BEFORE any network call; every
@@ -20,10 +22,18 @@ export function CoachCard({ numbers, onAction }: {
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<CoachReply | null>(null);
+  const [crisisOpen, setCrisisOpen] = useState(false);
 
   const ask = async () => {
     const q = question.trim();
     if (!q || busy) return;
+    // The crisis path runs FIRST — before the coach's own guards, before
+    // any network call. On a hit, coaching stops here.
+    if (checkCrisis(q)) {
+      setCrisisOpen(true);
+      setQuestion('');
+      return;
+    }
     const guard = coachLocalGuard(q);
     if (guard) {
       setReply({ answer: guard.reply, citedNumbers: [], action: null });
@@ -50,6 +60,7 @@ export function CoachCard({ numbers, onAction }: {
   };
 
   return (
+    <>
     <ExtraSlot id="coach">
     <Card>
       <ReceiptHeader label="Pebble Coach" summary="only speaks when asked" />
@@ -91,6 +102,9 @@ export function CoachCard({ numbers, onAction }: {
       <SrcNote>{COACH_SUBLABEL}</SrcNote>
     </Card>
     </ExtraSlot>
+    {/* The crisis screen lives OUTSIDE the gate — no Extra may wrap it. */}
+    <CrisisSheet open={crisisOpen} onClose={() => setCrisisOpen(false)} />
+    </>
   );
 }
 

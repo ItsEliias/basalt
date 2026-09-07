@@ -9,7 +9,7 @@
 // precision, AI proposes never narrates (the one narration Extra is
 // labelled as narration). No Extra may change a number the core app shows.
 
-export type ExtraGroup = 'capture' | 'motivation' | 'glanceability' | 'depth' | 'basalt';
+export type ExtraGroup = 'capture' | 'motivation' | 'glanceability' | 'depth' | 'wellbeing' | 'basalt';
 
 export type ExtraId =
   | 'sounds'
@@ -33,7 +33,10 @@ export type ExtraId =
   | 'imports'
   | 'uncertainty'
   | 'programmes'
-  | 'coach';
+  | 'coach'
+  | 'journal'
+  | 'winddown'
+  | 'meditation';
 
 export type ExtraOnboarding = {
   /** The question the onboarding screen asks, verbatim. */
@@ -66,6 +69,7 @@ export const EXTRA_GROUP_TITLES: Record<ExtraGroup, string> = {
   motivation: 'Motivation',
   glanceability: 'Glanceability',
   depth: 'More tools',
+  wellbeing: 'Wellbeing tools',
   basalt: 'Basalt',
 };
 
@@ -333,6 +337,51 @@ export const EXTRAS: readonly ExtraDef[] = [
       yesLabel: 'Add the ticked ones',
       noLabel: 'None for now',
       preview: 'depth',
+    },
+  },
+
+  // ── Wellbeing tools — off by default, one shared offer. The crisis
+  //    path is NOT here: it is core, always on, and has no entry.
+  {
+    id: 'journal',
+    title: 'Journal',
+    oneLiner: 'Free writing, on this phone only by default — cloud sync is a separate switch; a doctor-PDF export exists.',
+    group: 'wellbeing',
+    default: false,
+    onboardingGroup: 'wellbeing',
+    onboarding: {
+      question: 'Wellbeing tools? Private by design — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'wellbeing',
+    },
+  },
+  {
+    id: 'winddown',
+    title: 'Wind-down',
+    oneLiner: 'Box breathing, a 5-minute body scan, a 10-minute quiet timer — offered when sleep debt runs high.',
+    group: 'wellbeing',
+    default: false,
+    onboardingGroup: 'wellbeing',
+    onboarding: {
+      question: 'Wellbeing tools? Private by design — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'wellbeing',
+    },
+  },
+  {
+    id: 'meditation',
+    title: 'Meditation timer',
+    oneLiner: 'A quiet timer with an interval bell — minutes land in your ledger as sessions, nothing more.',
+    group: 'wellbeing',
+    default: false,
+    onboardingGroup: 'wellbeing',
+    onboarding: {
+      question: 'Wellbeing tools? Private by design — tick any you want.',
+      yesLabel: 'Add the ticked ones',
+      noLabel: 'None for now',
+      preview: 'wellbeing',
     },
   },
 

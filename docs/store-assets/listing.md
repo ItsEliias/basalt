@@ -35,6 +35,13 @@ No XP, no levels, no badges, no confetti. No ads, no analytics SDKs, no
 tracking. No AI summaries that talk over your data. Nothing is hidden
 behind a paywall — capture is never paid.
 
+MIND, WITHOUT SCORES
+An optional daily check-in (mood, energy, stress — words, not faces), an
+optional local-only journal, and quiet wind-down tools. No mental-health
+score, no diagnosis, no screening questionnaires. If your words sound
+like crisis, Basalt steps aside and puts real crisis lines one tap away
+(Lifeline 13 11 14 in Australia; local numbers by region).
+
 YOUR DATA IS YOURS
 Everything exports (JSON, CSV, printable doctor report). Account deletion
 is in-app, immediate and total — every row, then the sign-in record

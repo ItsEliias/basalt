@@ -58,6 +58,7 @@ const BASALT_TABLES = [
   'basalt_cycle_entries',
   'basalt_ppg_calibration',
   'basalt_pair_days',
+  'basalt_journal_entries',
   'basalt_supplement_checks',
   'basalt_supplements',
 ];

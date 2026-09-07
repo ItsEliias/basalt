@@ -564,3 +564,91 @@ Decisions made without you:
 - The crisis detector (Phase 7) will be wired IN FRONT of the coach's
   text entry point, as the spec orders; the coach ships this phase with
   its own guards only.
+
+## Phase 7 — Wellbeing (suite 1175 → 1195; registry: `journal`, `winddown`, `meditation` — new Wellbeing group, all off, one shared multi-select offer)
+
+### Core — Mind, Recover's third section
+
+- **Daily check-in** (`MindCard`, replacing the old evening check-in
+  card): mood / energy / stress on 1–5 rendered as words, never faces —
+  Low · Flat · OK · Good · High (pinned, plus an emoji-free source scan).
+  The evening facts (alcohol, late meal, …) stay; an optional one-line
+  note joins them (through the crisis gate); a 30-day strip shows one
+  mono char per day per scale, absent days as `·`. Schema: additive
+  `energy` + `stress` columns on `basalt_checkins` (applied).
+- **Correlations**: energy/stress series feed the existing engine
+  through the same gates (|r| ≥ 0.45, n ≥ 30); new checked pairs —
+  intake×mood, training-volume×mood, stress-level×sleep-that-night
+  (lag 1), sleep×energy-level. *(Mood-vs-sleep-DEBT decision-logged: the
+  daily-series loader carries nightly sleep, not the rolling debt
+  number; adding a debt series is real engine work, deferred.)*
+- **Stress-aware proposals**: the spec's exact rule (stress 4–5 on 4 of
+  7 days, or mood ≤ 2 on 3 of 7) in `wellbeing.ts`, delivered through
+  the NORMAL proposal path (a `stress-swap` Pebble proposal on Today —
+  Swap lighter / Not now). Phrasing pinned by test: fact + offer, and
+  the banned phrasings are asserted absent from output AND source.
+
+### The crisis path — always on, cannot be disabled, not in any Extra
+
+- **Detector** (`packages/core-data/src/crisis.ts`): curated definite +
+  unsure phrase lists, entirely on-device. The module has NO imports —
+  structurally it cannot read a setting, a flag, or the extras state.
+- **Decision made without you (spec deviation, stated):** the spec
+  allowed an AI second pass when the list is unsure. Unsure phrases
+  instead TRIGGER locally. Rationale: false positives are acceptable
+  and false negatives are not (this is stricter), and the same spec
+  promises "no data leaves the device except the user's own action" —
+  an AI pass would send the user's darkest sentence to a server at the
+  worst possible moment. Privacy and the stronger guarantee win.
+- **The screen** (`CrisisSheet`): "This sounds heavy." + plain words; AU
+  Lifeline 13 11 14 (call + text 0477 13 11 14) and 000; NZ 1737; UK/IE
+  Samaritans 116 123; US/CA 988; findahelpline.com everywhere; one-tap
+  call and text; no mascot; no "are you sure"; the entry still saves and
+  the copy says so. Region from the JS locale — no new native dep.
+- **Wiring + lint** (`crisisLint.test.ts`): the fixed phrases trigger
+  (pure fn — independent of every Extra by construction, asserted); the
+  coach question, the check-in note and the journal each run
+  `checkCrisis` FIRST and render `CrisisSheet`; a completeness scan
+  flags any new self-expression TextInput not on the audited list; and
+  no `<CrisisSheet` may appear inside any `<ExtraSlot>` block (this
+  caught CoachCard's self-gate — the sheet now renders outside it).
+- **Scope decision**: the gate guards fields where a person writes about
+  THEMSELVES (coach, journal, check-in note). Object-name fields (food
+  search, supplement names, exercise notes) are out — "chicken killed
+  my macros" is not a cry for help, and a crisis screen on a barcode
+  search would teach users to ignore it.
+
+### Extras — one "Wellbeing tools" offer screen
+
+- **Journal**: local-first exactly like progress photos (device entries
+  + separate cloud switch with the trade in words; cloud table
+  `basalt_journal_entries` applied, RLS self-only, both wipe paths
+  extended — guard 8/8, delete-account v16 live). 90-day doctor PDF via
+  the system sheet. "Ask the coach about this →" appears per entry ONLY
+  inside a nested coach ExtraSlot, runs the crisis gate before any
+  network call, and the reply is labelled "COACH — ONLY BECAUSE YOU
+  ASKED".
+- **Wind-down**: 5-minute body scan (one plain instruction per minute, a
+  light haptic between), 10-minute quiet timer; box breathing is NOT
+  duplicated — the existing breath pacer (visual + haptics, logs real
+  sessions) is pointed at, honestly. The offer: when sleep debt passes
+  90 min, ONE non-repeating notification at the usual bedtime (median of
+  last 14 nights, 3+ needed) minus 30 — decided fresh each time Recover
+  computes, cancelled otherwise.
+- **Meditation timer**: 5/10/20 minutes, soft bell every five (the tick
+  sample, direct — the bell IS the feature, not the sounds Extra),
+  notifee foreground service (health type, shared ref-counted service
+  with walks) so a locked phone finishes the sit; minutes land as
+  `basalt_mindfulness_sessions` kind `unguided` through the outbox, with
+  the same 30-second false-start floor as the breath pacer.
+
+### Docs
+
+- Design spec **§10 Wellbeing**: no diagnosis/screening, no PHQ-9/GAD-7,
+  no mental-health score, crisis path unconditional and ungateable,
+  journal private by construction.
+- **PLAY-ANSWERS**: new Health-info row declaring mood/energy/stress +
+  note + journal as mental-health data (optional, local-first, on-device
+  crisis matching).
+- **Store listing**: "MIND, WITHOUT SCORES" section with the
+  crisis-resources line.

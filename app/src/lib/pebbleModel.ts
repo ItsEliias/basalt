@@ -124,6 +124,20 @@ export function readinessSwapProposal(input: {
   };
 }
 
+/** The wellbeing stress rule (V4 Phase 7) — text comes from analytics. */
+export function stressSwapProposal(input: { text: string } | null): PebbleProposal | null {
+  if (!input) return null;
+  return {
+    id: 'stress-swap',
+    kind: 'stress-swap',
+    text: input.text,
+    actions: [
+      { label: 'Swap lighter', kind: 'open-train' },
+      { label: 'Not now', kind: 'dismiss' },
+    ],
+  };
+}
+
 /** Short last night against the sleep target. */
 export function sleepDebtProposal(input: {
   sleepHours: number | null;

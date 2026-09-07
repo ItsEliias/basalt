@@ -257,6 +257,29 @@ eating signals end coaching and point to help, medical questions get
 "one for a doctor". The crisis path (§Wellbeing, Phase 7) runs before the
 coach sees any text.
 
+## 10. Wellbeing (V4 Phase 7 amendment)
+
+Binding rules for the Mind section and every wellbeing Extra:
+
+- **No diagnosis, no screening.** No PHQ-9, no GAD-7, no questionnaire
+  that produces a clinical-sounding result. The check-in is three words
+  a day and an optional sentence — data for the user's own correlations,
+  nothing else.
+- **No mental-health score, ever.** Mood/energy/stress render as words
+  (Low · Flat · OK · Good · High), never as faces, never aggregated into
+  a number about the person.
+- **The crisis path is core and unconditional.** Every self-expression
+  text field runs the on-device crisis detector first; a hit stops all
+  coaching and shows the crisis screen — regional numbers one tap away
+  (call and text), findahelpline.com everywhere else, no mascot, no
+  "are you sure", and the user's entry still saves. No Extra, setting or
+  flag can gate any part of this; the screen may never sit inside an
+  ExtraSlot (lint-pinned).
+- **Journals are private by construction.** Local-only by default; cloud
+  sync is its own switch with the trade in plain words; no engine reads
+  an entry; AI sees one only when the coach Extra is on AND the user
+  taps ask on that entry.
+
 ## 7. Reference files
 
 `basalt-app-prototype.html` (v11 — source of truth: all components live, 5 tabs + settings + 8-step onboarding) · `basalt-master-roadmap.md` (scope & phasing) · `basalt-feature-adoption-matrix.md` (feature detail + sources) · `health-app-migration-report.md` (code audit: what ports from Arise/Oathbound) · `ui-benchmark-review.md` (market rationale).

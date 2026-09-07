@@ -23,7 +23,7 @@ export type PebbleAction = {
 export type PebbleProposal = {
   /** Stable id; a dismissal keys on it for the rest of the day. */
   id: string;
-  kind: 'progression' | 'macro-shortfall' | 'readiness-swap' | 'sleep-debt';
+  kind: 'progression' | 'macro-shortfall' | 'readiness-swap' | 'sleep-debt' | 'stress-swap';
   text: string;
   /** Exactly two: the action, and the way out. */
   actions: readonly [PebbleAction, PebbleAction];

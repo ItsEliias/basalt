@@ -12,3 +12,4 @@ export * from './progress-photos';
 export * from './ble-scale';
 export * from './sharing';
 export * from './extras/registry';
+export * from './crisis';
