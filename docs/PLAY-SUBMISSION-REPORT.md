@@ -1,8 +1,8 @@
 # Play submission report — 0.1.0 closed test (2026-09-07)
 
 Branchwork: `v3-4-themes` and `play-submission` merged to main (--no-ff) and
-pushed; every phase below ran on main. Suite: **1063 green** after the merges,
-**1067** after this batch (feedback model +4).
+pushed; every phase below ran on main. Suite: **1063 green** throughout (the
+batch's new tests — feedback 4, deletion 3 — were already aboard at merge).
 
 ## Phase 0 · Two questions answered
 
