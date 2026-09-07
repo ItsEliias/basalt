@@ -1,0 +1,3289 @@
+{
+ "source": "My Fittness Plan.xlsx",
+ "generated": "2026-09-07",
+ "account": {
+  "email": "itseliiasstudy@gmail.com",
+  "password": "<from env BASALT_SEED_PASSWORD>"
+ },
+ "notes": [
+  "2022 rows Jul\u2013Oct carry 85.7 in the 'change' column with no reading \u2014 treated as no weigh-in, not imported.",
+  "2022 session logs are labelled W1\u2013W6 with no dates. Import as week-dated (week 1 = w/c 2022-03-14, the Monday after the first weigh-in) with date_confidence='week'; show as 'historical import' in Train history, never as exact-dated PRs.",
+  "Recipe 'Approximate Total' lines often disagree with their own ingredient lines (e.g. Mango Lime Chicken states 890 kcal; ingredients sum to ~1,110). Import ingredient-level values and let Basalt compute totals; keep stated totals as a note only."
+ ],
+ "body_weight": [
+  {
+   "date": "2022-03-11",
+   "kg": 85.7,
+   "block": "2022",
+   "source": "import"
+  },
+  {
+   "date": "2022-03-30",
+   "kg": 85.7,
+   "block": "2022",
+   "source": "import"
+  },
+  {
+   "date": "2022-04-09",
+   "kg": 84.3,
+   "block": "2022",
+   "source": "import"
+  },
+  {
+   "date": "2022-04-13",
+   "kg": 86.1,
+   "block": "2022",
+   "source": "import"
+  },
+  {
+   "date": "2022-06-15",
+   "kg": 87.5,
+   "block": "2022",
+   "source": "import"
+  },
+  {
+   "date": "2024-01-18",
+   "kg": 86.0,
+   "block": "2024",
+   "source": "import"
+  },
+  {
+   "date": "2024-01-25",
+   "kg": 89.0,
+   "block": "2024",
+   "source": "import"
+  },
+  {
+   "date": "2024-02-01",
+   "kg": 90.0,
+   "block": "2024",
+   "source": "import"
+  }
+ ],
+ "targets": [
+  {
+   "block": "2022",
+   "protein_g": 229,
+   "carbs_g": 310,
+   "fat_g": 97,
+   "kcal": 3029,
+   "note": "kcal = 4P + 4C + 9F, per the sheet's own formula"
+  },
+  {
+   "block": "2024",
+   "from": "2024-02-12",
+   "protein_g": 180,
+   "carbs_g": 310,
+   "fat_g": 97,
+   "kcal": 2833,
+   "note": "sheet header '12/02/0204' read as 12 Feb 2024"
+  }
+ ],
+ "programme_templates": [
+  {
+   "id": "gym-split-1",
+   "title": "Gym split 1",
+   "days_per_week": 5,
+   "sessions": [
+    {
+     "name": "Push",
+     "exercises": [
+      {
+       "name": "Bench Press",
+       "prescription": {
+        "sets": 4,
+        "reps": "5-8",
+        "raw": "4x5-8"
+       }
+      },
+      {
+       "name": "Seated DB OHP",
+       "prescription": {
+        "sets": 4,
+        "reps": "8",
+        "raw": "4x8"
+       }
+      },
+      {
+       "name": "DB Fly",
+       "prescription": {
+        "sets": 4,
+        "reps": "12",
+        "raw": "4x12"
+       }
+      },
+      {
+       "name": "Cable Upright Row",
+       "prescription": {
+        "sets": 3,
+        "reps": "12",
+        "raw": "3x12"
+       }
+      },
+      {
+       "name": "Rope Extension",
+       "prescription": {
+        "sets": 5,
+        "reps": "10",
+        "raw": "5x10"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Lower",
+     "exercises": [
+      {
+       "name": "Squat",
+       "prescription": {
+        "sets": 4,
+        "reps": "5-8",
+        "raw": "4x5-8"
+       }
+      },
+      {
+       "name": "Weighted Walking Lunge",
+       "prescription": {
+        "sets": 3,
+        "reps": "16",
+        "raw": "3x16"
+       }
+      },
+      {
+       "name": "Leg Extension",
+       "prescription": {
+        "sets": 3,
+        "reps": "10",
+        "raw": "3x10"
+       }
+      },
+      {
+       "name": "Lying Leg Curl",
+       "prescription": {
+        "sets": 3,
+        "reps": "10",
+        "raw": "3x10"
+       }
+      },
+      {
+       "name": "Lying Leg Raise/Standing Calf Raise",
+       "prescription": {
+        "sets": 4,
+        "reps": "10-15",
+        "raw": "4x10-15/4x12"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Pull",
+     "exercises": [
+      {
+       "name": "Pull Ups",
+       "prescription": {
+        "sets": 4,
+        "reps": "5-10",
+        "raw": "4x5-10"
+       }
+      },
+      {
+       "name": "DB Row",
+       "prescription": {
+        "sets": 4,
+        "reps": "8",
+        "raw": "4x8"
+       }
+      },
+      {
+       "name": "Mag Pulldown",
+       "prescription": {
+        "sets": 4,
+        "reps": "8",
+        "raw": "4x8"
+       }
+      },
+      {
+       "name": "Face Pull",
+       "prescription": {
+        "sets": 3,
+        "reps": "12",
+        "raw": "3x12"
+       }
+      },
+      {
+       "name": "Supinating DB Curl",
+       "prescription": {
+        "sets": 5,
+        "reps": "10",
+        "raw": "5x10"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Lower",
+     "exercises": [
+      {
+       "name": "Trap Bar Deadlift",
+       "prescription": {
+        "sets": 4,
+        "reps": "5-8",
+        "raw": "4x5-8"
+       }
+      },
+      {
+       "name": "Leg Press",
+       "prescription": {
+        "sets": 4,
+        "reps": "8",
+        "raw": "4x8"
+       }
+      },
+      {
+       "name": "Goblet Squat",
+       "prescription": {
+        "sets": 4,
+        "reps": "12",
+        "raw": "4x12"
+       }
+      },
+      {
+       "name": "DB RDL",
+       "prescription": {
+        "sets": 4,
+        "reps": "12",
+        "raw": "4x12"
+       }
+      },
+      {
+       "name": "Leg Press Calf Raise",
+       "prescription": {
+        "sets": 5,
+        "reps": "15",
+        "raw": "5x15"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Upper",
+     "exercises": [
+      {
+       "name": "Incline DB Press",
+       "prescription": {
+        "sets": 4,
+        "reps": "8",
+        "raw": "4x8"
+       }
+      },
+      {
+       "name": "Unilateral Hammer Strength Row",
+       "prescription": {
+        "sets": 4,
+        "reps": "8",
+        "raw": "4x8"
+       }
+      },
+      {
+       "name": "DB Lateral Raise",
+       "prescription": {
+        "sets": 3,
+        "reps": "15",
+        "raw": "3x15"
+       }
+      },
+      {
+       "name": "Rope Curl/Dip Off Bench",
+       "prescription": {
+        "sets": 3,
+        "reps": "15",
+        "raw": "3x15/3x15"
+       }
+      },
+      {
+       "name": "Weighted Crunch/Push Up",
+       "prescription": {
+        "sets": 3,
+        "reps": "20",
+        "raw": "3x20/3x5-10"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "gym-split-2",
+   "title": "Gym split 2",
+   "days_per_week": 5,
+   "sessions": [
+    {
+     "name": "Push",
+     "exercises": [
+      {
+       "name": "Barbell Overhead Press"
+      },
+      {
+       "name": "Dumbbell Bench Press"
+      },
+      {
+       "name": "Incline Dumbbell Fly"
+      },
+      {
+       "name": "Dumbbell Lateral Raise"
+      },
+      {
+       "name": "Tricep Rope Pushdown"
+      }
+     ]
+    },
+    {
+     "name": "Lower",
+     "exercises": [
+      {
+       "name": "Front Squat"
+      },
+      {
+       "name": "Bulgarian Split Squat"
+      },
+      {
+       "name": "Leg Press"
+      },
+      {
+       "name": "Romanian Deadlift"
+      },
+      {
+       "name": "Seated Calf Raise"
+      }
+     ]
+    },
+    {
+     "name": "Pull",
+     "exercises": [
+      {
+       "name": "Pull Ups"
+      },
+      {
+       "name": "Barbell Bent Over Row"
+      },
+      {
+       "name": "Lat Pulldown (Wide Grip)"
+      },
+      {
+       "name": "Face Pull"
+      },
+      {
+       "name": "Hammer Curl"
+      }
+     ]
+    },
+    {
+     "name": "Push",
+     "exercises": [
+      {
+       "name": "Dumbbell Shoulder Press"
+      },
+      {
+       "name": "Machine Chest Press"
+      },
+      {
+       "name": "Cable Fly (High to Low)"
+      },
+      {
+       "name": "Barbell Upright Row"
+      },
+      {
+       "name": "Overhead Tricep Extension"
+      }
+     ]
+    },
+    {
+     "name": "Pull",
+     "exercises": [
+      {
+       "name": "Chin Ups"
+      },
+      {
+       "name": "T-Bar Row"
+      },
+      {
+       "name": "Cable Row"
+      },
+      {
+       "name": "Reverse Fly"
+      },
+      {
+       "name": "Concentration Curl"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "home-split-1",
+   "title": "Home split 1",
+   "days_per_week": 3,
+   "sessions": [
+    {
+     "name": "Full Body",
+     "exercises": [
+      {
+       "name": "Goblet Squats"
+      },
+      {
+       "name": "Dumbbell Bench Press"
+      },
+      {
+       "name": "Bent Over Rows with Dumbbells"
+      },
+      {
+       "name": "Standing Dumbbell Shoulder Press"
+      },
+      {
+       "name": "Dumbbell Lunges"
+      },
+      {
+       "name": "Dumbbell Bicep Curls"
+      },
+      {
+       "name": "Tricep Dips (using the bench)"
+      },
+      {
+       "name": "Plank"
+      }
+     ]
+    },
+    {
+     "name": "Cardio & Core",
+     "exercises": [
+      {
+       "name": "Jumping Jacks"
+      },
+      {
+       "name": "High Knees"
+      },
+      {
+       "name": "Dumbbell Russian Twists"
+      },
+      {
+       "name": "Mountain Climbers"
+      },
+      {
+       "name": "Dumbbell Woodchoppers"
+      },
+      {
+       "name": "Bicycle Crunches"
+      },
+      {
+       "name": "Burpees"
+      },
+      {
+       "name": "Jump Rope"
+      }
+     ]
+    },
+    {
+     "name": "Upper Body",
+     "exercises": [
+      {
+       "name": "Dumbbell Rows (on the bench)"
+      },
+      {
+       "name": "Incline Dumbbell Bench Press"
+      },
+      {
+       "name": "Dumbbell Lateral Raises"
+      },
+      {
+       "name": "Hammer Curls"
+      },
+      {
+       "name": "Tricep Kickbacks"
+      },
+      {
+       "name": "Reverse Flyes"
+      },
+      {
+       "name": "Push-Ups"
+      },
+      {
+       "name": "Plank Variations"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "home-split-2",
+   "title": "Home split 2",
+   "days_per_week": 3,
+   "sessions": [
+    {
+     "name": "Full Body",
+     "exercises": [
+      {
+       "name": "Goblet Squats"
+      },
+      {
+       "name": "Dumbbell Floor Press"
+      },
+      {
+       "name": "Romanian Deadlifts with Dumbbells"
+      },
+      {
+       "name": "Dumbbell Overhead Press"
+      },
+      {
+       "name": "Walking Lunges"
+      },
+      {
+       "name": "Concentration Curls"
+      },
+      {
+       "name": "Tricep Skull Crushers"
+      },
+      {
+       "name": "Russian Twists"
+      }
+     ]
+    },
+    {
+     "name": "Cardio & Core",
+     "exercises": [
+      {
+       "name": "Jump Rope"
+      },
+      {
+       "name": "High Knees"
+      },
+      {
+       "name": "Dumbbell Mountain Climbers"
+      },
+      {
+       "name": "Jumping Lunges"
+      },
+      {
+       "name": "Plank to T-Rotation"
+      },
+      {
+       "name": "Leg Raises"
+      },
+      {
+       "name": "Box Jumps (using the bench)"
+      },
+      {
+       "name": "Bicycle Crunches"
+      }
+     ]
+    },
+    {
+     "name": "Upper Body",
+     "exercises": [
+      {
+       "name": "Dumbbell Rows"
+      },
+      {
+       "name": "Incline Dumbbell Curl and Press"
+      },
+      {
+       "name": "Lateral Raises"
+      },
+      {
+       "name": "Hammer Curls"
+      },
+      {
+       "name": "Tricep Dips (using the bench)"
+      },
+      {
+       "name": "Reverse Flyes"
+      },
+      {
+       "name": "Push-Ups"
+      },
+      {
+       "name": "Plank Variations"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "session_logs": [
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Push",
+   "exercise": "Bench Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 40.0,
+     "reps": 8,
+     "raw": "40x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Push",
+   "exercise": "Bench Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 50.0,
+     "reps": 8,
+     "raw": "50*8",
+     "confidence": "high"
+    },
+    {
+     "kg": 45.0,
+     "reps": 6,
+     "raw": "45x6",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 5,
+   "session": "Push",
+   "exercise": "Bench Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 40.0,
+     "reps": 8,
+     "raw": "40*8",
+     "confidence": "high"
+    },
+    {
+     "kg": 45.0,
+     "reps": 6,
+     "raw": "45*6",
+     "confidence": "high"
+    },
+    {
+     "kg": 47.5,
+     "reps": 4,
+     "raw": "47.5*4",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Push",
+   "exercise": "Bench Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 45.0,
+     "reps": 6,
+     "raw": "45x6",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Push",
+   "exercise": "Seated DB OHP",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 10.0,
+     "reps": null,
+     "raw": "10.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Push",
+   "exercise": "Seated DB OHP",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 12.0,
+     "reps": null,
+     "raw": "12.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Push",
+   "exercise": "Seated DB OHP",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 12.5,
+     "reps": 8,
+     "raw": "12.5x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Push",
+   "exercise": "Seated DB OHP",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 12.5,
+     "reps": 8,
+     "raw": "12.5x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 5,
+   "session": "Push",
+   "exercise": "Seated DB OHP",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 10.0,
+     "reps": 8,
+     "raw": "10x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Push",
+   "exercise": "DB Fly",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 7.0,
+     "reps": null,
+     "raw": "7.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Push",
+   "exercise": "DB Fly",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Push",
+   "exercise": "DB Fly",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Push",
+   "exercise": "DB Fly",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": 14,
+     "raw": "8*14",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 5,
+   "session": "Push",
+   "exercise": "DB Fly",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": 12,
+     "raw": "8x12",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Push",
+   "exercise": "Cable Upright Row",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": 23.0,
+     "reps": null,
+     "raw": "23.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Push",
+   "exercise": "Cable Upright Row",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": 26.25,
+     "reps": null,
+     "raw": "26.25",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Push",
+   "exercise": "Cable Upright Row",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": 29.0,
+     "reps": null,
+     "raw": "29.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Push",
+   "exercise": "Cable Upright Row",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": 29.0,
+     "reps": null,
+     "raw": "29.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 5,
+   "session": "Push",
+   "exercise": "Cable Upright Row",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": 29.0,
+     "reps": null,
+     "raw": "29.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Push",
+   "exercise": "Rope Extension",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 17.0,
+     "reps": null,
+     "raw": "17 IJ",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Push",
+   "exercise": "Rope Extension",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": 18.75,
+     "reps": 25,
+     "raw": "18.75x25ish",
+     "confidence": "high"
+    },
+    {
+     "kg": 16.25,
+     "reps": 10,
+     "raw": "16.25x10",
+     "confidence": "high"
+    },
+    {
+     "kg": 15.0,
+     "reps": null,
+     "raw": "15",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Push",
+   "exercise": "Rope Extension",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": 23.0,
+     "reps": 15,
+     "raw": "23x15",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Push",
+   "exercise": "Rope Extension",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": 23.0,
+     "reps": 15,
+     "raw": "23*15",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 5,
+   "session": "Push",
+   "exercise": "Rope Extension",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": 23.0,
+     "reps": 15,
+     "raw": "23x15 IJ",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Lower",
+   "exercise": "Squat",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 30.0,
+     "reps": 10,
+     "raw": "30x10",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Lower",
+   "exercise": "Squat",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 50.0,
+     "reps": 8,
+     "raw": "50x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Lower",
+   "exercise": "Squat",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 50.0,
+     "reps": 8,
+     "raw": "50x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Lower",
+   "exercise": "Weighted Walking Lunge",
+   "prescription": {
+    "sets": 3,
+    "reps": "16",
+    "raw": "3x16"
+   },
+   "sets": [
+    {
+     "kg": 5.0,
+     "reps": null,
+     "raw": "5.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Lower",
+   "exercise": "Weighted Walking Lunge",
+   "prescription": {
+    "sets": 3,
+    "reps": "16",
+    "raw": "3x16"
+   },
+   "sets": [
+    {
+     "kg": 6.0,
+     "reps": null,
+     "raw": "6.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Lower",
+   "exercise": "Leg Extension",
+   "prescription": {
+    "sets": 3,
+    "reps": "10",
+    "raw": "3x10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 35.0,
+     "reps": 8,
+     "raw": "35 IJ x8",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Lower",
+   "exercise": "Leg Extension",
+   "prescription": {
+    "sets": 3,
+    "reps": "10",
+    "raw": "3x10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 41.0,
+     "reps": 10,
+     "raw": "41 IJ x10",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Lower",
+   "exercise": "Lying Leg Curl",
+   "prescription": {
+    "sets": 3,
+    "reps": "10",
+    "raw": "3x10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 29.0,
+     "reps": null,
+     "raw": "29 IJ",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": "Use seated leg curl if there is no lying leg curl."
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Lower",
+   "exercise": "Lying Leg Curl",
+   "prescription": {
+    "sets": 3,
+    "reps": "10",
+    "raw": "3x10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 35.0,
+     "reps": 10,
+     "raw": "35 IJ x10",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": "Use seated leg curl if there is no lying leg curl."
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Lower",
+   "exercise": "Lying Leg Curl",
+   "prescription": {
+    "sets": 3,
+    "reps": "10",
+    "raw": "3x10"
+   },
+   "sets": [
+    {
+     "kg": 35.0,
+     "reps": 10,
+     "raw": "35x10",
+     "confidence": "high"
+    }
+   ],
+   "note": "Use seated leg curl if there is no lying leg curl."
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Lower",
+   "exercise": "Lying Leg Raise/Standing Calf Raise",
+   "prescription": {
+    "sets": 4,
+    "reps": "10-15",
+    "raw": "4x10-15/4x12"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "-",
+     "confidence": "none"
+    },
+    {
+     "kg": 4.0,
+     "reps": null,
+     "raw": "4",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Pull",
+   "exercise": "Pull Ups",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-10",
+    "raw": "4x5-10"
+   },
+   "sets": [
+    {
+     "kg": 47.0,
+     "reps": null,
+     "raw": "47.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": "Use bands or machine to assist if needed."
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Pull",
+   "exercise": "Pull Ups",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-10",
+    "raw": "4x5-10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "purple 9th x8",
+     "confidence": "none"
+    }
+   ],
+   "note": "Use bands or machine to assist if needed."
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Pull",
+   "exercise": "Pull Ups",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-10",
+    "raw": "4x5-10"
+   },
+   "sets": [
+    {
+     "kg": 49.5,
+     "reps": null,
+     "raw": "49.5",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    },
+    {
+     "kg": 50.0,
+     "reps": null,
+     "raw": "50",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": "Use bands or machine to assist if needed."
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Pull",
+   "exercise": "Pull Ups",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-10",
+    "raw": "4x5-10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "purple 9th x8 (3 sets)",
+     "confidence": "none"
+    }
+   ],
+   "note": "Use bands or machine to assist if needed."
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Pull",
+   "exercise": "DB Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 10.0,
+     "reps": null,
+     "raw": "10.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Pull",
+   "exercise": "DB Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 12.5,
+     "reps": null,
+     "raw": "12.5",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Pull",
+   "exercise": "DB Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 12.0,
+     "reps": null,
+     "raw": "12.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Pull",
+   "exercise": "DB Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 17.5,
+     "reps": null,
+     "raw": "17.5",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Pull",
+   "exercise": "DB Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 17.5,
+     "reps": null,
+     "raw": "17.5",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Pull",
+   "exercise": "Mag Pulldown",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 20.0,
+     "reps": null,
+     "raw": "20.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": "Use narrow grip if no mag."
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Pull",
+   "exercise": "Mag Pulldown",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 59.0,
+     "reps": null,
+     "raw": "59 IJ",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": "Use narrow grip if no mag."
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Pull",
+   "exercise": "Mag Pulldown",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "23.5 DPP",
+     "confidence": "none"
+    }
+   ],
+   "note": "Use narrow grip if no mag."
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Pull",
+   "exercise": "Mag Pulldown",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 84.0,
+     "reps": null,
+     "raw": "84 IJ",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": "Use narrow grip if no mag."
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Pull",
+   "exercise": "Mag Pulldown",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 83.0,
+     "reps": null,
+     "raw": "83.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": "Use narrow grip if no mag."
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Pull",
+   "exercise": "Face Pull",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": 18.75,
+     "reps": null,
+     "raw": "18.75",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Pull",
+   "exercise": "Face Pull",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 35.0,
+     "reps": null,
+     "raw": "35 IJ",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Pull",
+   "exercise": "Face Pull",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "31.25ish",
+     "confidence": "none"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Pull",
+   "exercise": "Face Pull",
+   "prescription": {
+    "sets": 3,
+    "reps": "12",
+    "raw": "3x12"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "machine_setting": 41.0,
+     "reps": null,
+     "raw": "41 IJ",
+     "confidence": "low",
+     "note": "'IJ' looks like a machine plate/index setting, not kg"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Pull",
+   "exercise": "Supinating DB Curl",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": 7.0,
+     "reps": 10,
+     "raw": "7x10",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Pull",
+   "exercise": "Supinating DB Curl",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Pull",
+   "exercise": "Supinating DB Curl",
+   "prescription": {
+    "sets": 5,
+    "reps": "10",
+    "raw": "5x10"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Lower",
+   "exercise": "Trap Bar Deadlift",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 65.0,
+     "reps": 8,
+     "raw": "65x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Lower",
+   "exercise": "Trap Bar Deadlift",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 70.0,
+     "reps": 6,
+     "raw": "70x6",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Lower",
+   "exercise": "Trap Bar Deadlift",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 85.0,
+     "reps": 6,
+     "raw": "85x6",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Lower",
+   "exercise": "Trap Bar Deadlift",
+   "prescription": {
+    "sets": 4,
+    "reps": "5-8",
+    "raw": "4x5-8"
+   },
+   "sets": [
+    {
+     "kg": 90.0,
+     "reps": 6,
+     "raw": "90x6",
+     "confidence": "high"
+    },
+    {
+     "kg": 100.0,
+     "reps": 4,
+     "raw": "100x4",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Lower",
+   "exercise": "Leg Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 60.0,
+     "reps": null,
+     "raw": "60.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Lower",
+   "exercise": "Leg Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 70.0,
+     "reps": null,
+     "raw": "70.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Lower",
+   "exercise": "Leg Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 80.0,
+     "reps": null,
+     "raw": "80.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Lower",
+   "exercise": "Leg Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 100.0,
+     "reps": null,
+     "raw": "100.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Lower",
+   "exercise": "Leg Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 110.0,
+     "reps": 8,
+     "raw": "110x8",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Lower",
+   "exercise": "Goblet Squat",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 12.5,
+     "reps": null,
+     "raw": "12.5",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": "Utilise slant board or heels on plate where possible."
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Lower",
+   "exercise": "Goblet Squat",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 12.5,
+     "reps": null,
+     "raw": "12.5",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": "Utilise slant board or heels on plate where possible."
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Lower",
+   "exercise": "Goblet Squat",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 17.5,
+     "reps": null,
+     "raw": "17.5",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": "Utilise slant board or heels on plate where possible."
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Lower",
+   "exercise": "Goblet Squat",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "17.5 +heavy",
+     "confidence": "none"
+    }
+   ],
+   "note": "Utilise slant board or heels on plate where possible."
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Lower",
+   "exercise": "DB RDL",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Lower",
+   "exercise": "DB RDL",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Lower",
+   "exercise": "DB RDL",
+   "prescription": {
+    "sets": 4,
+    "reps": "12",
+    "raw": "4x12"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "change to hypers",
+     "confidence": "none"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Lower",
+   "exercise": "Leg Press Calf Raise",
+   "prescription": {
+    "sets": 5,
+    "reps": "15",
+    "raw": "5x15"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "standing (8kg)",
+     "confidence": "none"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 4,
+   "session": "Lower",
+   "exercise": "Leg Press Calf Raise",
+   "prescription": {
+    "sets": 5,
+    "reps": "15",
+    "raw": "5x15"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Lower",
+   "exercise": "Leg Press Calf Raise",
+   "prescription": {
+    "sets": 5,
+    "reps": "15",
+    "raw": "5x15"
+   },
+   "sets": [
+    {
+     "kg": 8.0,
+     "reps": null,
+     "raw": "8.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Upper",
+   "exercise": "Incline DB Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 10.0,
+     "reps": null,
+     "raw": "10.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Upper",
+   "exercise": "Incline DB Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 12.5,
+     "reps": 10,
+     "raw": "12.5x10",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Upper",
+   "exercise": "Incline DB Press",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 15.0,
+     "reps": null,
+     "raw": "15.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Upper",
+   "exercise": "Unilateral Hammer Strength Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "Unilateral High Row",
+     "confidence": "none"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 3,
+   "session": "Upper",
+   "exercise": "Unilateral Hammer Strength Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 20.0,
+     "reps": null,
+     "raw": "20.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Upper",
+   "exercise": "Unilateral Hammer Strength Row",
+   "prescription": {
+    "sets": 4,
+    "reps": "8",
+    "raw": "4x8"
+   },
+   "sets": [
+    {
+     "kg": 95.0,
+     "reps": 6,
+     "raw": "95 x6 cable row IJ",
+     "confidence": "high"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 1,
+   "session": "Upper",
+   "exercise": "DB Lateral Raise",
+   "prescription": {
+    "sets": 3,
+    "reps": "15",
+    "raw": "3x15"
+   },
+   "sets": [
+    {
+     "kg": 4.0,
+     "reps": null,
+     "raw": "4.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Upper",
+   "exercise": "DB Lateral Raise",
+   "prescription": {
+    "sets": 3,
+    "reps": "15",
+    "raw": "3x15"
+   },
+   "sets": [
+    {
+     "kg": 4.0,
+     "reps": null,
+     "raw": "4.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Upper",
+   "exercise": "DB Lateral Raise",
+   "prescription": {
+    "sets": 3,
+    "reps": "15",
+    "raw": "3x15"
+   },
+   "sets": [
+    {
+     "kg": 4.0,
+     "reps": null,
+     "raw": "4.0",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 2,
+   "session": "Upper",
+   "exercise": "Rope Curl/Dip Off Bench",
+   "prescription": {
+    "sets": 3,
+    "reps": "15",
+    "raw": "3x15/3x15"
+   },
+   "sets": [
+    {
+     "kg": 23.0,
+     "reps": null,
+     "raw": "23",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    },
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "BW",
+     "confidence": "none"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Upper",
+   "exercise": "Rope Curl/Dip Off Bench",
+   "prescription": {
+    "sets": 3,
+    "reps": "15",
+    "raw": "3x15/3x15"
+   },
+   "sets": [
+    {
+     "kg": 23.0,
+     "reps": null,
+     "raw": "23",
+     "confidence": "medium",
+     "note": "weight only; reps assumed from prescription"
+    },
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "BW",
+     "confidence": "none"
+    }
+   ],
+   "note": null
+  },
+  {
+   "block": "2022",
+   "week": 6,
+   "session": "Upper",
+   "exercise": "Weighted Crunch/Push Up",
+   "prescription": {
+    "sets": 3,
+    "reps": "20",
+    "raw": "3x20/3x5-10"
+   },
+   "sets": [
+    {
+     "kg": null,
+     "reps": null,
+     "raw": "12 reps",
+     "confidence": "none"
+    }
+   ],
+   "note": "Push up can be done on knees and progress to toes."
+  }
+ ],
+ "food_lists": {
+  "protein": [
+   "Chicken Breast",
+   "Salmon",
+   "Beef",
+   "Eggs",
+   "Low Fat Cottage Cheese",
+   "Beans",
+   "YoPro or Chobani",
+   "Kangaroo meats",
+   "Tuna",
+   "Lamb",
+   "Turkey",
+   "Milk"
+  ],
+  "carbs": [
+   "Sweet Potato OR white potato",
+   "Grain/Cereals",
+   "Long Grain White Rice",
+   "Breads",
+   "Rice Cakes (all flavours)",
+   "Quick Oats (homebrand)",
+   "Pasta",
+   "Protein Pasta (Vetta Smart)",
+   "Quinoa",
+   "Pumpkin",
+   "Banana",
+   "Beans"
+  ],
+  "fats": [
+   "Avocado",
+   "Olive Oil",
+   "Nut Butters",
+   "Coconut/avocado oil",
+   "Cheese",
+   "Salmon",
+   "Egg Yolk (combination of good fats and protein)",
+   "Nuts",
+   "Chia Seeds",
+   "Dark Chocolate",
+   "Tofu"
+  ],
+  "micros": [
+   "Spinach/leafy greens",
+   "Kiwi fruit",
+   "Berries",
+   "Carrots",
+   "Zucchini",
+   "Avocado",
+   "Beetroot",
+   "Broccoli",
+   "Apples"
+  ]
+ },
+ "recipes": [
+  {
+   "title": "Protein-Packed Chicken Salad",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 35.0,
+    "carbs_g": 28.0,
+    "kcal": 330.0,
+    "fat_g": 14.5
+   },
+   "ingredients": [
+    {
+     "name": "Chicken Breast",
+     "amount": "115g",
+     "protein_g": 30.0,
+     "carbs_g": 0.0,
+     "kcal": 140.0,
+     "fat_g": 3.5
+    },
+    {
+     "name": "Spinach/Leafy Greens",
+     "amount": "2 cups",
+     "protein_g": 2.0,
+     "carbs_g": 3.0,
+     "kcal": 20.0,
+     "fat_g": 0.5
+    },
+    {
+     "name": "Avocado",
+     "amount": "1/2 medium",
+     "protein_g": 2.0,
+     "carbs_g": 12.0,
+     "kcal": 120.0,
+     "fat_g": 10.5
+    },
+    {
+     "name": "Kiwi Fruit",
+     "amount": "1.0",
+     "protein_g": 1.0,
+     "carbs_g": 13.0,
+     "kcal": 50.0,
+     "fat_g": 0.5
+    }
+   ],
+   "steps": [
+    "Grill or bake the chicken breast until fully cooked.",
+    "Toss together chopped spinach, sliced avocado, and kiwi fruit.",
+    "Slice the cooked chicken breast and place it on top of the salad.",
+    "Dress with olive oil and a squeeze of fresh lemon juice."
+   ],
+   "computed_total": {
+    "protein_g": 35.0,
+    "carbs_g": 28.0,
+    "fat_g": 15.0,
+    "kcal": 330.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Salmon and Quinoa Bowl",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 32.0,
+    "carbs_g": 26.0,
+    "kcal": 486.0,
+    "fat_g": 29.5
+   },
+   "ingredients": [
+    {
+     "name": "Salmon",
+     "amount": "115g",
+     "protein_g": 25.0,
+     "carbs_g": 0.0,
+     "kcal": 200.0,
+     "fat_g": 13.0
+    },
+    {
+     "name": "Quinoa",
+     "amount": "1/2 cup",
+     "protein_g": 4.0,
+     "carbs_g": 20.0,
+     "kcal": 111.0,
+     "fat_g": 2.0
+    },
+    {
+     "name": "Olive Oil",
+     "amount": "1 tbsp",
+     "protein_g": 0.0,
+     "carbs_g": 0.0,
+     "kcal": 120.0,
+     "fat_g": 14.0
+    },
+    {
+     "name": "Broccoli",
+     "amount": "1 cup",
+     "protein_g": 3.0,
+     "carbs_g": 6.0,
+     "kcal": 55.0,
+     "fat_g": 0.5
+    }
+   ],
+   "steps": [
+    "Bake or grill the salmon until it flakes easily.",
+    "Cook quinoa according to package instructions.",
+    "Steam or stir-fry broccoli until tender.",
+    "Assemble a bowl with quinoa, salmon, and broccoli. Drizzle with olive oil"
+   ],
+   "computed_total": {
+    "protein_g": 32.0,
+    "carbs_g": 26.0,
+    "fat_g": 29.5,
+    "kcal": 486.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Egg and Veggie Omelette",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 21.0,
+    "carbs_g": 6.0,
+    "kcal": 267.0,
+    "fat_g": 19.0
+   },
+   "ingredients": [
+    {
+     "name": "Eggs",
+     "amount": "2 (large)",
+     "protein_g": 2.0,
+     "carbs_g": 1.0,
+     "kcal": 140.0,
+     "fat_g": 10.0
+    },
+    {
+     "name": "Spinach/Leafy Greens",
+     "amount": "1 cup",
+     "protein_g": 1.0,
+     "carbs_g": 1.0,
+     "kcal": 7.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Zucchini",
+     "amount": "1/2 cup",
+     "protein_g": 1.0,
+     "carbs_g": 3.0,
+     "kcal": 10.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Cheese",
+     "amount": "28g",
+     "protein_g": 7.0,
+     "carbs_g": 1.0,
+     "kcal": 110.0,
+     "fat_g": 9.0
+    }
+   ],
+   "steps": [
+    "Whisk eggs and pour them into a heated pan.",
+    "Add chopped spinach, grated cheese, and sliced zucchini.",
+    "Cook until the eggs are set, and the filling is cooked."
+   ],
+   "computed_total": {
+    "protein_g": 11.0,
+    "carbs_g": 6.0,
+    "fat_g": 19.0,
+    "kcal": 267.0
+   },
+   "total_mismatch": true
+  },
+  {
+   "title": "Chicken and Sweet Potato Bowl",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 36.0,
+    "carbs_g": 41.0,
+    "kcal": 392.0,
+    "fat_g": 14.6
+   },
+   "ingredients": [
+    {
+     "name": "Grilled chicken breast",
+     "amount": "115g",
+     "protein_g": 30.0,
+     "carbs_g": 0.0,
+     "kcal": 140.0,
+     "fat_g": 3.5
+    },
+    {
+     "name": "Sweet potatoes",
+     "amount": "1 cup",
+     "protein_g": 2.0,
+     "carbs_g": 26.0,
+     "kcal": 112.0,
+     "fat_g": 0.1
+    },
+    {
+     "name": "Avocado",
+     "amount": "1/2 medium",
+     "protein_g": 2.0,
+     "carbs_g": 12.0,
+     "kcal": 120.0,
+     "fat_g": 10.5
+    },
+    {
+     "name": "Spinach/leafy greens",
+     "amount": "2 cups",
+     "protein_g": 2.0,
+     "carbs_g": 3.0,
+     "kcal": 20.0,
+     "fat_g": 0.5
+    }
+   ],
+   "steps": [
+    "Grill the chicken breast until fully cooked.",
+    "Roast sweet potatoes until tender.",
+    "Slice avocado.",
+    "Serve grilled chicken, sweet potatoes, and avocado over a bed of spinach/leafy greens."
+   ],
+   "computed_total": {
+    "protein_g": 36.0,
+    "carbs_g": 41.0,
+    "fat_g": 14.6,
+    "kcal": 392.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Beef and Rice Stir-Fry",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 38.0,
+    "carbs_g": 36.0,
+    "kcal": 383.0,
+    "fat_g": 16.7
+   },
+   "ingredients": [
+    {
+     "name": "Lean beef strips",
+     "amount": "115g",
+     "protein_g": 30.0,
+     "carbs_g": 0.0,
+     "kcal": 140.0,
+     "fat_g": 8.0
+    },
+    {
+     "name": "Long grain white rice",
+     "amount": "1/2 cup",
+     "protein_g": 2.0,
+     "carbs_g": 23.0,
+     "kcal": 103.0,
+     "fat_g": 0.2
+    },
+    {
+     "name": "Nut butter",
+     "amount": "1 tbsp",
+     "protein_g": 3.0,
+     "carbs_g": 4.0,
+     "kcal": 94.0,
+     "fat_g": 8.0
+    },
+    {
+     "name": "Mixed bell peppers and broccoli",
+     "amount": "1 cup",
+     "protein_g": 3.0,
+     "carbs_g": 9.0,
+     "kcal": 46.0,
+     "fat_g": 0.5
+    }
+   ],
+   "steps": [
+    "Stir-fry lean beef strips until browned.",
+    "Cook long grain white rice.",
+    "Mix nut butter into the stir-fried beef.",
+    "Combine beef with rice, bell peppers, and broccoli."
+   ],
+   "computed_total": {
+    "protein_g": 38.0,
+    "carbs_g": 36.0,
+    "fat_g": 16.7,
+    "kcal": 383.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Cottage Cheese and Rice Cakes Snack",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 23.0,
+    "carbs_g": 22.0,
+    "kcal": 260.0,
+    "fat_g": 10.5
+   },
+   "ingredients": [
+    {
+     "name": "Low-fat cottage cheese",
+     "amount": "1/2 cup",
+     "protein_g": 14.0,
+     "carbs_g": 6.0,
+     "kcal": 90.0,
+     "fat_g": 1.0
+    },
+    {
+     "name": "Rice cakes (all flavors)",
+     "amount": "1.0",
+     "protein_g": 1.0,
+     "carbs_g": 12.0,
+     "kcal": 50.0,
+     "fat_g": 0.5
+    },
+    {
+     "name": "Sliced cheese",
+     "amount": "28g",
+     "protein_g": 7.0,
+     "carbs_g": 1.0,
+     "kcal": 110.0,
+     "fat_g": 9.0
+    },
+    {
+     "name": "Zucchini",
+     "amount": "1/2 cup",
+     "protein_g": 1.0,
+     "carbs_g": 3.0,
+     "kcal": 10.0,
+     "fat_g": 0.0
+    }
+   ],
+   "steps": [
+    "Spoon low-fat cottage cheese onto rice cakes.",
+    "Top with sliced cheese.",
+    "Serve with sliced zucchini on the side."
+   ],
+   "computed_total": {
+    "protein_g": 23.0,
+    "carbs_g": 22.0,
+    "fat_g": 10.5,
+    "kcal": 260.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Yogurt Parfait with Berries",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 22.0,
+    "carbs_g": 31.0,
+    "kcal": 370.0,
+    "fat_g": 20.5
+   },
+   "ingredients": [
+    {
+     "name": "YoPro or Chobani yogurt",
+     "amount": "1 cup",
+     "protein_g": 15.0,
+     "carbs_g": 15.0,
+     "kcal": 150.0,
+     "fat_g": 5.0
+    },
+    {
+     "name": "Mixed berries (strawberries, blueberries)",
+     "amount": "1/2 cup",
+     "protein_g": 1.0,
+     "carbs_g": 12.0,
+     "kcal": 40.0,
+     "fat_g": 0.5
+    },
+    {
+     "name": "Handful of nuts",
+     "amount": "28g",
+     "protein_g": 6.0,
+     "carbs_g": 4.0,
+     "kcal": 180.0,
+     "fat_g": 15.0
+    }
+   ],
+   "steps": [
+    "Layer yogurt with mixed berries in a glass.",
+    "Top with a handful of nuts."
+   ],
+   "computed_total": {
+    "protein_g": 22.0,
+    "carbs_g": 31.0,
+    "fat_g": 20.5,
+    "kcal": 370.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Kangaroo Meat and Veggie Stir-Fry",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 55.0,
+    "carbs_g": 55.0,
+    "kcal": 430.0,
+    "fat_g": 9.0
+   },
+   "ingredients": [
+    {
+     "name": "Stir-fried kangaroo meat",
+     "amount": "115g",
+     "protein_g": 30.0,
+     "carbs_g": 0.0,
+     "kcal": 140.0,
+     "fat_g": 3.0
+    },
+    {
+     "name": "Protein pasta (Vetta Smart)",
+     "amount": "1 cup",
+     "protein_g": 20.0,
+     "carbs_g": 40.0,
+     "kcal": 200.0,
+     "fat_g": 2.0
+    },
+    {
+     "name": "Broccoli, bell peppers, and chia seeds",
+     "amount": "1 cup (mixed)",
+     "protein_g": 5.0,
+     "carbs_g": 15.0,
+     "kcal": 90.0,
+     "fat_g": 4.0
+    }
+   ],
+   "steps": [
+    "Stir-fry kangaroo meat until cooked.",
+    "Prepare protein pasta.",
+    "Mix with stir-fried meat, broccoli, bell peppers, and sprinkle chia seeds."
+   ],
+   "computed_total": {
+    "protein_g": 55.0,
+    "carbs_g": 55.0,
+    "fat_g": 9.0,
+    "kcal": 430.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Turkey and Tofu Skewers",
+   "level": "1",
+   "stated_total": {
+    "protein_g": 41.0,
+    "carbs_g": 15.0,
+    "kcal": 339.0,
+    "fat_g": 11.2
+   },
+   "ingredients": [
+    {
+     "name": "Grilled turkey skewers",
+     "amount": "115g",
+     "protein_g": 30.0,
+     "carbs_g": 0.0,
+     "kcal": 140.0,
+     "fat_g": 2.0
+    },
+    {
+     "name": "Marinated tofu cubes",
+     "amount": "85g",
+     "protein_g": 9.0,
+     "carbs_g": 3.0,
+     "kcal": 150.0,
+     "fat_g": 9.0
+    },
+    {
+     "name": "Roasted pumpkin",
+     "amount": "1 cup",
+     "protein_g": 2.0,
+     "carbs_g": 12.0,
+     "kcal": 49.0,
+     "fat_g": 0.2
+    }
+   ],
+   "steps": [
+    "Skewer turkey and marinated tofu alternately.",
+    "Grill until fully cooked.",
+    "Serve with a side of roasted pumpkin."
+   ],
+   "computed_total": {
+    "protein_g": 41.0,
+    "carbs_g": 15.0,
+    "fat_g": 11.2,
+    "kcal": 339.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Lemon Garlic Chicken with Asparagus and Cauliflower Mash",
+   "level": "2",
+   "stated_total": {
+    "protein_g": 49.0,
+    "carbs_g": 27.0,
+    "kcal": 457.0,
+    "fat_g": 20.8
+   },
+   "ingredients": [
+    {
+     "name": "Chicken breasts",
+     "amount": "170g",
+     "protein_g": 40.0,
+     "carbs_g": 0.0,
+     "kcal": 220.0,
+     "fat_g": 4.5
+    },
+    {
+     "name": "Asparagus spears",
+     "amount": "1 cup",
+     "protein_g": 3.0,
+     "carbs_g": 6.0,
+     "kcal": 30.0,
+     "fat_g": 0.3
+    },
+    {
+     "name": "Cauliflower",
+     "amount": "1 cup",
+     "protein_g": 3.0,
+     "carbs_g": 10.0,
+     "kcal": 50.0,
+     "fat_g": 2.0
+    },
+    {
+     "name": "Garlic",
+     "amount": "2 cloves",
+     "protein_g": 1.0,
+     "carbs_g": 3.0,
+     "kcal": 10.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Lemon",
+     "amount": "1 (medium)",
+     "protein_g": 1.0,
+     "carbs_g": 7.0,
+     "kcal": 20.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Chicken broth",
+     "amount": "1/2 cup",
+     "protein_g": 1.0,
+     "carbs_g": 1.0,
+     "kcal": 5.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Olive oil",
+     "amount": "1 tbsp",
+     "protein_g": 0.0,
+     "carbs_g": 0.0,
+     "kcal": 120.0,
+     "fat_g": 14.0
+    },
+    {
+     "name": "Fresh thyme",
+     "amount": "1 tbsp",
+     "protein_g": 0.0,
+     "carbs_g": 0.0,
+     "kcal": 2.0,
+     "fat_g": 0.0
+    }
+   ],
+   "steps": [
+    "Season chicken with lemon, garlic, and thyme; pan-sear until golden brown.",
+    "Roast asparagus with olive oil, salt, and pepper.",
+    "Steam cauliflower, then mash with chicken broth and a touch of olive oil."
+   ],
+   "computed_total": {
+    "protein_g": 49.0,
+    "carbs_g": 27.0,
+    "fat_g": 20.8,
+    "kcal": 457.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Beef and Vegetable Stir-Fry with Quinoa",
+   "level": "2",
+   "stated_total": {
+    "protein_g": 42.0,
+    "carbs_g": 43.0,
+    "kcal": 380.0,
+    "fat_g": 14.8
+   },
+   "ingredients": [
+    {
+     "name": "Beef sirloin strips",
+     "amount": "115g",
+     "protein_g": 30.0,
+     "carbs_g": 0.0,
+     "kcal": 140.0,
+     "fat_g": 8.0
+    },
+    {
+     "name": "Quinoa",
+     "amount": "1/2 cup",
+     "protein_g": 4.0,
+     "carbs_g": 20.0,
+     "kcal": 111.0,
+     "fat_g": 2.0
+    },
+    {
+     "name": "Broccoli florets",
+     "amount": "1 cup",
+     "protein_g": 3.0,
+     "carbs_g": 6.0,
+     "kcal": 31.0,
+     "fat_g": 0.3
+    },
+    {
+     "name": "Carrots",
+     "amount": "1 (medium)",
+     "protein_g": 1.0,
+     "carbs_g": 6.0,
+     "kcal": 25.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Snow peas",
+     "amount": "1 cup",
+     "protein_g": 2.0,
+     "carbs_g": 8.0,
+     "kcal": 41.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Soy sauce",
+     "amount": "1 tbsp",
+     "protein_g": 2.0,
+     "carbs_g": 2.0,
+     "kcal": 10.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Ginger",
+     "amount": "1 tsp",
+     "protein_g": 0.0,
+     "carbs_g": 1.0,
+     "kcal": 2.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Sesame oil",
+     "amount": "1 tsp",
+     "protein_g": 0.0,
+     "carbs_g": 0.0,
+     "kcal": 40.0,
+     "fat_g": 4.5
+    }
+   ],
+   "steps": [
+    "Stir-fry beef in sesame oil, ginger, and soy sauce until cooked.",
+    "Add broccoli, carrots, and snow peas to the stir-fry.",
+    "Serve over cooked quinoa, garnish with green onions and sesame seeds."
+   ],
+   "computed_total": {
+    "protein_g": 42.0,
+    "carbs_g": 43.0,
+    "fat_g": 14.8,
+    "kcal": 400.0
+   },
+   "total_mismatch": false
+  },
+  {
+   "title": "Mango Lime Chicken with Coconut Brown Rice",
+   "level": "2",
+   "stated_total": {
+    "protein_g": 44.0,
+    "carbs_g": 141.0,
+    "kcal": 890.0,
+    "fat_g": 46.6
+   },
+   "ingredients": [
+    {
+     "name": "Chicken thighs",
+     "amount": "170g",
+     "protein_g": 35.0,
+     "carbs_g": 0.0,
+     "kcal": 350.0,
+     "fat_g": 22.0
+    },
+    {
+     "name": "Mango",
+     "amount": "1 cup",
+     "protein_g": 1.0,
+     "carbs_g": 60.0,
+     "kcal": 240.0,
+     "fat_g": 1.0
+    },
+    {
+     "name": "Lime",
+     "amount": "1 (medium)",
+     "protein_g": 0.0,
+     "carbs_g": 20.0,
+     "kcal": 20.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Coconut milk",
+     "amount": "1/2 cup",
+     "protein_g": 2.0,
+     "carbs_g": 10.0,
+     "kcal": 240.0,
+     "fat_g": 22.0
+    },
+    {
+     "name": "Brown rice",
+     "amount": "1 cup",
+     "protein_g": 5.0,
+     "carbs_g": 45.0,
+     "kcal": 215.0,
+     "fat_g": 1.6
+    },
+    {
+     "name": "Red bell pepper",
+     "amount": "1 (medium)",
+     "protein_g": 1.0,
+     "carbs_g": 6.0,
+     "kcal": 25.0,
+     "fat_g": 0.0
+    },
+    {
+     "name": "Cilantro",
+     "amount": "1 tbsp",
+     "protein_g": 0.0,
+     "carbs_g": 0.0,
+     "kcal": 0.0,
+     "fat_g": 0.0
+    }
+   ],
+   "steps": [
+    "Marinate chicken in mango puree, lime juice, and coconut milk.",
+    "Grill or roast the chicken until fully cooked.",
+    "Serve over coconut-infused brown rice, topped with diced red bell pepper, fresh cilantro."
+   ],
+   "computed_total": {
+    "protein_g": 44.0,
+    "carbs_g": 141.0,
+    "fat_g": 46.6,
+    "kcal": 1090.0
+   },
+   "total_mismatch": true
+  }
+ ],
+ "exercise_descriptions": {
+  "Flat Bench Dumbbell Press": "Lie on a flat bench with a dumbbell in each hand, press them up to the ceiling.",
+  "Dumbbell Rows": "Place one knee and hand on a bench, lift a dumbbell with the opposite hand, pulling it towards your hip.",
+  "Dumbbell Shoulder Press": "Sit or stand, press dumbbells overhead, extending your arms.",
+  "Goblet Squats": "Hold a dumbbell close to your chest and perform squats.",
+  "Dumbbell Bicep Curls": "Stand and curl the dumbbells, targeting the biceps.",
+  "Incline Dumbbell Press": "Similar to flat bench press but on an incline bench, targeting the upper chest.",
+  "Bent-Over Rows (with Barbell)": "Similar to dumbbell rows but performed with a barbell.",
+  "Lateral Raises": "Stand and lift dumbbells to the sides, targeting the lateral deltoids.",
+  "Lunges (with Dumbbells)": "Step forward or backward with one leg while holding dumbbells.",
+  "Tricep Dips (using a bench)": "Place your hands on a bench, lower and lift your body to work the triceps.",
+  "Decline Dumbbell Press": "Lie on a decline bench to emphasize the lower chest.",
+  "Single-Arm Dumbbell Rows": "Stand and row a dumbbell with one arm, stabilizing yourself with the opposite hand on a bench.",
+  "Step-Ups (using a bench)": "Step onto a bench with one foot, alternating between legs.",
+  "Dumbbell Flyes": "Lie on a flat bench, arms extended, and open and close the arms in a flye motion.",
+  "Bench Press (with Barbell)": "Using a barbell, perform the classic bench press on a flat bench."
+ }
+}

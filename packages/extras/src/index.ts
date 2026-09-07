@@ -5,3 +5,7 @@ export * from './xp/model';
 export * from './growth/model';
 export * from './growth/StagedPebble';
 export * from './motivation/Cards';
+export * from './social/model';
+export * from './social/SocialCard';
+export * from './narrative/model';
+export * from './narrative/NarrativeCard';

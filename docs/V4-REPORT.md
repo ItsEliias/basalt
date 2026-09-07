@@ -246,3 +246,39 @@ fails the suite otherwise.
 
 Awaiting review; the daily-narrative Extra (last in the phase order)
 also waits behind this stop.
+
+### Phase 2 completion — social + narrative client side (suite 1103 → 1115)
+
+STOP B was answered "continue"; what landed and what's gated:
+
+- **Migration written, NOT applied**: `20260907170000_basalt_social_v4.sql`
+  exactly as posted (plus one fix the deletion guard caught — see below).
+  The `apply_migration` call was permission-blocked by the tool
+  classifier; it needs the user to approve a retry or run
+  `supabase db push`. The social Extra's client code is complete and
+  inert until then (reads/writes will error politely against missing
+  tables; the Extra defaults off).
+- **The deletion guard caught a real regression**: the new
+  `basalt_delete_my_data` body had been copied from the ppg-calibration
+  migration and silently dropped `basalt_mobility_sessions` (added by a
+  later migration). Fixed in the unapplied file; the Edge function's
+  wipe lists gained the five social tables (friends as two-sided,
+  invites/challenges via a new KEYED list) — 8/8 deletion tests green.
+  Edge redeploy pending alongside the migration.
+- **Social** (`packages/extras/src/social` + `SocialCard` +
+  `app/src/lib/socialData.ts`): invite codes (8-char no-lookalike
+  alphabet, model-tested), leaderboard math (sum/sort/self-mark,
+  zero-row members stay visible), the published shared-columns note
+  rendered on the card, challenge create/join plumbing, Today's
+  "N friends logged today" line (plain fact, null when zero), and the
+  device publishing only its own aggregates (`publishToday`). 7 tests.
+- **Daily narrative** (`packages/extras/src/narrative` + edge function
+  `ai-daily-summary`, deploy pending): one paragraph about YESTERDAY
+  from numbers the client chooses to send; the model system prompt
+  forbids advice/cheer/invention; the label "Generated summary" is part
+  of the component (no prop can hide it); an empty day earns silence.
+  Law tests pin: label unconditional, yesterday-only, never-on-Trends
+  (source scan), never-in-a-notification (source scan of every
+  notification module). 5 tests.
+- Registry: `social` + `narrative` entries (motivation, off, own
+  onboarding screens per the prompt's order).

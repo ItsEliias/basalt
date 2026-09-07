@@ -12,6 +12,8 @@
 export type ExtraGroup = 'capture' | 'motivation' | 'glanceability' | 'depth' | 'basalt';
 
 export type ExtraId =
+  | 'social'
+  | 'narrative'
   | 'streaks'
   | 'xp'
   | 'pebbleGrows'
@@ -145,6 +147,32 @@ export const EXTRAS: readonly ExtraDef[] = [
       yesLabel: 'Turn them on',
       noLabel: 'Not now',
       preview: 'sxb',
+    },
+  },
+  {
+    id: 'social',
+    title: 'Friends & challenges',
+    oneLiner: 'Invite-code friends, weekly challenges, leaderboards among friends only — aggregates, never your food.',
+    group: 'motivation',
+    default: false,
+    onboarding: {
+      question: 'Friends and challenges? Friends see only aggregate numbers you publish — never your entries.',
+      yesLabel: 'Turn it on',
+      noLabel: 'Not now',
+      preview: 'social',
+    },
+  },
+  {
+    id: 'narrative',
+    title: 'Daily summary',
+    oneLiner: 'One AI-written paragraph about yesterday, from your real numbers — labelled as generated, never a notification.',
+    group: 'motivation',
+    default: false,
+    onboarding: {
+      question: 'A daily summary? One generated paragraph each morning from yesterday’s numbers — narration, labelled as such.',
+      yesLabel: 'Turn it on',
+      noLabel: 'Not now',
+      preview: 'narrative',
     },
   },
   {

@@ -15,7 +15,11 @@ import { CoopCard } from './CoopCard';
 import { loadWeeklyVolume, type WeeklyVolumeReport } from '../../lib/weeklyVolumeData';
 import { volumeLine } from '@basalt/training';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
-import { StreaksCard, XpCard, type BadgeInputs } from '@basalt/extras';
+import { StreaksCard, XpCard, SocialCard, makeInviteCode, type BadgeInputs, type SocialChallenge, type ChallengeKind } from '@basalt/extras';
+import {
+  challengeBoard, createChallenge, createInvite, listFriends, myChallenges, myUserId, redeemInvite,
+} from '../../lib/socialData';
+import { Alert } from 'react-native';
 
 // Trends — everything here is computed from the ledger or absent. Gaps stay
 // gray, streak resets don't shame, and there are no charts until there is
@@ -46,6 +50,57 @@ export function TrendsScreen() {
   const [trainDays, setTrainDays] = useState<Set<string> | null>(null);
   const [sleepDays, setSleepDays] = useState<Set<string> | null>(null);
   const [xpInputs, setXpInputs] = useState<BadgeInputs | null>(null);
+  const socialOn = useExtra('social');
+  const [selfId, setSelfId] = useState<string>('');
+  const [friendCount, setFriendCount] = useState(0);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [socialChallenges, setSocialChallenges] = useState<SocialChallenge[]>([]);
+  const [socialBusy, setSocialBusy] = useState(false);
+  const displayName = useAppStore((st) => st.profile?.name ?? 'Me');
+  const reloadSocial = useCallback(async () => {
+    const uid = await myUserId(supabase);
+    if (!uid) return;
+    setSelfId(uid);
+    setFriendCount((await listFriends(supabase)).length);
+    const cs = await myChallenges(supabase);
+    const withBoards: SocialChallenge[] = [];
+    for (const c of cs.slice(0, 3)) {
+      const b = await challengeBoard(supabase, c.id);
+      withBoards.push({ id: c.id, kind: c.kind, startsOn: c.startsOn, endsOn: c.endsOn, ...b });
+    }
+    setSocialChallenges(withBoards);
+  }, []);
+  useEffect(() => {
+    if (socialOn) void reloadSocial();
+  }, [socialOn, reloadSocial]);
+  const onCreateInvite = async () => {
+    setSocialBusy(true);
+    const code = makeInviteCode(Array.from({ length: 8 }, () => Math.random()));
+    const r = await createInvite(supabase, code);
+    if (r) setInviteCode(r.code);
+    setSocialBusy(false);
+  };
+  const onRedeem = async (code: string) => {
+    setSocialBusy(true);
+    const r = await redeemInvite(supabase, code);
+    setSocialBusy(false);
+    Alert.alert(r.ok ? 'Friends' : 'Could not add', r.message);
+    if (r.ok) void reloadSocial();
+  };
+  const onCreateChallenge = async (kind: ChallengeKind) => {
+    setSocialBusy(true);
+    const start = new Date();
+    const end = new Date(start.getTime() + 6 * 86400000);
+    const r = await createChallenge(supabase, {
+      kind,
+      startsOn: start.toISOString().slice(0, 10),
+      endsOn: end.toISOString().slice(0, 10),
+      displayName,
+    });
+    setSocialBusy(false);
+    if (!r.ok) Alert.alert('Could not create', r.message ?? 'Unknown error.');
+    else void reloadSocial();
+  };
   useEffect(() => {
     if (!streaksOn) return;
     void activeDaysFor(supabase, 'workout', { restAware: true }).then((r) => r.ok && setTrainDays(r.data));
@@ -233,6 +288,20 @@ export function TrendsScreen() {
             <XpCard inputs={xpInputs} />
           </Card>
         ) : null}
+      </ExtraSlot>
+      <ExtraSlot id="social">
+        <Card>
+          <SocialCard
+            selfId={selfId}
+            friendCount={friendCount}
+            myInviteCode={inviteCode}
+            challenges={socialChallenges}
+            busy={socialBusy}
+            onCreateInvite={() => void onCreateInvite()}
+            onRedeem={(c) => void onRedeem(c)}
+            onCreateChallenge={(k) => void onCreateChallenge(k)}
+          />
+        </Card>
       </ExtraSlot>
 
       {/* ── Records — from real set history ────────────────────────── */}

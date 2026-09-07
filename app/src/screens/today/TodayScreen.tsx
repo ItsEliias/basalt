@@ -12,8 +12,10 @@ import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, 
 } from './model';
 import { loadReadiness } from '@basalt/analytics';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
-import { StagedPebble, growthScore, stageFor } from '@basalt/extras';
+import { StagedPebble, growthScore, stageFor, NarrativeCard, narrativeDateFor, friendsLoggedLine } from '@basalt/extras';
 import { loadGrowthInputs } from '../../lib/growthData';
+import { loadDailySummary } from '../../lib/narrativeData';
+import { friendsLoggedToday, publishToday } from '../../lib/socialData';
 import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
 import {
   PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
@@ -137,6 +139,27 @@ export function TodayScreen({ onOpenTab }: {
 
   const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
   const growsOn = useExtra('pebbleGrows');
+  const narrativeOn = useExtra('narrative');
+  const socialOn = useExtra('social');
+  const [summary, setSummary] = useState<string | null>(null);
+  const [friendsCount, setFriendsCount] = useState(0);
+  useEffect(() => {
+    if (!narrativeOn || !targets) { setSummary(null); return; }
+    void loadDailySummary(supabase, {
+      date: narrativeDateFor(new Date()),
+      targetCalories: targets.calories,
+      sleepHours: null,
+    }).then(setSummary);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [narrativeOn, targets?.calories]);
+  useEffect(() => {
+    if (!socialOn || !data) return;
+    const day = todayISO();
+    void publishToday(supabase, { day, loggedAnything: data.entries.length > 0, perChallenge: [] })
+      .then(() => friendsLoggedToday(supabase, day))
+      .then(setFriendsCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socialOn, data?.entries.length]);
   const [growthStage, setGrowthStage] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
   useEffect(() => {
     if (!growsOn) { setGrowthStage(null); return; }
@@ -324,6 +347,14 @@ export function TodayScreen({ onOpenTab }: {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
+      <ExtraSlot id="narrative">
+        {summary ? (
+          <Card>
+            <NarrativeCard summary={summary} />
+          </Card>
+        ) : null}
+      </ExtraSlot>
+
       <ExtraSlot id="pebble">
         <PebbleSlot
           proposal={shownProposal}
@@ -402,6 +433,14 @@ export function TodayScreen({ onOpenTab }: {
           </>
         ) : null}
       </Card>
+
+      <ExtraSlot id="social">
+        {friendsLoggedLine(friendsCount) ? (
+          <Text style={[styles.friendsLine, { color: theme.text.faint }]}>
+            {friendsLoggedLine(friendsCount)}
+          </Text>
+        ) : null}
+      </ExtraSlot>
 
       {/* ── Macros + caps ──────────────────────────────────────────── */}
       {targets && data && !hideNumbers && !hidden.has('macros') ? (
@@ -574,6 +613,7 @@ export function TodayScreen({ onOpenTab }: {
 }
 
 const styles = StyleSheet.create({
+  friendsLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, marginTop: 6, marginBottom: 2, textAlign: 'center' },
   microMeta: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.4, marginTop: -2, marginBottom: 6 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
