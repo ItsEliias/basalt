@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  CTA, ObQuestion, ObSub, Pebble, PebbleSlot, mono, useTheme, ScaledText as Text,
+  CTA, ObOption, ObQuestion, ObSub, Pebble, PebbleSlot, mono, useTheme, ScaledText as Text,
 } from '@basalt/ui';
-import type { OnboardingExtraScreen } from '@basalt/core-data';
-import { onboardingExtraScreens } from '@basalt/core-data';
+import type { ExtraId, OnboardingExtraScreen } from '@basalt/core-data';
+import { extraDef, onboardingExtraScreens } from '@basalt/core-data';
 import { setExtraFlag, markExtrasIntroSeen } from '../lib/extras';
 
 // The Extras offer — one screen per registry entry (or group), a live
@@ -41,17 +41,28 @@ function ExtraPreview({ kind }: { kind: string }) {
   return <Pebble size={56} />;
 }
 
-/** One offer screen. Yes flips every id on; Not now leaves them off. */
+/**
+ * One offer screen. Single Extra: Yes/Not now. A grouped screen renders a
+ * checklist seeded from the registry defaults (capture ships ticked); the
+ * primary CTA commits the ticks, Not now turns the lot off. Either way
+ * every flag is written explicitly.
+ */
 export function ExtrasStep({ screen, onAnswered }: {
   screen: OnboardingExtraScreen;
   onAnswered: () => void;
 }) {
   const { theme } = useTheme();
   const [busy, setBusy] = useState(false);
+  const [ticks, setTicks] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(screen.ids.map((id) => [id, extraDef(id).default])),
+  );
+  const grouped = screen.ids.length > 1;
   const answer = async (yes: boolean) => {
     if (busy) return;
     setBusy(true);
-    for (const id of screen.ids) await setExtraFlag(id, yes);
+    for (const id of screen.ids) {
+      await setExtraFlag(id as ExtraId, yes ? (grouped ? !!ticks[id] : true) : false);
+    }
     setBusy(false);
     onAnswered();
   };
@@ -60,7 +71,25 @@ export function ExtrasStep({ screen, onAnswered }: {
       <ObQuestion>{screen.question}</ObQuestion>
       <ObSub>Off unless you say yes — and switchable any time in Settings › Extras.</ObSub>
       <View style={styles.body}>
-        <ExtraPreview kind={screen.preview} />
+        {grouped ? (
+          <View>
+            {screen.ids.map((id) => {
+              const def = extraDef(id as ExtraId);
+              return (
+                <ObOption
+                  key={id}
+                  title={def.title}
+                  subtitle={def.oneLiner}
+                  on={!!ticks[id]}
+                  multi
+                  onPress={() => setTicks((t) => ({ ...t, [id]: !t[id] }))}
+                />
+              );
+            })}
+          </View>
+        ) : (
+          <ExtraPreview kind={screen.preview} />
+        )}
         <CTA label={screen.yesLabel} disabled={busy} onPress={() => void answer(true)} />
         <Pressable onPress={() => void answer(false)} disabled={busy} hitSlop={10} accessibilityRole="button">
           <Text style={[styles.notNow, { color: theme.text.faint }]}>{screen.noLabel}</Text>

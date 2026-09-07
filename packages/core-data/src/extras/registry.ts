@@ -12,6 +12,10 @@
 export type ExtraGroup = 'capture' | 'motivation' | 'glanceability' | 'depth' | 'basalt';
 
 export type ExtraId =
+  | 'capturePhoto'
+  | 'captureVoice'
+  | 'captureBarcode'
+  | 'capturePlate'
   | 'pebble';
 
 export type ExtraOnboarding = {
@@ -49,6 +53,67 @@ export const EXTRA_GROUP_TITLES: Record<ExtraGroup, string> = {
 };
 
 export const EXTRAS: readonly ExtraDef[] = [
+  // ── Capture — input methods, not motivation: ON by default, permission
+  //    still asked at first use, and manual entry stays the ungated floor.
+  {
+    id: 'capturePhoto',
+    title: 'Photo to meal',
+    oneLiner: 'Point the camera at a plate — AI proposes items with portion ranges; you correct, then log.',
+    group: 'capture',
+    default: true,
+    permissions: ['android.permission.CAMERA'],
+    groupOnboarding: true,
+    onboarding: {
+      question: 'How do you want to capture food? All of these are optional — typing always works.',
+      yesLabel: 'Keep the ticked ones',
+      noLabel: 'Just typing, thanks',
+      preview: 'capture',
+    },
+  },
+  {
+    id: 'captureVoice',
+    title: 'Voice logging',
+    oneLiner: 'Say the meal — your phone transcribes on-device, the same proposal engine parses it.',
+    group: 'capture',
+    default: true,
+    permissions: ['android.permission.RECORD_AUDIO'],
+    groupOnboarding: true,
+    onboarding: {
+      question: 'How do you want to capture food? All of these are optional — typing always works.',
+      yesLabel: 'Keep the ticked ones',
+      noLabel: 'Just typing, thanks',
+      preview: 'capture',
+    },
+  },
+  {
+    id: 'captureBarcode',
+    title: 'Barcode & label scan',
+    oneLiner: 'Scan a barcode, or photograph the nutrition panel — uncertain reads come back as ranges.',
+    group: 'capture',
+    default: true,
+    permissions: ['android.permission.CAMERA'],
+    groupOnboarding: true,
+    onboarding: {
+      question: 'How do you want to capture food? All of these are optional — typing always works.',
+      yesLabel: 'Keep the ticked ones',
+      noLabel: 'Just typing, thanks',
+      preview: 'capture',
+    },
+  },
+  {
+    id: 'capturePlate',
+    title: 'Plate builder',
+    oneLiner: 'Drag your recent foods onto a plate and size the portions — commits as ordinary entries.',
+    group: 'capture',
+    default: true,
+    groupOnboarding: true,
+    onboarding: {
+      question: 'How do you want to capture food? All of these are optional — typing always works.',
+      yesLabel: 'Keep the ticked ones',
+      noLabel: 'Just typing, thanks',
+      preview: 'capture',
+    },
+  },
   {
     id: 'pebble',
     title: 'Pebble',

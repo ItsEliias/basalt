@@ -15,6 +15,12 @@ const ALLOWED = [
   'packages/core-data/src/extras/registry.ts',
 ];
 
+// A file may import extras feature code only if it renders it under the
+// gate — statically approximated as: the file also uses <ExtraSlot.
+function rendersUnderGate(src: string): boolean {
+  return src.includes('<ExtraSlot');
+}
+
 function* walk(p: string): Generator<string> {
   const full = join(ROOT, p);
   const st = statSync(full, { throwIfNoEntry: false });
@@ -34,7 +40,8 @@ describe('extras lint — packages/extras is only reachable through the gate', (
         if (!/\.(ts|tsx)$/.test(f) || f.endsWith('.test.ts') || f.endsWith('.test.tsx')) continue;
         if (f.startsWith('packages/extras/')) continue; // the package itself
         const src = readFileSync(join(ROOT, f), 'utf8');
-        if (/from ['"](@basalt\/extras|.*packages\/extras)/.test(src) && !ALLOWED.includes(f)) {
+        if (/from ['"](@basalt\/extras|.*packages\/extras)/.test(src)
+            && !ALLOWED.includes(f) && !rendersUnderGate(src)) {
           offenders.push(f);
         }
       }

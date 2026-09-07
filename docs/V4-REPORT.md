@@ -50,7 +50,47 @@ open.
   by default, never affects a core number") and §8 records the four
   binding rules.
 
-## Phase 1 — Capture (STOPPED at STOP POINT A)
+## Phase 1 — Capture (code complete; suite 1075 → 1083)
+
+STOP POINT A answered: existing Anthropic key, server-side label mode, no
+ML Kit (no new native dependency; secrets stay server-side). What landed:
+
+- **Four capture Extras in the registry**, all `default: true` (the
+  sanctioned exception — input methods, not motivation), all
+  `groupOnboarding`: photo-to-meal, voice logging, barcode & label scan,
+  plate builder. Onboarding shows ONE capture screen — a checklist
+  seeded ticked from the registry, "Keep the ticked ones" / "Just
+  typing, thanks"; grouped screens got the checklist variant of
+  `ExtrasStep`.
+- **Existing capture surfaces gated, typing stays the floor**: the Log
+  capture-mode control derives from the extras (search · [barcode] ·
+  [photo] · ai · [plate] · manual), the current mode falls back to
+  search if its Extra flips off mid-session, the voice mic inside AI
+  mode rides `captureVoice`, and the quick-log sheet's SCAN item rides
+  `captureBarcode`. No capture path was added or removed from core —
+  the toggles only hide surfaces.
+- **Plate builder — the first real `packages/extras` feature**
+  (`@basalt/extras`): a pure model (add/remove up to six recent foods,
+  portion factor ×0.25–×3 clamped, drag mapping, area-true circle
+  radii, scaled totals, `plateEntries` producing ordinary food-entry
+  shapes — 8 tests) and the `PlateBuilder` component (SVG plate,
+  drag-to-size circles with −/+ steppers and a11y labels, favorites as
+  the recent-food picker, commits through the host's `addFoodEntry` —
+  the package never touches the service layer). Lives in Log as the
+  PLATE mode inside `<ExtraSlot id="capturePlate">`.
+- **Lint rule refined**: a file may import `@basalt/extras` only if it
+  also renders `<ExtraSlot` (or is the provider/registry) — LogScreen
+  qualifies; anything else fails the suite.
+
+**Note for the all-off run:** capture extras default ON, so the
+pre-tester diff session must flip every Extra off in Settings › Extras
+first — "all off" is a deliberate state, not the fresh-install state.
+
+Device verification of the new surfaces (plate drag, mode hiding,
+checklist onboarding screen) rides the same deferred session as the
+all-off gate.
+
+## Phase 1 — original stop-point context (for the record)
 
 Discovery that reshapes the phase: **photo-to-meal, voice logging and
 label capture already exist in core Basalt** (V2/V3): `ai-photo-food`

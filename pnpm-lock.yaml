@@ -44,6 +44,9 @@ importers:
       '@basalt/core-data':
         specifier: workspace:*
         version: link:../packages/core-data
+      '@basalt/extras':
+        specifier: workspace:*
+        version: link:../packages/extras
       '@basalt/health-connect':
         specifier: workspace:*
         version: link:../packages/health-connect
@@ -290,6 +293,37 @@ importers:
         specifier: ^2.106.2
         version: 2.112.3
     devDependencies:
+      typescript:
+        specifier: ~5.7.0
+        version: 5.7.3
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.11(@types/node@26.2.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/extras:
+    dependencies:
+      '@basalt/core-data':
+        specifier: workspace:*
+        version: link:../core-data
+      '@basalt/nutrition':
+        specifier: workspace:*
+        version: link:../nutrition
+      '@basalt/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@types/react':
+        specifier: ~19.2.2
+        version: 19.2.18
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-native:
+        specifier: 0.85.3
+        version: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
+      react-native-svg:
+        specifier: ^15.15.5
+        version: 15.15.5(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       typescript:
         specifier: ~5.7.0
         version: 5.7.3

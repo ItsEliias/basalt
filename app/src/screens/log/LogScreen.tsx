@@ -52,13 +52,15 @@ import { writeThroughOutbox } from '../../lib/outbox';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 import { capturePhoto, enqueuePhoto, dequeuePhoto, loadPhotoQueue, readQueuedPhotoB64 } from '../../lib/photoFood';
 import { voiceAvailable, startVoiceCapture } from '../../lib/voiceCapture';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { PlateBuilder, type PlateEntry, type PlateFood } from '@basalt/extras';
 import { queuedLabel, type QueuedPhoto } from '../../lib/photoQueueModel';
 
 // Log / Capture — viewfinder with on-device GS1 verification, OFF lookup,
 // manual add, favorites and "frequent at this hour". Every path ends in the
 // same editable-before-save form; nothing auto-commits.
 
-type Mode = 'search' | 'barcode' | 'manual' | 'ai' | 'photo';
+type Mode = 'search' | 'barcode' | 'manual' | 'ai' | 'photo' | 'plate';
 
 type ScanState =
   | { kind: 'idle' }
@@ -104,6 +106,46 @@ function CaptureTab() {
   const [photoQueue, setPhotoQueue] = useState<QueuedPhoto[]>([]);
   const [voiceState, setVoiceState] = useState<'idle' | 'listening'>('idle');
   const voiceStopRef = useRef<(() => void) | null>(null);
+  // V4 capture Extras — input surfaces, gated; typing stays the floor.
+  const barcodeOn = useExtra('captureBarcode');
+  const photoOn = useExtra('capturePhoto');
+  const voiceOn = useExtra('captureVoice');
+  const plateOn = useExtra('capturePlate');
+  const modes: Mode[] = [
+    'search',
+    ...(barcodeOn ? ['barcode' as const] : []),
+    ...(photoOn ? ['photo' as const] : []),
+    'ai',
+    ...(plateOn ? ['plate' as const] : []),
+    'manual',
+  ];
+  useEffect(() => {
+    if (!modes.includes(mode)) setMode('search');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barcodeOn, photoOn, plateOn]);
+  const [plateFoods, setPlateFoods] = useState<PlateFood[]>([]);
+  const [plateBusy, setPlateBusy] = useState(false);
+  useEffect(() => {
+    if (mode !== 'plate') return;
+    void listFavorites(supabase, 12).then((r) => {
+      if (!r.ok) return;
+      setPlateFoods(r.data.map((f) => ({
+        key: f.id, foodName: f.foodName, brand: f.brand,
+        calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
+        fiber: f.fiber, sugar: f.sugar, sodiumMg: (f as { sodiumMg?: number }).sodiumMg,
+      })));
+    });
+  }, [mode]);
+  const commitPlate = async (entries: PlateEntry[]) => {
+    setPlateBusy(true);
+    const meal = mealForHour(new Date().getHours());
+    for (const e of entries) {
+      await addFoodEntry(supabase, { ...e, mealType: meal });
+    }
+    setPlateBusy(false);
+    bumpToday();
+    setMode('search');
+  };
   useEffect(() => {
     void loadPhotoQueue().then(setPhotoQueue);
   }, []);
@@ -503,6 +545,12 @@ function CaptureTab() {
           </View>
         ) : null}
 
+        {mode === 'plate' ? (
+          <ExtraSlot id="capturePlate">
+            <PlateBuilder recentFoods={plateFoods} onCommit={(e) => void commitPlate(e)} busy={plateBusy} />
+          </ExtraSlot>
+        ) : null}
+
         {mode === 'photo' ? (
           <View style={{ paddingBottom: 8 }}>
             <CTA label={photoBusy === 'meal' ? 'Estimating…' : 'Photograph a meal'} disabled={photoBusy !== null} onPress={() => void runPhoto('camera', 'meal')} />
@@ -551,7 +599,7 @@ function CaptureTab() {
               onChangeText={setAiText}
               multiline
             />
-            {voiceAvailable() ? (
+            {voiceOn && voiceAvailable() ? (
               <Pressable onPress={() => void toggleVoice()} hitSlop={8}>
                 <Text style={[styles.voiceLink, { color: theme.text.faint }, voiceState === 'listening' && { color: theme.text.ink }]}>
                   {voiceState === 'listening' ? 'LISTENING — TAP WHEN DONE' : 'SPEAK IT INSTEAD'}
@@ -566,7 +614,7 @@ function CaptureTab() {
         {/* ── Capture-mode segmented control — bottom of the capture area,
                a filled control so it can't be mistaken for the tab sub-nav ── */}
         <View style={[styles.modeSeg, { borderTopColor: theme.surfaces.border }]}>
-          {(['search', 'barcode', 'photo', 'ai', 'manual'] as Mode[]).map((m) => (
+          {modes.map((m) => (
             <Pressable
               key={m}
               onPress={() => setMode(m)}

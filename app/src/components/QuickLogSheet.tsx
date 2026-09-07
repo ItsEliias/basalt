@@ -8,9 +8,12 @@ import { useTheme } from '@basalt/ui';
 // M1 carries 8 items: Walk recording is V1.x, and a dead button would be a
 // lie, so it simply isn't here yet.
 
+import { useExtra } from './ExtrasProvider';
+
 export type QuickAction =
   | 'scan' | 'meal' | 'relog' | 'water' | 'weight' | 'breathwork' | 'session' | 'manual';
 
+// 'scan' rides the captureBarcode Extra; everything else is core.
 const ITEMS: { key: QuickAction; glyph: string; label: string }[] = [
   { key: 'scan', glyph: '◫', label: 'Scan' },
   { key: 'meal', glyph: '✳', label: 'Meal' },
@@ -31,13 +34,15 @@ export function QuickLogSheet({
 }) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const barcodeOn = useExtra('captureBarcode');
+  const items = ITEMS.filter((it) => (it.key === 'scan' ? barcodeOn : true));
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
         <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
         <View style={styles.grid}>
-          {ITEMS.map((it) => (
+          {items.map((it) => (
             <Pressable
               key={it.key}
               style={[styles.item, { borderColor: theme.surfaces.border }]}
