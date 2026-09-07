@@ -64,9 +64,11 @@ function themeIdForLabel(label: string): ThemeId {
   return THEME_IDS.find((id) => THEMES[id].name === label) ?? 'minimal';
 }
 
-const LAYOUT_OPTIONS = ['Ledger', 'Tiles'];
-function layoutKey(label: string): 'ledger' | 'tiles' {
-  return label === 'Tiles' ? 'tiles' : 'ledger';
+const LAYOUT_OPTIONS = ['Ledger', 'Tiles', 'Rings'];
+function layoutKey(label: string): 'ledger' | 'tiles' | 'rings' {
+  if (label === 'Tiles') return 'tiles';
+  if (label === 'Rings') return 'rings';
+  return 'ledger';
 }
 
 export function SettingsScreen() {
@@ -422,7 +424,7 @@ export function SettingsScreen() {
         <ObChipLabel>Today layout</ObChipLabel>
         <ChipRow
           options={LAYOUT_OPTIONS}
-          value={profile?.todayLayout === 'tiles' ? 'Tiles' : 'Ledger'}
+          value={profile?.todayLayout === 'tiles' ? 'Tiles' : profile?.todayLayout === 'rings' ? 'Rings' : 'Ledger'}
           onChange={(v) => {
             const next = layoutKey(v);
             logThemeLayoutEvent({ type: 'layout_selected', surface: 'today', layout: next, previous: profile?.todayLayout ?? 'ledger' });

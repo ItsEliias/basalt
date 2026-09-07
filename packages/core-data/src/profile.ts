@@ -45,7 +45,7 @@ export type ProfileRecord = {
   theme: 'minimal' | 'humanist' | 'athletic' | 'brutalist' | 'depth' | 'atelier'
        | 'clay' | 'sticker' | 'gummy' | 'soft' | 'candyRings';
   /** Settings → Display. Today only in v1 (docs/basalt-layouts.md) — 'ledger' for new and existing installs until changed. */
-  todayLayout: 'ledger' | 'tiles';
+  todayLayout: 'ledger' | 'tiles' | 'rings';
 };
 
 function mapProfile(r: any): ProfileRecord {

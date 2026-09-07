@@ -139,6 +139,7 @@ export function TodayScreen({ onOpenTab }: {
 
   const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
   const growsOn = useExtra('pebbleGrows');
+  const widgetsOn = useExtra('widgets');
   const narrativeOn = useExtra('narrative');
   const socialOn = useExtra('social');
   const [summary, setSummary] = useState<string | null>(null);
@@ -298,6 +299,13 @@ export function TodayScreen({ onOpenTab }: {
       entryCount: data.entries.length,
       hideNumbers,
       at: new Date().toISOString(),
+      // Macros ride the snapshot only while the widgets Extra is on — at
+      // defaults the widget file is byte-identical to core.
+      ...(widgetsOn && targets ? { macros: {
+        p: data.totals.protein, pt: targets.proteinG,
+        c: data.totals.carbs, ct: targets.carbsG,
+        f: data.totals.fat, fcap: targets.fatG,
+      } } : {}),
     };
     void AsyncStorage.setItem(WIDGET_SNAPSHOT_KEY, JSON.stringify(snapshot)).then(() => {
       void requestWidgetUpdate({
@@ -377,7 +385,7 @@ export function TodayScreen({ onOpenTab }: {
           </>
         ) : null}
         {hero && heroMode === 'numeric' ? (
-          theme.shape.meter === 'ring' && targets && data ? (
+          (layout === 'rings' || theme.shape.meter === 'ring') && targets && data ? (
             <>
               <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
               <View style={styles.ringRow}>

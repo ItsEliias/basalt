@@ -251,7 +251,8 @@ also waits behind this stop.
 
 STOP B was answered "continue"; what landed and what's gated:
 
-- **Migration written, NOT applied**: `20260907170000_basalt_social_v4.sql`
+- **Migration written, NOT applied** *(since applied — see the Interlude
+  below)*: `20260907170000_basalt_social_v4.sql`
   exactly as posted (plus one fix the deletion guard caught — see below).
   The `apply_migration` call was permission-blocked by the tool
   classifier; it needs the user to approve a retry or run
@@ -312,3 +313,52 @@ on the exercise note), 12 recipes (ingredients are truth; >8% stated
 mismatches flagged), favourites only where macros exist (name-only
 skipped and listed — a 0-kcal favourite would be a lie). Dry-run prints
 counts, custom exercises and note-only sets, writes nothing.
+
+## Phase 3 — Glanceability (suite 1115 → see commit; registry: `sounds`, `widgets`, both off)
+
+- **Rings Today layout** (core, not an Extra — it's a layout choice like
+  tiles): `todayLayout` gains `'rings'`
+  (`20260907191000_basalt_today_layout_rings.sql`, applied), selectable in
+  Settings next to ledger/tiles. The hero renders the same three numbers
+  as the ledger — remaining energy, protein, water — as quiet stroke
+  arcs. This does not violate the forbidden list: the V3.4 theme
+  amendment split rings-as-reward (still forbidden globally) from
+  rings-as-meter-shape (theme-scoped expression, `theme.shape.meter`);
+  the rings layout uses the meter primitives, carries no glow, no
+  celebration at close, over-cap stated in words.
+- **Lock-screen walk, rich** (`walkNotifModel.ts`, 4 tests): the walk
+  foreground notification now shows distance, elapsed and pace
+  (zero-padded `06:00 /km`; no pace at all under 100 m — a made-up pace
+  is a lie), plus a Pause/Resume action. Pause is honest time-keeping:
+  `pausedSince`/`pausedTotalMs` on the tracking state, GPS fixes during
+  pause update position only (no distance accrues), elapsed subtracts
+  paused time everywhere (live readout, voice announcements, saved walk).
+- **Sounds** (Extra, off): three short generated sine samples —
+  tick (set commit), commit (log commit), pr — via expo-audio 56.0.13
+  at volume 0.4, `playSound()` checks the Extra and is a static import
+  everywhere (repo rule: no dynamic `import()` in app code). Haptics on
+  the same commit points are core and fire regardless — they were
+  already part of the app's language.
+- **Widgets** (Extra, off): (1) macros join the Today widget — protein /
+  carbs / fat against targets on one line, fat over-cap in words
+  (`· 5 over`), hide-the-numbers carries through. The macros ride the
+  snapshot ONLY while the Extra is on, so at defaults the widget renders
+  byte-identically to pre-branch main (the gate invariant). (2) A second
+  home-screen widget, **Readiness**: last computed score or "No number",
+  with its age in plain words ("as of 45 min ago"); Recover publishes
+  the snapshot only while the Extra is on. Hand-added like the first
+  widget (no prebuild): manifest receiver `.widget.BasaltReadiness`,
+  `widgetprovider_basaltreadiness.xml`, string resource, app.json plugin
+  entry. Widget model tests 5 → 11.
+- **Wear OS: not this branch.** `docs/WEAROS-SCOPE.md` records what a
+  tile would need (native Wear module, Data Layer publisher, Expo-less
+  Gradle wiring, watch test surface) and why it's a branch of its own.
+
+Decisions made without you:
+- Rings layout requires targets + a loaded day; with either missing it
+  falls back to the ledger's empty state rather than drawing empty arcs.
+- The Readiness widget shows "open Basalt — fills after Recover
+  computes" until the first snapshot exists — a real empty state, not a
+  fake 0.
+- Widget macro line uses the fat target as a cap (matches Today's
+  ledger phrasing); protein/carbs render as plain progress.

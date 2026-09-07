@@ -25,7 +25,8 @@ import {
   type RouteCluster, type IntervalWalk, type ShoeWithKm, type DeviationState,
 } from '@basalt/training';
 import * as Haptics from 'expo-haptics';
-import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed, WALK_STOP_ACTION_ID } from '../../lib/walkTrackingService';
+import { startWalkTracking, updateWalkTracking, stopWalkTracking, walkTrackingServiceFailed, WALK_STOP_ACTION_ID, WALK_PAUSE_ACTION_ID } from '../../lib/walkTrackingService';
+import { walkNotifText } from './walkNotifModel';
 import notifee, { EventType } from '@notifee/react-native';
 
 // Outdoor — the GPS walk recorder, ported state machine and filters, with
@@ -39,7 +40,7 @@ type Mode =
   | { kind: 'services_off' }
   | { kind: 'denied'; message: string }
   | { kind: 'ready'; last: GpsFix }
-  | { kind: 'tracking'; started: number; points: GpsFix[]; last: GpsFix }
+  | { kind: 'tracking'; started: number; points: GpsFix[]; last: GpsFix; pausedSince: number | null; pausedTotalMs: number }
   | { kind: 'saving' }
   | { kind: 'summary'; distanceM: number; durationS: number; avgPace: number | null; elevation: number | null; splits: Split[]; route: { lat: number; lng: number; t: number }[]; saved: boolean }
   | { kind: 'error'; message: string };
@@ -199,7 +200,7 @@ export function OutdoorTab() {
     if (mode.kind !== 'ready') return;
     try {
       const started = Date.now();
-      setMode({ kind: 'tracking', started, points: [mode.last], last: mode.last });
+      setMode({ kind: 'tracking', started, points: [mode.last], last: mode.last, pausedSince: null, pausedTotalMs: 0 });
 
       watcherRef.current = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 2 },
@@ -213,6 +214,7 @@ export function OutdoorTab() {
           };
           setMode((m) => {
             if (m.kind !== 'tracking') return m;
+            if (m.pausedSince !== null) return { ...m, last: p }; // paused: position updates, route doesn't
             const lastKept = m.points[m.points.length - 1] ?? null;
             const next = !acceptFix(lastKept, p) ? { ...m, last: p } : { ...m, last: p, points: [...m.points, p] };
             // Keep the ongoing notification's body current — throttled to
@@ -223,10 +225,9 @@ export function OutdoorTab() {
             if (nowMs - notifLastUpdate.current >= 30_000) {
               notifLastUpdate.current = nowMs;
               const distM = routeDistanceM(next.points);
-              const secs = Math.max(1, Math.round((nowMs - next.started) / 1000));
-              void updateWalkTracking(
-                `${distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(2)} km`} · ${mmss(secs)}`,
-              );
+              const movingS = Math.max(1, Math.round((nowMs - next.started - next.pausedTotalMs) / 1000));
+              const t = walkNotifText({ distM, movingS, paused: false });
+              void updateWalkTracking(t.body, { title: t.title });
             }
             return next;
           });
@@ -314,13 +315,28 @@ export function OutdoorTab() {
   useEffect(() => {
     if (!tracking) return;
     return notifee.onForegroundEvent(({ type, detail }) => {
-      if (type === EventType.ACTION_PRESS && detail.pressAction?.id === WALK_STOP_ACTION_ID) {
-        void stop();
-      }
+      if (type !== EventType.ACTION_PRESS) return;
+      if (detail.pressAction?.id === WALK_STOP_ACTION_ID) void stop();
+      if (detail.pressAction?.id === WALK_PAUSE_ACTION_ID) togglePause();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracking]);
   const liveDistance = tracking ? routeDistanceM(mode.points) : 0;
+  const paused = tracking && mode.pausedSince !== null;
+  const togglePause = () => {
+    setMode((m) => {
+      if (m.kind !== 'tracking') return m;
+      const nowMs = Date.now();
+      const next = m.pausedSince === null
+        ? { ...m, pausedSince: nowMs }
+        : { ...m, pausedSince: null, pausedTotalMs: m.pausedTotalMs + (nowMs - m.pausedSince) };
+      const distM = routeDistanceM(next.points);
+      const movingS = Math.max(1, Math.round((nowMs - next.started - next.pausedTotalMs - (next.pausedSince ? nowMs - next.pausedSince : 0)) / 1000));
+      const t = walkNotifText({ distM, movingS, paused: next.pausedSince !== null });
+      void updateWalkTracking(t.body, { title: t.title, paused: next.pausedSince !== null });
+      return next;
+    });
+  };
 
   // Voice split announcements — OS text-to-speech, opt-in, on whole kms.
   useEffect(() => {
@@ -328,12 +344,12 @@ export function OutdoorTab() {
     const km = Math.floor(liveDistance / 1000);
     if (km > lastAnnouncedKm.current && mode.kind === 'tracking') {
       lastAnnouncedKm.current = km;
-      const seconds = Math.max(1, Math.round((Date.now() - mode.started) / 1000));
+      const seconds = Math.max(1, Math.round((Date.now() - mode.started - mode.pausedTotalMs - (mode.pausedSince ? Date.now() - mode.pausedSince : 0)) / 1000));
       const paceS = Math.round(seconds / (liveDistance / 1000));
       Speech.speak(`${km} kilometre${km === 1 ? '' : 's'}. Average pace ${Math.floor(paceS / 60)} ${paceS % 60} per kilometre.`);
     }
   }, [tracking, voiceSplits, liveDistance, mode]);
-  const liveSeconds = tracking ? Math.max(1, Math.round((now - mode.started) / 1000)) : 0;
+  const liveSeconds = tracking ? Math.max(1, Math.round((now - mode.started - mode.pausedTotalMs - (mode.pausedSince ? now - mode.pausedSince : 0)) / 1000)) : 0;
   const livePace = tracking && liveDistance > 50 ? liveSeconds / (liveDistance / 1000) : null;
 
   // Guided interval script — haptics are the PRIMARY signal (pocket, no
@@ -549,6 +565,7 @@ export function OutdoorTab() {
                 <Text style={[styles.shareLink, { color: theme.text.faint }]}>SHARE A LIVE BEACON → EXPLICIT START, EXPLICIT STOP, 2 H MAX</Text>
               </Pressable>
             )}
+            <CTA label={paused ? 'Resume walk' : 'Pause'} onPress={togglePause} />
             <CTA label="Stop & save" onPress={() => void stop()} />
             <SrcNote>
               {Platform.OS === 'android' && !walkTrackingServiceFailed()

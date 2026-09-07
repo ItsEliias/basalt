@@ -12,6 +12,8 @@
 export type ExtraGroup = 'capture' | 'motivation' | 'glanceability' | 'depth' | 'basalt';
 
 export type ExtraId =
+  | 'sounds'
+  | 'widgets'
   | 'social'
   | 'narrative'
   | 'streaks'
@@ -118,6 +120,22 @@ export const EXTRAS: readonly ExtraDef[] = [
       noLabel: 'Just typing, thanks',
       preview: 'capture',
     },
+  },
+
+  // ── Glanceability ─────────────────────────────────────────────────────
+  {
+    id: 'sounds',
+    title: 'Sounds',
+    oneLiner: 'Three short samples on set commit, log commit and a PR — off by default; haptics stay regardless.',
+    group: 'glanceability',
+    default: false,
+  },
+  {
+    id: 'widgets',
+    title: 'Extra home-screen widgets',
+    oneLiner: 'Macros join the Today widget and a Readiness widget becomes available — system placements you add yourself.',
+    group: 'glanceability',
+    default: false,
   },
 
   // ── Motivation — all off by default, all honest inside ────────────────

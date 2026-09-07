@@ -19,6 +19,11 @@ import { isoDay } from '@basalt/core-data';
 import { useAppStore } from '../../state/appStore';
 import { writeThroughOutbox } from '../../lib/outbox';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requestWidgetUpdate } from 'react-native-android-widget';
+import { useExtra } from '../../components/ExtrasProvider';
+import { READINESS_SNAPSHOT_KEY } from '../../widgets/handler';
+import { BasaltReadinessWidget, parseReadinessSnapshot } from '../../widgets/BasaltReadinessWidget';
 
 // Recover — Vitals (real-or-hidden, sources named) and Mind (breathing
 // pacer that logs real mindfulness sessions).
@@ -158,6 +163,21 @@ function VitalsTab() {
 
   const ready = readiness?.ok ? readiness.data.readiness : null;
   const bands = readiness?.ok ? readiness.data.bands : null;
+
+  const widgetsOn = useExtra('widgets');
+  useEffect(() => {
+    if (!widgetsOn || !ready) return;
+    const snap = { score: ready.score, note: ready.note, at: new Date().toISOString() };
+    void AsyncStorage.setItem(READINESS_SNAPSHOT_KEY, JSON.stringify(snap)).then(() => {
+      void requestWidgetUpdate({
+        widgetName: 'BasaltReadiness',
+        renderWidget: () => (
+          <BasaltReadinessWidget snapshot={parseReadinessSnapshot(JSON.stringify(snap))} nowMs={Date.now()} />
+        ),
+      }).catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [widgetsOn, ready?.score, ready?.note]);
 
   return (
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>

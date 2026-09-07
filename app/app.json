@@ -81,6 +81,14 @@
               "minWidth": "180dp",
               "minHeight": "80dp",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "BasaltReadiness",
+              "label": "Basalt \u2014 Readiness",
+              "description": "Your last computed readiness, with its age \u2014 no number without components.",
+              "minWidth": "180dp",
+              "minHeight": "80dp",
+              "updatePeriodMillis": 1800000
             }
           ]
         }

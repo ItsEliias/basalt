@@ -12,6 +12,7 @@ import {
   type SetEntry, type Exercise, type GuidedState, type GuidedEvent, type Program, prEligibleSession,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
+import { playSound } from '../lib/sounds';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // The active training session — lives in a store (not screen state) so
@@ -413,6 +414,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
       })();
     get().updateRow(id, index, { committed: true, isPr: pr });
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound(pr ? 'pr' : 'tick');
 
     // Start the per-exercise rest timer.
     set({ rest: { sessionExerciseId: id, remaining: ex.restSeconds } });

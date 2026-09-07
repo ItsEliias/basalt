@@ -12,6 +12,7 @@
   "dependencies": {
     "@basalt/analytics": "workspace:*",
     "@basalt/core-data": "workspace:*",
+    "@basalt/extras": "workspace:*",
     "@basalt/health-connect": "workspace:*",
     "@basalt/nutrition": "workspace:*",
     "@basalt/training": "workspace:*",
@@ -37,6 +38,7 @@
     "@react-navigation/stack": "^7.9.3",
     "@supabase/supabase-js": "^2.106.2",
     "expo": "~56.0.5",
+    "expo-audio": "56.0.13",
     "expo-background-task": "~56.0.27",
     "expo-blur": "~56.0.4",
     "expo-build-properties": "~56.0.26",
@@ -72,8 +74,7 @@
     "react-native-view-shot": "4.0.3",
     "react-native-vision-camera": "4.7.3",
     "react-native-worklets-core": "1.6.3",
-    "zustand": "^5.0.13",
-    "@basalt/extras": "workspace:*"
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@babel/plugin-proposal-nullish-coalescing-operator": "^7.18.6",

@@ -31,7 +31,10 @@ export const WALK_STOP_ACTION_ID = 'walk-stop';
 // does the actual stop — nothing is saved from a headless context.
 notifee.onBackgroundEvent(async () => { /* handled in foreground */ });
 
-const WALK_ACTIONS = [
+export const WALK_PAUSE_ACTION_ID = 'walk-pause';
+
+const walkActions = (paused: boolean) => [
+  { title: paused ? 'Resume' : 'Pause', pressAction: { id: WALK_PAUSE_ACTION_ID, launchActivity: 'default' } },
   { title: 'Stop & save', pressAction: { id: WALK_STOP_ACTION_ID, launchActivity: 'default' } },
 ];
 
@@ -68,7 +71,7 @@ export async function startWalkTracking(label: string): Promise<boolean> {
         ongoing: true,
         onlyAlertOnce: true,
         pressAction: { id: 'default' },
-        actions: WALK_ACTIONS,
+        actions: walkActions(false),
         smallIcon: 'ic_launcher',
       },
     });
@@ -83,12 +86,15 @@ export async function startWalkTracking(label: string): Promise<boolean> {
 
 /** Update the notification body — call sparingly (e.g. every km or every
  *  minute), never per GPS fix; matches timerService's own "no spam" rule. */
-export async function updateWalkTracking(label: string): Promise<void> {
+export async function updateWalkTracking(
+  label: string,
+  opts: { title?: string; paused?: boolean } = {},
+): Promise<void> {
   if (!running) return;
   try {
     await notifee.displayNotification({
       id: NOTIF_ID,
-      title: 'Basalt — recording your walk',
+      title: opts.title ?? 'Basalt — recording your walk',
       body: label,
       android: {
         channelId: CHANNEL_ID,
@@ -97,7 +103,7 @@ export async function updateWalkTracking(label: string): Promise<void> {
         ongoing: true,
         onlyAlertOnce: true,
         pressAction: { id: 'default' },
-        actions: WALK_ACTIONS,
+        actions: walkActions(opts.paused ?? false),
         smallIcon: 'ic_launcher',
       },
     });

@@ -40,6 +40,8 @@ function aiKcalText(item: AiItem): string {
   return `~${Math.round(item.calories)}`;
 }
 import { supabase } from '../../lib/supabase';
+import * as Haptics from 'expo-haptics';
+import { playSound } from '../../lib/sounds';
 import { useAppStore } from '../../state/appStore';
 import {
   barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts,
@@ -143,6 +145,8 @@ function CaptureTab() {
       await addFoodEntry(supabase, { ...e, mealType: meal });
     }
     setPlateBusy(false);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
     bumpToday();
     setMode('search');
   };
@@ -388,7 +392,9 @@ function CaptureTab() {
       if (!('queued' in r)) void recordFoodUse(supabase, entry);
       setDraft(null);
       setScan({ kind: 'idle' });
-      bumpToday();
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
+    bumpToday();
       void refreshLists();
     }
   };
@@ -465,6 +471,8 @@ function CaptureTab() {
     logLoggingEvent({ type: 'tray_commit', items: tray.length });
     setTray([]);
     setTrayBusy(false);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
     bumpToday();
     void refreshLists();
   };
@@ -486,6 +494,8 @@ function CaptureTab() {
       });
     }
     logLoggingEvent({ type: 'copy_yesterday', meal, entries: toCopy.length });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
     bumpToday();
     void refreshLists();
   };

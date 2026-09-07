@@ -11,6 +11,8 @@ export type WidgetSnapshot = {
   entryCount: number;
   hideNumbers: boolean;
   at: string;
+  /** Present only while the widgets Extra is on. */
+  macros?: { p: number; pt: number; c: number; ct: number; f: number; fcap: number };
 };
 
 export function parseSnapshot(json: string | null): WidgetSnapshot | null {
@@ -26,10 +28,23 @@ export function parseSnapshot(json: string | null): WidgetSnapshot | null {
       entryCount: Number(p.entryCount ?? 0),
       hideNumbers: !!p.hideNumbers,
       at: p.at,
+      ...(p.macros && typeof p.macros.p === 'number' ? { macros: {
+        p: Number(p.macros.p), pt: Number(p.macros.pt ?? 0),
+        c: Number(p.macros.c), ct: Number(p.macros.ct ?? 0),
+        f: Number(p.macros.f), fcap: Number(p.macros.fcap ?? 0),
+      } } : {}),
     };
   } catch {
     return null;
   }
+}
+
+/** One line: P 82/180 · C 190/279 · F 41/93 — over-cap stays in words. */
+export function macroLine(snapshot: WidgetSnapshot | null): string | null {
+  const m = snapshot?.macros;
+  if (!m || snapshot?.hideNumbers) return null;
+  const fatOver = m.fcap > 0 && m.f > m.fcap ? ` · ${Math.round(m.f - m.fcap)} over` : '';
+  return `P ${Math.round(m.p)}/${Math.round(m.pt)} · C ${Math.round(m.c)}/${Math.round(m.ct)} · F ${Math.round(m.f)}/${Math.round(m.fcap)}${fatOver}`;
 }
 
 export function widgetLines(snapshot: WidgetSnapshot | null, nowMs: number): {
@@ -58,4 +73,24 @@ export function widgetLines(snapshot: WidgetSnapshot | null, nowMs: number): {
     sub: `as of ${ageText}`,
     water,
   };
+}
+
+// ── Readiness widget (widgets Extra) ───────────────────────────────────
+
+export type ReadinessSnapshot = { score: number | null; note: string; at: string };
+
+export function parseReadinessSnapshot(json: string | null): ReadinessSnapshot | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json);
+    if (typeof p?.at !== 'string') return null;
+    return { score: typeof p.score === 'number' ? p.score : null, note: String(p.note ?? ''), at: p.at };
+  } catch {
+    return null;
+  }
+}
+
+export function readinessAgeText(at: string, nowMs: number): string {
+  const ageMin = Math.max(0, Math.round((nowMs - Date.parse(at)) / 60000));
+  return ageMin < 2 ? 'just now' : ageMin < 60 ? `${ageMin} min ago` : `${Math.floor(ageMin / 60)} h ago`;
 }
