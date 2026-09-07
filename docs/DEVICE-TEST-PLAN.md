@@ -209,3 +209,38 @@ Legend: each line is a checkbox; note failures inline with device + Android vers
 - [ ] Delete account (QA/burner account only!): completes with "sign-in
       record" gone — signing in again with the same credentials fails
       (deletion is unconditional as of 2026-09-07)
+
+### 27 · Release-build pass (0.1.0 AAB → universal APK, emulator, 2026-09-07)
+
+Artifact: `app-release.aab` (98.8 MB, main HEAD, upload-key signed) →
+bundletool 1.18.2 `--mode=universal` → installed over a clean uninstall.
+Shots: `docs/report-assets/release-0.1.0/`.
+
+- [x] Adaptive pillars icon renders (App-info page) — `app-icon.png`
+- [x] Cold boot on Hermes/minified JS, no Metro: sign-in → Today with live
+      targets — `today-signin-ok.png`
+- [x] Theme picker opens with live previews; Candy Rings staged + confirmed;
+      Fredoka lazy-loads from the per-file requires — `theme-picker.png`,
+      `candy-applied.png`
+- [x] Pebble card: fresh install = all off; master → voice dependency;
+      both enable and persist (static-import revoice path, no error) —
+      `pebble-toggles.png`
+- [x] Pebble sleep-debt bubble above the ring hero in release —
+      `pebble-bubble.png`
+- [x] Send feedback fires the mailto intent → Gmail picks it up (no mail
+      account on the AVD, so the pre-filled compose could not render; the
+      subject/body content is pinned by the 4 feedbackModel tests) —
+      `feedback-mail-intent.png`
+- [x] Privacy-policy row opens the browser with the URL (Chrome first-run
+      gate on this AVD blocks the page render; intent verified)
+- [x] Quick-log + → WATER +250 commits instantly; water card shows
+      250 / 2,700 ml — `water-250.png`
+- [x] Week-review toggle: Android 13 POST_NOTIFICATIONS prompt → Allow →
+      on; scheduled through voicedContent with Pebble voice on, so next
+      Sunday 18:00 delivers as "Pebble · Basalt" — `weekreview-on.png`
+- [ ] NEEDS A PHYSICAL DEVICE (environment limit, not a carried-forward
+      red): guided-timer + walk foreground services with the screen off
+      (§2/§6) — the AVD's system server ANRs under load make FGS timing
+      claims dishonest here
+- [ ] Delete-account full run (§26) — needs a burner account; deletion is
+      Edge-deployed (v13) + pinned by 8 deletion-coverage tests
