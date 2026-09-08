@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CORRIDOR_EXPLAINER, corridorFor, weeklyCheckin } from './checkin';
+import { CHECKIN_PRIORITY, CORRIDOR_EXPLAINER, corridorFor, fullWeeklyCheckin, weeklyCheckin } from './checkin';
 import { PROGRAMME_TEMPLATES, programmeTemplate, programmeWeek } from './templates';
 
 const BASE = {
@@ -82,5 +82,49 @@ describe('templates are data, and the corridor is published', () => {
     expect((w4.low + w4.high) / 2).toBeCloseTo(82 * (1 - 0.01), 1);
     expect(CORRIDOR_EXPLAINER).toContain('± 0.3 kg scale noise');
     expect(CORRIDOR_EXPLAINER).toContain('information, not failure');
+  });
+});
+
+describe('the complete check-in (8f) — one ask, by the published priority', () => {
+  const FULL = {
+    ...BASE,
+    mealAdherencePct: 80,
+    rirTrend: { thisWeekAvg: 1.9, lastWeekAvg: 2.6 },
+    painFlags: 0,
+    volumeProposalReason: null,
+  };
+
+  it('reports facts: sessions with miss reasons, meal %, RIR direction', () => {
+    const c = fullWeeklyCheckin({ ...FULL, sessionsDone: 2, missReasons: ['moved'] });
+    expect(c.report[0]).toBe('Sessions 2 of 3 (missed: moved).');
+    expect(c.report[1]).toContain('80% of planned meals');
+    expect(c.report[2]).toContain('2.6 → 1.9 — harder, as the block intends');
+  });
+
+  it('safety outranks everything', () => {
+    const c = fullWeeklyCheckin({ ...FULL, painFlags: 3, sessionsDone: 1, observedRatePct: -2 });
+    expect(c.proposal.kind).toBe('safety');
+    expect((c.proposal as { reason: string }).reason).toContain('No other change this week');
+  });
+
+  it('session adherence beats energy; being ill is not an adherence problem', () => {
+    const c = fullWeeklyCheckin({ ...FULL, sessionsPlanned: 4, sessionsDone: 2, observedRatePct: -0.9 });
+    expect(c.proposal.kind).toBe('adherence-offer');
+    expect((c.proposal as { reason: string }).reason).toContain('2 of 4');
+    const ill = fullWeeklyCheckin({ ...FULL, sessionsPlanned: 4, sessionsDone: 2, missReasons: ['ill', 'ill'], observedRatePct: -0.3 });
+    expect(ill.proposal.kind).not.toBe('adherence-offer');
+  });
+
+  it('energy rules fire when attendance is fine; volume is last; hold when all is well', () => {
+    const energy = fullWeeklyCheckin({ ...FULL, observedRatePct: -0.7 });
+    expect(energy.proposal.kind).toBe('adjust');
+    const volume = fullWeeklyCheckin({ ...FULL, volumeProposalReason: 'chest sat under 10 two weeks running — add a set.' });
+    expect(volume.proposal.kind).toBe('volume');
+    const hold = fullWeeklyCheckin(FULL);
+    expect(hold.proposal.kind).toBe('hold');
+  });
+
+  it('the priority list itself is published', () => {
+    expect([...CHECKIN_PRIORITY]).toEqual(['safety (pain flags)', 'adherence (sessions or meals)', 'energy adjustment', 'volume']);
   });
 });

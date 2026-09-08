@@ -3,12 +3,13 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Card, EmptyState, ReceiptHeader, ReceiptRow, SrcNote, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
-  CORRIDOR_EXPLAINER, PROGRAMME_TEMPLATES, corridorFor, programmeTemplate, programmeWeek,
-  weeklyCheckin, type CheckinProposal,
+  CORRIDOR_EXPLAINER, PROGRAMME_TEMPLATES, corridorFor, fullWeeklyCheckin, programmeTemplate,
+  programmeWeek, type FullCheckin,
 } from '@basalt/extras';
-import { getActiveProgram, startProgram, stopProgram, listRecentSessions, type Program } from '@basalt/training';
+import { getActiveProgram, startProgram, stopProgram, listRecentSessions, loadPainSummary, type Program } from '@basalt/training';
 import { listWeightEntries, saveTargets, isoDay } from '@basalt/core-data';
-import { trendWeightKg } from '@basalt/nutrition';
+import { loadPlanOutcomes, trendWeightKg } from '@basalt/nutrition';
+import { loadVolumeProposals } from '../../lib/weeklyVolumeData';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { ExtraSlot } from '../../components/ExtrasProvider';
@@ -28,7 +29,7 @@ export function ProgrammeCard() {
   const [program, setProgram] = useState<Program | null>(null);
   const [startWeight, setStartWeight] = useState<number | null>(null);
   const [trendNow, setTrendNow] = useState<number | null>(null);
-  const [proposal, setProposal] = useState<CheckinProposal | null>(null);
+  const [checkin, setCheckin] = useState<FullCheckin | null>(null);
   const [generating, setGenerating] = useState(false);
 
   const refresh = useCallback(() => {
@@ -51,7 +52,7 @@ export function ProgrammeCard() {
       const lastRaw = await AsyncStorage.getItem(CHECKIN_KEY);
       const daysSince = lastRaw ? (Date.now() - Date.parse(lastRaw)) / 86_400_000 : Infinity;
       if (!template || !week || week < 2 || daysSince < 7) {
-        setProposal(null);
+        setCheckin(null);
         return;
       }
       const weekAgo = weighIns.filter((x) => Date.parse(x.date) <= Date.now() - 7 * 86_400_000);
@@ -63,13 +64,42 @@ export function ProgrammeCard() {
       const sessions = await listRecentSessions(supabase, 20);
       const cut = Date.now() - 7 * 86_400_000;
       const done = (sessions.ok ? sessions.data : []).filter((s) => Date.parse(s.startedAt) >= cut).length;
-      setProposal(
-        weeklyCheckin({
+
+      // Facts for the full check-in: meal adherence, RIR trend, pain, volume.
+      const weekAgoIso = new Date(cut).toISOString().slice(0, 10);
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const outcomes = await loadPlanOutcomes(supabase, weekAgoIso, todayIso, todayIso);
+      const settled = outcomes.ok ? outcomes.data.filter((o) => o.outcome !== 'pending') : [];
+      const mealAdherencePct = settled.length > 0
+        ? (settled.filter((o) => o.outcome === 'as_planned').length / settled.length) * 100
+        : null;
+      const rirAvg = async (fromDaysAgo: number, toDaysAgo: number) => {
+        const from = new Date(Date.now() - fromDaysAgo * 86_400_000).toISOString();
+        const to = new Date(Date.now() - toDaysAgo * 86_400_000).toISOString();
+        const r = await supabase
+          .from('basalt_set_entries')
+          .select('rir')
+          .not('rir', 'is', null)
+          .gte('completed_at', from)
+          .lt('completed_at', to);
+        const vals = (r.data ?? []).map((x: any) => Number(x.rir));
+        return vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : null;
+      };
+      const [thisWeekAvg, lastWeekAvg, pain, volume] = await Promise.all([
+        rirAvg(7, 0), rirAvg(14, 7), loadPainSummary(supabase), loadVolumeProposals(supabase),
+      ]);
+      setCheckin(
+        fullWeeklyCheckin({
           targetRatePct: template.ratePctPerWeek,
           observedRatePct,
           currentCalories: targets?.calories ?? 0,
           sessionsPlanned: template.trainingDays.length,
           sessionsDone: done,
+          mealAdherencePct,
+          rirTrend: { thisWeekAvg, lastWeekAvg },
+          painFlags: pain.ok ? pain.data.totalFlags : 0,
+          waistCm: null,
+          volumeProposalReason: volume[0]?.reason ?? null,
         }),
       );
     })();
@@ -88,15 +118,16 @@ export function ProgrammeCard() {
 
   const answer = async (accept: boolean) => {
     await AsyncStorage.setItem(CHECKIN_KEY, new Date().toISOString());
-    if (accept && proposal?.kind === 'adjust' && targets) {
+    const p = checkin?.proposal;
+    if (accept && p && p.kind === 'adjust' && 'deltaKcal' in p && targets) {
       const saved = await saveTargets(supabase, {
         ...targets,
-        calories: targets.calories + proposal.deltaKcal,
-        reason: `Programme check-in — ${proposal.reason}`,
+        calories: targets.calories + p.deltaKcal,
+        reason: `Programme check-in — ${p.reason}`,
       });
       if (saved.ok) await refreshCore();
     }
-    setProposal(null);
+    setCheckin(null);
   };
 
   const template = program?.templateId ? programmeTemplate(program.templateId) : null;
@@ -156,16 +187,19 @@ export function ProgrammeCard() {
               unit="kg"
             />
           ) : null}
-          {proposal ? (
+          {checkin ? (
             <View style={[styles.proposal, { borderColor: theme.surfaces.border }]}>
               <Text style={[styles.proposalKind, { color: theme.text.mute }]}>
-                {`WEEKLY CHECK-IN — ${proposal.kind.replace('-', ' ').toUpperCase()}`}
+                {`WEEKLY CHECK-IN — ${checkin.proposal.kind.replace(/-/g, ' ').toUpperCase()}`}
               </Text>
-              <Text style={[styles.proposalText, { color: theme.text.ink2 }]}>{proposal.reason}</Text>
+              {checkin.report.map((line) => (
+                <Text key={line.slice(0, 28)} style={[styles.reportLine, { color: theme.text.faint }]}>{line}</Text>
+              ))}
+              <Text style={[styles.proposalText, { color: theme.text.ink2 }]}>{checkin.proposal.reason}</Text>
               <View style={styles.proposalRow}>
                 <Pressable onPress={() => void answer(true)} hitSlop={10} accessibilityRole="button">
                   <Text style={[styles.proposalBtn, { color: theme.text.carbs }]}>
-                    {proposal.kind === 'adjust' ? 'ACCEPT' : 'NOTED'}
+                    {checkin.proposal.kind === 'adjust' ? 'ACCEPT' : 'NOTED'}
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => void answer(false)} hitSlop={10} accessibilityRole="button">
@@ -219,6 +253,7 @@ const styles = StyleSheet.create({
   proposal: { borderWidth: 1, borderRadius: 8, padding: 12, marginVertical: 8 },
   proposalKind: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1, marginBottom: 6 },
   proposalText: { fontSize: 13, lineHeight: 19 },
+  reportLine: { fontSize: 11.5, lineHeight: 16, marginBottom: 2 },
   proposalRow: { flexDirection: 'row', gap: 22, marginTop: 8 },
   proposalBtn: { fontFamily: mono, fontSize: 12, letterSpacing: 1, paddingVertical: 10 },
   share: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.85, textAlign: 'center', paddingVertical: 10 },
