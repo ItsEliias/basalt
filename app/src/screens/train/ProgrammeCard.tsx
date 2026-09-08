@@ -13,6 +13,7 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { ExtraSlot } from '../../components/ExtrasProvider';
 import { createChallenge } from '../../lib/socialData';
+import { GenerateProgrammeSheet } from './GenerateProgrammeSheet';
 
 // Programmes (programmes Extra) — template blocks over the core program
 // machinery. Week strip, trend corridor, and a weekly check-in that
@@ -28,6 +29,7 @@ export function ProgrammeCard() {
   const [startWeight, setStartWeight] = useState<number | null>(null);
   const [trendNow, setTrendNow] = useState<number | null>(null);
   const [proposal, setProposal] = useState<CheckinProposal | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const refresh = useCallback(() => {
     void (async () => {
@@ -113,6 +115,14 @@ export function ProgrammeCard() {
             A programme is a stated block: structure, length, and a nutrition stance — with a weekly
             check-in that proposes exactly one thing.
           </EmptyState>
+          <Pressable onPress={() => setGenerating(true)} hitSlop={8}>
+            <ReceiptRow
+              name="Build my programme"
+              meta="generated from your intake — equipment, days, minutes, limitations; every rule shown, every slot swappable"
+              value="build →"
+              valueColor={theme.text.carbs}
+            />
+          </Pressable>
           {PROGRAMME_TEMPLATES.map((t, i) => (
             <Pressable key={t.id} onPress={() => void start(t.id)} hitSlop={8}>
               <ReceiptRow name={t.title} meta={t.oneLiner} value="start →" valueColor={theme.text.faint} last={i === PROGRAMME_TEMPLATES.length - 1} />
@@ -191,6 +201,14 @@ export function ProgrammeCard() {
           <SrcNote>{`${template.oneLiner} · ${CORRIDOR_EXPLAINER}`}</SrcNote>
         </>
       )}
+      <GenerateProgrammeSheet
+        open={generating}
+        onClose={() => setGenerating(false)}
+        onKept={() => {
+          setGenerating(false);
+          refresh();
+        }}
+      />
     </Card>
   );
 }
