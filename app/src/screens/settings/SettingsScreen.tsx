@@ -15,11 +15,23 @@ import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
+import { HydrationCard } from './HydrationCard';
+import { PlanCard } from './PlanCard';
+import { FinishProfileModal } from '../../components/FinishProfileModal';
+import { PromiseScreen } from '../../components/PromiseScreen';
+import { DETAIL_OPTIONS } from '../../lib/detailModel';
+import { ConnectedServicesCard } from './ConnectedServicesCard';
+import { cancelAllHydrationReminders } from '../../lib/hydrationReminders';
+import { setSupplementsReminderHour } from '../../lib/supplementsReminder';
 import { logThemeLayoutEvent } from '../../lib/instrumentation';
 import { HIDEABLE_SECTIONS } from '../today/model';
 import { isIllnessNotifEnabled, setIllnessNotifEnabled } from '../../lib/backgroundWork';
 import { getPebbleSettings, setPebbleSettings } from '../../lib/pebble';
 import { PEBBLE_DEFAULTS, type PebbleSettings } from '../../lib/pebbleModel';
+import { EXTRAS, EXTRA_GROUP_TITLES, extraDef, type ExtraGroup, type ExtraId } from '@basalt/core-data';
+import { ExtraSlot, useExtra, useExtras } from '../../components/ExtrasProvider';
+import { GROWTH_RULES, StagedPebble, growthScore, scoreText, stageFor } from '@basalt/extras';
+import { loadGrowthInputs, type GrowthInputs } from '../../lib/growthData';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { buildFeedbackMailto } from '../../lib/feedbackModel';
@@ -60,9 +72,11 @@ function themeIdForLabel(label: string): ThemeId {
   return THEME_IDS.find((id) => THEMES[id].name === label) ?? 'minimal';
 }
 
-const LAYOUT_OPTIONS = ['Ledger', 'Tiles'];
-function layoutKey(label: string): 'ledger' | 'tiles' {
-  return label === 'Tiles' ? 'tiles' : 'ledger';
+const LAYOUT_OPTIONS = ['Ledger', 'Tiles', 'Rings'];
+function layoutKey(label: string): 'ledger' | 'tiles' | 'rings' {
+  if (label === 'Tiles') return 'tiles';
+  if (label === 'Rings') return 'rings';
+  return 'ledger';
 }
 
 export function SettingsScreen() {
@@ -81,6 +95,27 @@ export function SettingsScreen() {
   }, []);
   const patchPebble = (patch: Partial<PebbleSettings>) => {
     void setPebbleSettings(patch).then(setPebble);
+  };
+  const extras = useExtras();
+  const growsOn = useExtra('pebbleGrows');
+  const [growth, setGrowth] = useState<GrowthInputs | null>(null);
+  useEffect(() => {
+    if (growsOn) void loadGrowthInputs(supabase).then(setGrowth);
+  }, [growsOn]);
+  const flipExtra = async (id: ExtraId, on: boolean) => {
+    const r = await extras.flip(id, on);
+    if (r.turnedOffDependents.length > 0) {
+      Alert.alert(
+        'Also turned off',
+        `${r.turnedOffDependents.map((d) => extraDef(d).title).join(', ')} need${r.turnedOffDependents.length === 1 ? 's' : ''} ${extraDef(id).title} on.`,
+      );
+    }
+    // Pebble's card mirrors the extra — keep its local state in step.
+    if (id === 'pebble') void getPebbleSettings().then(setPebble);
+    // Turning a reminder-bearing Extra off cancels its notifications —
+    // no orphaned nudges.
+    if (id === 'hydration' && !on) void cancelAllHydrationReminders();
+    if (id === 'supplements' && !on) void setSupplementsReminderHour(null);
   };
   useEffect(() => {
     void AsyncStorage.getItem('basalt.hiddenToday').then((raw) => {
@@ -103,6 +138,8 @@ export function SettingsScreen() {
 
   const [edit, setEdit] = useState<EditKey>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [finishProfileOpen, setFinishProfileOpen] = useState(false);
+  const [promiseOpen, setPromiseOpen] = useState(false);
   const [hcStatus, setHcStatus] = useState<string | null>(null);
   const [confirmText, setConfirmText] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -256,6 +293,14 @@ export function SettingsScreen() {
             valueColor={theme.text.faint}
           />
         </Pressable>
+        <Pressable onPress={() => setFinishProfileOpen(true)} hitSlop={8}>
+          <ReceiptRow
+            name="PT intake"
+            meta={profile?.ptIntake ? 'experience, schedule, equipment weights, diet preferences' : 'not filled yet — the programme generator asks for this'}
+            value="edit →"
+            valueColor={theme.text.faint}
+          />
+        </Pressable>
         <ReceiptRow
           name="Daily targets"
           meta={
@@ -292,6 +337,10 @@ export function SettingsScreen() {
       </Card>
 
       {/* ── Preferences ────────────────────────────────────────────── */}
+      <PlanCard />
+      <FinishProfileModal open={finishProfileOpen} onClose={() => setFinishProfileOpen(false)} />
+      <PromiseScreen open={promiseOpen} onClose={() => setPromiseOpen(false)} />
+
       <Card>
         <ReceiptHeader label="Preferences" />
         <ObChipLabel>Check-ins</ObChipLabel>
@@ -312,16 +361,6 @@ export function SettingsScreen() {
             meta="log-only mode: everything is still recorded and exported — calories and macros just aren't shown. For anyone the numbers aren't kind to."
             value={profile?.hideNumbers ? 'on' : 'off'}
             valueColor={profile?.hideNumbers ? theme.text.carbs : theme.text.faint}
-            last
-          />
-        </Pressable>
-        <ObChipLabel>Fasting module</ObChipLabel>
-        <Pressable onPress={() => void save({ fastingEnabled: !(profile?.fastingEnabled ?? false) })} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name="Fasting timer"
-            meta="a window timer with documented stages — information, not medical advice. Off unless you want it."
-            value={profile?.fastingEnabled ? 'on' : 'off'}
-            valueColor={profile?.fastingEnabled ? theme.text.carbs : theme.text.faint}
             last
           />
         </Pressable>
@@ -374,6 +413,15 @@ export function SettingsScreen() {
       {/* ── Display ────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Display" summary="legibility — applies everywhere" />
+        <ObChipLabel>Detail — what is shown, never what is computed</ObChipLabel>
+        <ChipRow
+          options={DETAIL_OPTIONS.map((o) => `${o.title} — ${o.quote}`)}
+          value={(() => { const o = DETAIL_OPTIONS.find((x) => x.key === (profile?.detail ?? 'standard')); return o ? `${o.title} — ${o.quote}` : undefined; })()}
+          onChange={(label) => {
+            const o = DETAIL_OPTIONS.find((x) => `${x.title} — ${x.quote}` === label);
+            if (o) void save({ detail: o.key });
+          }}
+        />
         <ObChipLabel>Text size</ObChipLabel>
         <ChipRow
           options={TEXT_SCALE_OPTIONS}
@@ -401,7 +449,7 @@ export function SettingsScreen() {
         <ObChipLabel>Today layout</ObChipLabel>
         <ChipRow
           options={LAYOUT_OPTIONS}
-          value={profile?.todayLayout === 'tiles' ? 'Tiles' : 'Ledger'}
+          value={profile?.todayLayout === 'tiles' ? 'Tiles' : profile?.todayLayout === 'rings' ? 'Rings' : 'Ledger'}
           onChange={(v) => {
             const next = layoutKey(v);
             logThemeLayoutEvent({ type: 'layout_selected', surface: 'today', layout: next, previous: profile?.todayLayout ?? 'ledger' });
@@ -430,6 +478,51 @@ export function SettingsScreen() {
         <SrcNote>The energy hero is the day's anchor and always shows · hidden sections still record — everything stays in your ledger and exports</SrcNote>
       </Card>
 
+      {/* ── Extras ─────────────────────────────────────────────────── */}
+      <Card>
+        <ReceiptHeader label="Extras" summary="all off — Basalt is complete without them" />
+        {(Object.keys(EXTRA_GROUP_TITLES) as ExtraGroup[]).map((group) => {
+          const inGroup = EXTRAS.filter((e) => e.group === group);
+          if (inGroup.length === 0) return null;
+          return (
+            <View key={group}>
+              <ObChipLabel>{EXTRA_GROUP_TITLES[group]}</ObChipLabel>
+              {inGroup.map((e, i) => {
+                const deps = e.requires ?? [];
+                const depsOn = deps.every((d) => extras.extras[d]);
+                return (
+                  <ReceiptRow
+                    key={e.id}
+                    name={e.title}
+                    meta={depsOn ? e.oneLiner : `needs ${deps.map((d) => extraDef(d).title).join(' + ')} on first`}
+                    last={i === inGroup.length - 1}
+                    right={
+                      <Switch
+                        value={extras.extras[e.id]}
+                        disabled={!depsOn}
+                        onValueChange={(v) => void flipExtra(e.id, v)}
+                        trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                        thumbColor={theme.text.ink}
+                        accessibilityLabel={`${e.title} extra`}
+                      />
+                    }
+                  />
+                );
+              })}
+            </View>
+          );
+        })}
+        <SrcNote>Every Extra is off by default and honest inside — published formulas, ranges not false precision. With everything off, Basalt is exactly the core app.</SrcNote>
+      </Card>
+
+      <ExtraSlot id="hydration">
+        <HydrationCard />
+      </ExtraSlot>
+
+      <ExtraSlot id="imports">
+        <ConnectedServicesCard />
+      </ExtraSlot>
+
       {/* ── Pebble ─────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Pebble" summary="off by default" />
@@ -444,8 +537,8 @@ export function SettingsScreen() {
           meta="proposals with actions, never commentary"
           right={
             <Switch
-              value={pebble.showInApp}
-              onValueChange={(v) => patchPebble({ showInApp: v })}
+              value={extras.extras.pebble}
+              onValueChange={(v) => void flipExtra('pebble', v)}
               trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
               thumbColor={theme.text.ink}
               accessibilityLabel="Show Pebble in the app"
@@ -481,6 +574,24 @@ export function SettingsScreen() {
           }
         />
         <SrcNote>Pebble never comments on how you did. Every message is a proposal with an action, and you can dismiss any of them. Turning Pebble off keeps the same notifications in Basalt's plain voice.</SrcNote>
+        <ExtraSlot id="pebbleGrows">
+          {growth ? (() => {
+            const score = growthScore(growth);
+            return (
+              <View style={styles.growthRow}>
+                <StagedPebble stage={stageFor(score)} size={56} />
+                <View style={styles.growthText}>
+                  <Text style={{ color: theme.text.ink, fontSize: 13.5, fontWeight: '600' }}>
+                    Stage {stageFor(score)} of 5 · consistency {scoreText(score)}
+                  </Text>
+                  <Text style={{ color: theme.text.faint, fontSize: 11, lineHeight: 15, marginTop: 3 }}>
+                    {GROWTH_RULES.join(' ')}
+                  </Text>
+                </View>
+              </View>
+            );
+          })() : null}
+        </ExtraSlot>
       </Card>
 
       {/* ── Your data ──────────────────────────────────────────────── */}
@@ -525,7 +636,7 @@ export function SettingsScreen() {
         >
           <ReceiptRow
             name={busy === 'doctor' ? 'Building…' : 'Doctor report — PDF'}
-            meta="last 30 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
+            meta="last 90 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
             value="→"
             valueColor={theme.text.faint}
           />
@@ -562,6 +673,14 @@ export function SettingsScreen() {
       {/* ── Account ────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Account" />
+        <Pressable onPress={() => setPromiseOpen(true)} hitSlop={8}>
+          <ReceiptRow
+            name="What Basalt does and doesn't do"
+            meta="the promise, in plain words"
+            value="read →"
+            valueColor={theme.text.faint}
+          />
+        </Pressable>
         <ReceiptRow name={session?.user.email ?? '—'} meta="free plan" />
         <Pressable
           onPress={() => {
@@ -757,6 +876,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   pebbleIntro: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  growthRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 12 },
+  growthText: { flex: 1 },
   pebbleBlurb: { flex: 1, fontSize: 12, lineHeight: 17 },
   dim: { flex: 1, backgroundColor: 'rgba(5,6,8,.6)' },
   sheet: {

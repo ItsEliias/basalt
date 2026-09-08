@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSnapshot, widgetLines } from './widgetModel';
+import { macroLine, parseReadinessSnapshot, parseSnapshot, readinessAgeText, widgetLines } from './widgetModel';
 
 const NOW = Date.parse('2026-08-21T12:00:00Z');
 const snap = {
@@ -35,5 +35,44 @@ describe('widget snapshot', () => {
     expect(parseSnapshot('garbage')).toBeNull();
     expect(parseSnapshot(null)).toBeNull();
     expect(parseSnapshot(JSON.stringify(snap))).toMatchObject({ remainingKcal: 640 });
+  });
+});
+
+describe('macro line (widgets Extra)', () => {
+  it('is absent without macros in the snapshot — the defaults widget is unchanged', () => {
+    expect(macroLine(parseSnapshot(JSON.stringify(snap)))).toBeNull();
+  });
+
+  it('renders P/C/F against targets, fat over-cap in words', () => {
+    const withMacros = { ...snap, macros: { p: 82.4, pt: 180, c: 190, ct: 279, f: 97.6, fcap: 93 } };
+    expect(macroLine(parseSnapshot(JSON.stringify(withMacros))))
+      .toBe('P 82/180 · C 190/279 · F 98/93 · 5 over');
+  });
+
+  it('hide-the-numbers hides macros too', () => {
+    const hidden = { ...snap, hideNumbers: true, macros: { p: 82, pt: 180, c: 190, ct: 279, f: 41, fcap: 93 } };
+    expect(macroLine(parseSnapshot(JSON.stringify(hidden)))).toBeNull();
+  });
+});
+
+describe('readiness snapshot', () => {
+  it('parses score + note + age; rejects garbage', () => {
+    const r = parseReadinessSnapshot(JSON.stringify({ score: 71, note: 'HRV low', at: '2026-08-21T11:00:00Z' }));
+    expect(r).toEqual({ score: 71, note: 'HRV low', at: '2026-08-21T11:00:00Z' });
+    expect(parseReadinessSnapshot('not json')).toBeNull();
+    expect(parseReadinessSnapshot(null)).toBeNull();
+    expect(parseReadinessSnapshot(JSON.stringify({ score: 71 }))).toBeNull();
+  });
+
+  it('a null score survives the round trip — No number, never 0', () => {
+    const r = parseReadinessSnapshot(JSON.stringify({ score: null, note: 'no wearable data', at: '2026-08-21T11:00:00Z' }));
+    expect(r?.score).toBeNull();
+    expect(r?.note).toBe('no wearable data');
+  });
+
+  it('states its age in plain words', () => {
+    expect(readinessAgeText('2026-08-21T11:59:30Z', NOW)).toBe('just now');
+    expect(readinessAgeText('2026-08-21T11:15:00Z', NOW)).toBe('45 min ago');
+    expect(readinessAgeText('2026-08-21T08:00:00Z', NOW)).toBe('4 h ago');
   });
 });

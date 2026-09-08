@@ -22,3 +22,8 @@ export * from './meal-budgets';
 export * from './fasting';
 export * from './fill-gap';
 export * from './cooking-mode';
+export * from './supplements';
+export * from './uncertainty';
+export * from './plan';
+export * from './plan-week';
+export * from './activity-factor';

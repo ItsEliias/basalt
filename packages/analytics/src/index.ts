@@ -23,3 +23,4 @@ export * from './coop';
 export * from './coop-load';
 export * from './sleep-window';
 export * from './ppg';
+export * from './wellbeing';

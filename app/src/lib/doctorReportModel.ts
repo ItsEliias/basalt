@@ -5,11 +5,14 @@
 // disappearing — a clinician should know what wasn't tracked.
 
 export type DoctorReportInput = {
+  /** Period heading, e.g. "last 90 days to 7 Sep 2026". */
   monthLabel: string;
   generatedAtIso: string;
   weight: { entries: { date: string; kg: number }[]; source: string } | null;
   sleep: { nights: number; avgMin: number; source: string } | null;
   activity: { stepDays: number; stepsAvg: number; sessions: number; volumeKg: number; walks: number; walkKm: number } | null;
+  /** Daily energy intake over logged days — a range, never one number. */
+  intake: { loggedDays: number; minKcal: number; medianKcal: number; maxKcal: number; proteinMedianG: number | null } | null;
   vitals: {
     hrv: { min: number; median: number; max: number; days: number } | null;
     rhr: { min: number; median: number; max: number; days: number } | null;
@@ -23,7 +26,7 @@ function section(title: string, body: string): string {
   return `<section><h2>${esc(title)}</h2>${body}</section>`;
 }
 
-const NO_DATA = (what: string) => `<p class="nodata">No ${what} recorded this month.</p>`;
+const NO_DATA = (what: string) => `<p class="nodata">No ${what} recorded in this period.</p>`;
 
 export function buildDoctorReportHtml(input: DoctorReportInput): string {
   const w = input.weight;
@@ -58,6 +61,13 @@ ${a.walks > 0 ? `<li>Recorded walks: ${a.walks} · ${a.walkKm.toFixed(1)} km (GP
 </ul><p class="src">Sources: user log · Health Connect where synced</p>`
       : NO_DATA('activity');
 
+  const i = input.intake;
+  const intakeBody =
+    i && i.loggedDays > 0
+      ? `<p>${i.loggedDays} logged days · daily energy ${Math.round(i.minKcal)}–${Math.round(i.maxKcal)} kcal (median ${Math.round(i.medianKcal)})${i.proteinMedianG !== null ? ` · median protein ${Math.round(i.proteinMedianG)} g` : ''}</p>
+<p class="src">Source: the patient's food log · a range over logged days, not an average of assumptions · unlogged days are absent, not zero</p>`
+      : NO_DATA('food intake');
+
   const v = input.vitals;
   const vitalRow = (label: string, band: { min: number; median: number; max: number; days: number } | null, unit: string) =>
     band
@@ -84,6 +94,7 @@ ${a.walks > 0 ? `<li>Recorded walks: ${a.walks} · ${a.walkKm.toFixed(1)} km (GP
 ${section('Body weight', weightBody)}
 ${section('Sleep', sleepBody)}
 ${section('Activity', activityBody)}
-${section('Vitals (30-day)', vitalsBody)}
+${section('Food intake', intakeBody)}
+${section('Vitals', vitalsBody)}
 <p class="foot">Basalt records what the user logged and what their devices reported, with sources named. Absent sections mean absent data — nothing in this report is estimated or filled in.</p>`;
 }

@@ -7,6 +7,22 @@ import { todayISO } from './dates';
 // onboarding answer editable later) and basalt_targets (versioned rows so
 // historical charts stay honest when targets change).
 
+/**
+ * PT intake (V4 Phase 8a) — what a trainer would ask that the profile
+ * didn't already hold. Every field optional; the generator states what it
+ * assumed when something is missing.
+ */
+export type PtIntake = {
+  /** Drives rep ranges, starting loads, and how much the app explains. */
+  experience?: 'new' | 'under1y' | '1to3y' | '3plus';
+  schedule?: { daysPerWeek?: number; sessionMinutes?: number; weekdays?: number[] };
+  /** Inventory beyond the name list: weights make load selection possible. */
+  inventory?: { dumbbellMaxKg?: number; kettlebellKg?: number; adjustableDumbbells?: boolean };
+  limitations?: { note?: string };
+  diet?: { dislikes?: string[]; mealsPerDay?: number; cookingTime?: 'quick' | 'normal' | 'happy_to_cook' };
+  measurements?: { waistCm?: number };
+};
+
 export type ProfileRecord = {
   name: string | null;
   biologicalSex: 'female' | 'male' | 'intersex' | 'prefer_not_to_say' | null;
@@ -34,6 +50,9 @@ export type ProfileRecord = {
   hideNumbers: boolean;
   /** Fasting module opt-in — off by default. */
   fastingEnabled: boolean;
+  ptIntake: PtIntake | null;
+  /** V4 Phase 8h: what is SHOWN, never what is computed. */
+  detail: 'simple' | 'standard' | 'full';
   /** Monthly-challenge opt-in — private, optional, off by default. */
   challengeEnabled: boolean;
   useMetric: boolean;
@@ -45,7 +64,7 @@ export type ProfileRecord = {
   theme: 'minimal' | 'humanist' | 'athletic' | 'brutalist' | 'depth' | 'atelier'
        | 'clay' | 'sticker' | 'gummy' | 'soft' | 'candyRings';
   /** Settings → Display. Today only in v1 (docs/basalt-layouts.md) — 'ledger' for new and existing installs until changed. */
-  todayLayout: 'ledger' | 'tiles';
+  todayLayout: 'ledger' | 'tiles' | 'rings';
 };
 
 function mapProfile(r: any): ProfileRecord {
@@ -74,6 +93,8 @@ function mapProfile(r: any): ProfileRecord {
     checkinPreference: r.checkin_preference ?? null,
     hideNumbers: r.hide_numbers ?? false,
     fastingEnabled: r.fasting_enabled ?? false,
+    ptIntake: r.pt_intake ?? null,
+    detail: r.detail ?? 'standard',
     challengeEnabled: r.challenge_enabled ?? false,
     useMetric: r.use_metric ?? true,
     textScale: r.text_scale ?? 'system',
@@ -93,7 +114,7 @@ function profilePayload(p: Partial<ProfileRecord>): Record<string, unknown> {
     ['dietaryFlags', 'dietary_flags'], ['dietPatterns', 'diet_patterns'], ['trainLocation', 'train_location'],
     ['equipment', 'equipment'], ['jobActivity', 'job_activity'], ['exerciseFrequency', 'exercise_frequency'],
     ['typicalSleep', 'typical_sleep'], ['stressLevel', 'stress_level'], ['motivations', 'motivations'],
-    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'], ['challengeEnabled', 'challenge_enabled'],
+    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'], ['ptIntake', 'pt_intake'], ['detail', 'detail'], ['challengeEnabled', 'challenge_enabled'],
     ['textScale', 'text_scale'], ['density', 'density'],
     ['theme', 'theme'], ['todayLayout', 'today_layout'],
   ];
@@ -203,6 +224,14 @@ export async function saveTargets(
 }
 
 /** The targets version in force on `date` — latest effective_date ≤ date. */
+/**
+ * Rows whose reason starts with this are HISTORY imported from outside
+ * Basalt — Trends may show them, but they never become the current target
+ * (V4 import rule: the profile computes the current target from the
+ * user's own numbers; a 2022 spreadsheet block must not feed Today).
+ */
+export const IMPORTED_TARGETS_REASON = 'Imported history';
+
 export async function getTargetsFor(
   client: SupabaseClient,
   date: string = todayISO(),
@@ -214,6 +243,7 @@ export async function getTargetsFor(
     .from('basalt_targets')
     .select('*')
     .eq('user_id', u.data)
+    .or(`reason.is.null,reason.not.ilike.${IMPORTED_TARGETS_REASON}%`)
     .lte('effective_date', date)
     .order('effective_date', { ascending: false })
     .limit(1)
@@ -225,6 +255,19 @@ export async function getTargetsFor(
 // ─── Weight entries (feeds the adaptive TDEE loop) ──────────────────────────
 
 export type WeightEntry = { id: string; measuredAt: string; weightKg: number; source: string };
+
+/** Every stored target row, oldest first — history for Trends, imports included. */
+export async function listTargetHistory(client: SupabaseClient): Promise<Result<TargetsRecord[]>> {
+  const u = await currentUserId(client);
+  if (!u.ok) return u;
+  const { data, error } = await client
+    .from('basalt_targets')
+    .select('*')
+    .eq('user_id', u.data)
+    .order('effective_date', { ascending: true });
+  if (error) return err(error.message);
+  return ok((data ?? []).map(mapTargets));
+}
 
 export async function addWeightEntry(
   client: SupabaseClient,

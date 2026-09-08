@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
-import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
+import { listRecentSessions, getSessionDetail, sessionVolumeKg, getActiveProgram } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
 import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
@@ -10,11 +10,22 @@ import { runHealthSync } from '../../lib/healthSync';
 import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
-import { loadReadiness } from '@basalt/analytics';
+import { loadReadiness, listCheckins, stressProposal } from '@basalt/analytics';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { SupplementsCard } from '../../components/SupplementsCard';
+import { IntakeRangeNote } from '../../components/IntakeRangeNote';
+import { CoachCard } from '../../components/CoachCard';
+import { Detail, useDetail } from '../../components/DetailProvider';
+import { heroDisplay, simpleMacroLine } from '../../lib/detailModel';
+import { HeroWhySheet } from '../../components/HeroWhySheet';
+import { StagedPebble, growthScore, stageFor, NarrativeCard, narrativeDateFor, friendsLoggedLine } from '@basalt/extras';
+import { loadGrowthInputs } from '../../lib/growthData';
+import { loadDailySummary } from '../../lib/narrativeData';
+import { friendsLoggedToday, publishToday } from '../../lib/socialData';
 import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
 import {
   PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
-  macroShortfallProposal, readinessSwapProposal, sleepDebtProposal,
+  macroShortfallProposal, missedSessionProposal, readinessSwapProposal, sleepDebtProposal, stressSwapProposal,
   type PebbleSettings,
 } from '../../lib/pebbleModel';
 import { Image } from 'react-native';
@@ -129,10 +140,59 @@ export function TodayScreen({ onOpenTab }: {
   const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [microWallOpen, setMicroWallOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const detail = useDetail();
   // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
   const layout = profile?.todayLayout ?? 'ledger';
 
   const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
+  const [stressWellbeing, setStressWellbeing] = useState<{ text: string } | null>(null);
+  const [missedInput, setMissedInput] = useState({ yesterdayWasPlanned: false, sessionYesterday: false });
+  useEffect(() => {
+    void (async () => {
+      const prog = await getActiveProgram(supabase);
+      if (!prog.ok || !prog.data) return;
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      const planned = prog.data.trainingDays.includes(y.getDay());
+      const recent = await listRecentSessions(supabase, 10);
+      const had = (recent.ok ? recent.data : []).some((sess) => sess.startedAt.slice(0, 10) === y.toISOString().slice(0, 10));
+      setMissedInput({ yesterdayWasPlanned: planned, sessionYesterday: had });
+    })();
+  }, [todayVersion]);
+  useEffect(() => {
+    void listCheckins(supabase, 7).then((r) => {
+      if (r.ok) setStressWellbeing(stressProposal(r.data, todayISO()));
+    });
+  }, [todayVersion]);
+  const growsOn = useExtra('pebbleGrows');
+  const widgetsOn = useExtra('widgets');
+  const narrativeOn = useExtra('narrative');
+  const socialOn = useExtra('social');
+  const [summary, setSummary] = useState<string | null>(null);
+  const [friendsCount, setFriendsCount] = useState(0);
+  useEffect(() => {
+    if (!narrativeOn || !targets) { setSummary(null); return; }
+    void loadDailySummary(supabase, {
+      date: narrativeDateFor(new Date()),
+      targetCalories: targets.calories,
+      sleepHours: null,
+    }).then(setSummary);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [narrativeOn, targets?.calories]);
+  useEffect(() => {
+    if (!socialOn || !data) return;
+    const day = todayISO();
+    void publishToday(supabase, { day, loggedAnything: data.entries.length > 0, perChallenge: [] })
+      .then(() => friendsLoggedToday(supabase, day))
+      .then(setFriendsCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socialOn, data?.entries.length]);
+  const [growthStage, setGrowthStage] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  useEffect(() => {
+    if (!growsOn) { setGrowthStage(null); return; }
+    void loadGrowthInputs(supabase).then((g) => g && setGrowthStage(stageFor(growthScore(g))));
+  }, [growsOn]);
   const [pebbleDismissed, setPebbleDismissed] = useState<string[]>([]);
   const [readinessScore, setReadinessScore] = useState<number | null>(null);
 
@@ -233,6 +293,8 @@ export function TodayScreen({ onOpenTab }: {
   const pebbleProposal: PebbleProposal | null = data && targets
     ? pickProposal([
         readinessSwapProposal({ score: readinessScore, band: null, hasSessionToday: data.sessions.length > 0 }),
+        stressSwapProposal(stressWellbeing),
+        missedSessionProposal(missedInput),
         hideNumbers ? null : macroShortfallProposal({
           proteinG: data.totals.protein,
           proteinTargetG: targets.proteinG,
@@ -266,6 +328,13 @@ export function TodayScreen({ onOpenTab }: {
       entryCount: data.entries.length,
       hideNumbers,
       at: new Date().toISOString(),
+      // Macros ride the snapshot only while the widgets Extra is on — at
+      // defaults the widget file is byte-identical to core.
+      ...(widgetsOn && targets ? { macros: {
+        p: data.totals.protein, pt: targets.proteinG,
+        c: data.totals.carbs, ct: targets.carbsG,
+        f: data.totals.fat, fcap: targets.fatG,
+      } } : {}),
     };
     void AsyncStorage.setItem(WIDGET_SNAPSHOT_KEY, JSON.stringify(snapshot)).then(() => {
       void requestWidgetUpdate({
@@ -283,7 +352,13 @@ export function TodayScreen({ onOpenTab }: {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
-        <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+        <ExtraSlot id="pebble">
+          <PebbleSlot
+            proposal={shownProposal}
+            onAction={onPebbleAction}
+            mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
+          />
+        </ExtraSlot>
         <TileGridThemed>
           {filterTiles(tileSpecs, hidden).map((t) => (
             <Tile
@@ -309,7 +384,21 @@ export function TodayScreen({ onOpenTab }: {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >
-      <PebbleSlot proposal={shownProposal} onAction={onPebbleAction} />
+      <ExtraSlot id="narrative">
+        {summary ? (
+          <Card>
+            <NarrativeCard summary={summary} />
+          </Card>
+        ) : null}
+      </ExtraSlot>
+
+      <ExtraSlot id="pebble">
+        <PebbleSlot
+          proposal={shownProposal}
+          onAction={onPebbleAction}
+          mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
+        />
+      </ExtraSlot>
 
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
       <Card lead>
@@ -325,7 +414,7 @@ export function TodayScreen({ onOpenTab }: {
           </>
         ) : null}
         {hero && heroMode === 'numeric' ? (
-          theme.shape.meter === 'ring' && targets && data ? (
+          (layout === 'rings' || theme.shape.meter === 'ring') && targets && data ? (
             <>
               <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
               <View style={styles.ringRow}>
@@ -347,6 +436,11 @@ export function TodayScreen({ onOpenTab }: {
                 />
               </View>
               <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+              {data ? (
+                <ExtraSlot id="uncertainty">
+                  <IntakeRangeNote entries={data.entries} />
+                </ExtraSlot>
+              ) : null}
             </>
           ) : theme.shape.meter === 'dial' ? (
             <>
@@ -357,12 +451,26 @@ export function TodayScreen({ onOpenTab }: {
                 label={hero.over ? 'kcal over' : 'kcal left'}
               />
               <Text style={[styles.heroSub, styles.heroSubCentered, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+              {data ? (
+                <ExtraSlot id="uncertainty">
+                  <IntakeRangeNote entries={data.entries} />
+                </ExtraSlot>
+              ) : null}
             </>
           ) : (
           <>
             <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
-            <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
+            <Pressable onPress={() => setWhyOpen(true)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Why this number">
+              <HeroNumeral value={groupInt(heroDisplay(hero.remaining, detail))} unit={hero.over ? 'kcal over' : 'kcal'} />
+            </Pressable>
             <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
+            {data ? (
+              <Detail min="standard" moreLabel="MORE — THE RANGE →">
+                <ExtraSlot id="uncertainty">
+                  <IntakeRangeNote entries={data.entries} />
+                </ExtraSlot>
+              </Detail>
+            ) : null}
             <SegmentedStack
               segments={[
                 { fraction: hero.stack[0]?.fraction ?? 0, fill: theme.fill.protein },
@@ -382,13 +490,66 @@ export function TodayScreen({ onOpenTab }: {
         ) : null}
       </Card>
 
+      {targets && data ? (
+        <HeroWhySheet
+          open={whyOpen}
+          onClose={() => setWhyOpen(false)}
+          targets={targets}
+          eatenKcal={data.totals.calories}
+          activeKcal={data.activeKcal}
+        />
+      ) : null}
+
+      <ExtraSlot id="coach">
+        <CoachCard
+          numbers={{
+            todayKcal: data ? Math.round(data.totals.calories) : null,
+            targetKcal: targets?.calories ?? null,
+            proteinG: data ? Math.round(data.totals.protein) : null,
+            proteinTargetG: targets?.proteinG ?? null,
+            trendWeightKg: null,
+            sleepDebtMin: null,
+            readiness: null,
+            sessionsThisWeek: null,
+          }}
+          onAction={(kind) => {
+            if (kind === 'open-recover') onOpenTab?.('recover');
+            else if (kind === 'open-train') onOpenTab?.('train');
+            else Alert.alert('The plan', 'Settings › Nutrition plan — every number a range, formulas published.');
+          }}
+        />
+      </ExtraSlot>
+
+      <ExtraSlot id="supplements">
+        <SupplementsCard />
+      </ExtraSlot>
+
+      <ExtraSlot id="social">
+        {friendsLoggedLine(friendsCount) ? (
+          <Text style={[styles.friendsLine, { color: theme.text.faint }]}>
+            {friendsLoggedLine(friendsCount)}
+          </Text>
+        ) : null}
+      </ExtraSlot>
+
       {/* ── Macros + caps ──────────────────────────────────────────── */}
       {targets && data && !hideNumbers && !hidden.has('macros') ? (
         <Card>
+          {detail === 'simple' ? (
+            <Text style={[styles.simpleLine, { color: theme.text.mute }]}>
+              {simpleMacroLine({
+                carbsOverG: Math.max(0, data.totals.carbs - targets.carbsG),
+                fatOverG: Math.max(0, data.totals.fat - targets.fatG),
+                proteinShortG: Math.max(0, targets.proteinG - data.totals.protein),
+              })}
+            </Text>
+          ) : null}
           <MacroRow name="Protein" dot={theme.fill.protein} value={data.totals.protein} target={targets.proteinG} />
+          <Detail min="standard" moreLabel="MORE — CARBS, FAT, FIBRE, CAPS →">
           <MacroRow name="Carbohydrate" dot={theme.fill.carbs} value={data.totals.carbs} target={targets.carbsG} />
           <MacroRow name="Fat" dot={theme.fill.fat} value={data.totals.fat} target={targets.fatG} />
           <MacroRow name="Fibre" dot={theme.fill.faint} value={data.totals.fiber} target={targets.fiberG} />
+          </Detail>
           {targets.sugarCapG !== null || targets.sodiumCapMg !== null ? (
             <>
               <Rule />
@@ -553,6 +714,8 @@ export function TodayScreen({ onOpenTab }: {
 }
 
 const styles = StyleSheet.create({
+  simpleLine: { fontSize: 13, marginBottom: 6 },
+  friendsLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, marginTop: 6, marginBottom: 2, textAlign: 'center' },
   microMeta: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.4, marginTop: -2, marginBottom: 6 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },

@@ -26,3 +26,16 @@ export function repPrMatrix(sets: PrSet[], maxReps = 12): RepPr[] {
     .map(([reps, v]) => ({ reps, weightKg: v.weightKg, date: v.date }))
     .sort((a, b) => a.reps - b.reps);
 }
+
+/**
+ * Import rule (V4): a session imported with week-precision dating can
+ * never mint a PR or feed progression — its numbers are real but its
+ * ordering isn't. Everything the app writes live has source null/'app'
+ * and date_confidence 'day', and stays eligible.
+ */
+export function prEligibleSession(
+  source: string | null | undefined,
+  dateConfidence: string | null | undefined,
+): boolean {
+  return !(source === 'import' && dateConfidence !== 'day');
+}

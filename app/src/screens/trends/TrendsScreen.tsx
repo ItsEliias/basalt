@@ -7,13 +7,20 @@ import {
   loadYearAndChallenge,
   type WeekReview, type CorrelationResult, type YearReview, type MonthlyChallenge,
 } from '@basalt/analytics';
-import { e1rm, bigThree, type BigThree } from '@basalt/training';
+import { e1rm, bigThree, prEligibleSession, type BigThree } from '@basalt/training';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
 import { ShareSheet, WeekShareCard } from '../../components/ShareCards';
 import { CoopCard } from './CoopCard';
 import { loadWeeklyVolume, type WeeklyVolumeReport } from '../../lib/weeklyVolumeData';
 import { volumeLine } from '@basalt/training';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { Detail } from '../../components/DetailProvider';
+import { StreaksCard, XpCard, SocialCard, makeInviteCode, type BadgeInputs, type SocialChallenge, type ChallengeKind } from '@basalt/extras';
+import {
+  challengeBoard, createChallenge, createInvite, listFriends, myChallenges, myUserId, redeemInvite,
+} from '../../lib/socialData';
+import { Alert } from 'react-native';
 
 // Trends — everything here is computed from the ledger or absent. Gaps stay
 // gray, streak resets don't shame, and there are no charts until there is
@@ -38,6 +45,91 @@ export function TrendsScreen() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [monthly, setMonthly] = useState<MonthlyBehaviorReport | null>(null);
 
+  // V4 motivation Extras — loaded only while their toggles are on.
+  const streaksOn = useExtra('streaks');
+  const xpOn = useExtra('xp');
+  const [trainDays, setTrainDays] = useState<Set<string> | null>(null);
+  const [sleepDays, setSleepDays] = useState<Set<string> | null>(null);
+  const [xpInputs, setXpInputs] = useState<BadgeInputs | null>(null);
+  const socialOn = useExtra('social');
+  const [selfId, setSelfId] = useState<string>('');
+  const [friendCount, setFriendCount] = useState(0);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [socialChallenges, setSocialChallenges] = useState<SocialChallenge[]>([]);
+  const [socialBusy, setSocialBusy] = useState(false);
+  const displayName = useAppStore((st) => st.profile?.name ?? 'Me');
+  const reloadSocial = useCallback(async () => {
+    const uid = await myUserId(supabase);
+    if (!uid) return;
+    setSelfId(uid);
+    setFriendCount((await listFriends(supabase)).length);
+    const cs = await myChallenges(supabase);
+    const withBoards: SocialChallenge[] = [];
+    for (const c of cs.slice(0, 3)) {
+      const b = await challengeBoard(supabase, c.id);
+      withBoards.push({ id: c.id, kind: c.kind, startsOn: c.startsOn, endsOn: c.endsOn, ...b });
+    }
+    setSocialChallenges(withBoards);
+  }, []);
+  useEffect(() => {
+    if (socialOn) void reloadSocial();
+  }, [socialOn, reloadSocial]);
+  const onCreateInvite = async () => {
+    setSocialBusy(true);
+    const code = makeInviteCode(Array.from({ length: 8 }, () => Math.random()));
+    const r = await createInvite(supabase, code);
+    if (r) setInviteCode(r.code);
+    setSocialBusy(false);
+  };
+  const onRedeem = async (code: string) => {
+    setSocialBusy(true);
+    const r = await redeemInvite(supabase, code);
+    setSocialBusy(false);
+    Alert.alert(r.ok ? 'Friends' : 'Could not add', r.message);
+    if (r.ok) void reloadSocial();
+  };
+  const onCreateChallenge = async (kind: ChallengeKind) => {
+    setSocialBusy(true);
+    const start = new Date();
+    const end = new Date(start.getTime() + 6 * 86400000);
+    const r = await createChallenge(supabase, {
+      kind,
+      startsOn: start.toISOString().slice(0, 10),
+      endsOn: end.toISOString().slice(0, 10),
+      displayName,
+    });
+    setSocialBusy(false);
+    if (!r.ok) Alert.alert('Could not create', r.message ?? 'Unknown error.');
+    else void reloadSocial();
+  };
+  useEffect(() => {
+    if (!streaksOn) return;
+    void activeDaysFor(supabase, 'workout', { restAware: true }).then((r) => r.ok && setTrainDays(r.data));
+    void supabase
+      .from('basalt_sleep_sessions')
+      .select('date')
+      .gte('date', new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10))
+      .limit(400)
+      .then(({ data }) => setSleepDays(new Set((data ?? []).map((r: { date: string }) => r.date))));
+  }, [streaksOn]);
+  useEffect(() => {
+    if (!xpOn) return;
+    void (async () => {
+      const count = async (table: string) => {
+        const { count: c } = await supabase.from(table).select('*', { count: 'exact', head: true });
+        return c ?? 0;
+      };
+      const [entries, sessions, walks, sleepRecords] = await Promise.all([
+        count('basalt_food_entries'), count('basalt_workout_sessions'),
+        count('basalt_walks'), count('basalt_sleep_sessions'),
+      ]);
+      const { data: walkRows } = await supabase.from('basalt_walks').select('distance_m').limit(2000);
+      const totalWalkKm = (walkRows ?? []).reduce((s2: number, r: { distance_m: number | null }) => s2 + (Number(r.distance_m) || 0), 0) / 1000;
+      const run = fullDays ? currentAndLongest(fullDays, new Date()).longest : 0;
+      setXpInputs({ entries, sessions, walks, sleepRecords, totalWalkKm, longestCompleteLogRun: run });
+    })();
+  }, [xpOn, fullDays]);
+
   const load = useCallback(() => {
     setLoadFailed(false);
     void (async () => {
@@ -61,7 +153,8 @@ export function TrendsScreen() {
         setFullDays(full.ok ? full.data : new Set());
         setAnyDays(any.ok ? any.data : new Set());
 
-        // Records: best e1RM per exercise from real set history.
+        // Records: best e1RM per exercise from real set history. Import
+        // rule: week-dated imported sessions never appear here.
         const { data: sets } = await supabase
           .from('basalt_set_entries')
           .select('weight_kg, reps, set_type, completed_at, session_exercise_id')
@@ -69,9 +162,22 @@ export function TrendsScreen() {
           .limit(2000);
         const { data: exs } = await supabase
           .from('basalt_session_exercises')
-          .select('id, exercise_name')
+          .select('id, exercise_name, session_id')
           .limit(1000);
-        const nameFor = new Map<string, string>((exs ?? []).map((r: any) => [r.id, r.exercise_name]));
+        const { data: sess } = await supabase
+          .from('basalt_workout_sessions')
+          .select('id, source, date_confidence')
+          .limit(1000);
+        const eligibleSession = new Set(
+          (sess ?? [])
+            .filter((r: any) => prEligibleSession(r.source ?? null, r.date_confidence ?? null))
+            .map((r: any) => r.id),
+        );
+        const nameFor = new Map<string, string>(
+          (exs ?? [])
+            .filter((r: any) => eligibleSession.has(r.session_id))
+            .map((r: any) => [r.id, r.exercise_name]),
+        );
         const best = new Map<string, { e1rm: number; date: string }>();
         for (const s of sets ?? []) {
           if ((s as any).set_type === 'warmup') continue;
@@ -183,6 +289,36 @@ export function TrendsScreen() {
         </Card>
       ) : null}
 
+      {/* ── V4 motivation Extras — off means these cards don't exist ── */}
+      <ExtraSlot id="streaks">
+        {anyDays && trainDays && sleepDays ? (
+          <Card>
+            <StreaksCard logging={anyDays} training={trainDays} sleep={sleepDays} />
+          </Card>
+        ) : null}
+      </ExtraSlot>
+      <ExtraSlot id="xp">
+        {xpInputs ? (
+          <Card>
+            <XpCard inputs={xpInputs} />
+          </Card>
+        ) : null}
+      </ExtraSlot>
+      <ExtraSlot id="social">
+        <Card>
+          <SocialCard
+            selfId={selfId}
+            friendCount={friendCount}
+            myInviteCode={inviteCode}
+            challenges={socialChallenges}
+            busy={socialBusy}
+            onCreateInvite={() => void onCreateInvite()}
+            onRedeem={(c) => void onRedeem(c)}
+            onCreateChallenge={(k) => void onCreateChallenge(k)}
+          />
+        </Card>
+      </ExtraSlot>
+
       {/* ── Records — from real set history ────────────────────────── */}
       <Card>
         <ReceiptHeader label="Records" summary={records && records.length > 0 ? 'all-time · e1RM' : undefined} />
@@ -224,6 +360,7 @@ export function TrendsScreen() {
       ) : null}
 
       {/* ── Correlations — gated, disclaimed, checked-not-shown named ── */}
+      <Detail min="standard" moreLabel="MORE — CORRELATIONS →">
       <Card>
         <ReceiptHeader label="Correlations" summary={correlations ? `${correlations.shown.length} past the gates` : undefined} />
         {loadFailed && correlations === null ? (
@@ -255,6 +392,7 @@ export function TrendsScreen() {
           </>
         )}
       </Card>
+      </Detail>
 
       {/* ── Monthly behavior impact — facts + gated correlations ───── */}
       {monthly ? (

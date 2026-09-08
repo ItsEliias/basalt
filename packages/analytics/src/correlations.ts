@@ -91,6 +91,11 @@ export const CHECKED_PAIRS: CorrelationPair[] = [
   { aKey: 'screens_late', bKey: 'sleepMin', aLabel: 'late-screens', bLabel: 'sleep that night', lag: 1 },
   { aKey: 'sleepMin', bKey: 'mood', aLabel: 'sleep', bLabel: 'mood', lag: 0 },
   { aKey: 'steps', bKey: 'mood', aLabel: 'step', bLabel: 'mood', lag: 0 },
+  // Wellbeing (V4 Phase 7): mood/stress against the day's real loads.
+  { aKey: 'intakeKcal', bKey: 'mood', aLabel: 'energy-intake', bLabel: 'mood', lag: 0 },
+  { aKey: 'volumeKg', bKey: 'mood', aLabel: 'training-volume', bLabel: 'mood', lag: 0 },
+  { aKey: 'stressLevel', bKey: 'sleepMin', aLabel: 'stress-level', bLabel: 'sleep that night', lag: 1 },
+  { aKey: 'sleepMin', bKey: 'energyLevel', aLabel: 'sleep', bLabel: 'energy level', lag: 0 },
 ];
 
 export function computeCorrelations(series: DailySeries, pairs: CorrelationPair[] = CHECKED_PAIRS): {

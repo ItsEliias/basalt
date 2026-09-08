@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTheme } from '../theme';
@@ -23,7 +23,7 @@ export type PebbleAction = {
 export type PebbleProposal = {
   /** Stable id; a dismissal keys on it for the rest of the day. */
   id: string;
-  kind: 'progression' | 'macro-shortfall' | 'readiness-swap' | 'sleep-debt';
+  kind: 'progression' | 'macro-shortfall' | 'readiness-swap' | 'sleep-debt' | 'stress-swap' | 'missed-session';
   text: string;
   /** Exactly two: the action, and the way out. */
   actions: readonly [PebbleAction, PebbleAction];
@@ -76,15 +76,17 @@ function BlinkingPebble({ size }: { size: number }) {
  * The one place Pebble is allowed to appear in the app. No proposal, no
  * Pebble — this returns null, it does not render an idle mascot.
  */
-export function PebbleSlot({ proposal, onAction }: {
+export function PebbleSlot({ proposal, onAction, mascot }: {
   proposal: PebbleProposal | null;
   onAction: (proposal: PebbleProposal, action: PebbleAction) => void;
+  /** Optional mascot override (the growth Extra passes a staged pebble). */
+  mascot?: ReactNode;
 }) {
   const { theme } = useTheme();
   if (!proposal) return null;
   return (
     <View style={styles.row} accessibilityRole="alert" accessibilityLabel={`Pebble proposes: ${proposal.text}`}>
-      <BlinkingPebble size={44} />
+      {mascot ?? <BlinkingPebble size={44} />}
       <View
         style={[
           styles.bubble,

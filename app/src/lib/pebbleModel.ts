@@ -124,6 +124,37 @@ export function readinessSwapProposal(input: {
   };
 }
 
+/** Missed planned session (V4 Phase 8d): shift the week, never a lecture. */
+export function missedSessionProposal(input: {
+  yesterdayWasPlanned: boolean;
+  sessionYesterday: boolean;
+}): PebbleProposal | null {
+  if (!input.yesterdayWasPlanned || input.sessionYesterday) return null;
+  return {
+    id: 'missed-session',
+    kind: 'missed-session',
+    text: 'Yesterday was a planned training day with no session. Shift the week — train today and the plan slides along; nothing breaks, nothing is lost.',
+    actions: [
+      { label: 'Open Train', kind: 'open-train' },
+      { label: 'Leave it', kind: 'dismiss' },
+    ],
+  };
+}
+
+/** The wellbeing stress rule (V4 Phase 7) — text comes from analytics. */
+export function stressSwapProposal(input: { text: string } | null): PebbleProposal | null {
+  if (!input) return null;
+  return {
+    id: 'stress-swap',
+    kind: 'stress-swap',
+    text: input.text,
+    actions: [
+      { label: 'Swap lighter', kind: 'open-train' },
+      { label: 'Not now', kind: 'dismiss' },
+    ],
+  };
+}
+
 /** Short last night against the sleep target. */
 export function sleepDebtProposal(input: {
   sleepHours: number | null;

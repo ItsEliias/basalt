@@ -1,4 +1,5 @@
-import type { ProfileRecord } from '@basalt/core-data';
+import type { ProfileRecord, PtIntake } from '@basalt/core-data';
+import { onboardingExtraScreens } from '@basalt/core-data';
 import type { GoalKey, TargetInput, ActivityLevel, BiologicalSex } from '@basalt/nutrition';
 
 // Onboarding view-model — pure. Options are verbatim from the prototype
@@ -20,7 +21,8 @@ export const UNIT_OPTIONS = ['Metric — kg · cm', 'Imperial — lb · in'] as 
 export const CONDITION_OPTIONS = [
   'Nothing to note', 'High blood pressure', 'Type 1 diabetes', 'Type 2 diabetes',
   'Heart condition', 'Asthma', 'Pregnant', 'Postpartum', 'Shoulder injury',
-  'Knee injury', 'Lower-back issues', 'Limited mobility', 'Recovering from surgery',
+  'Knee injury', 'Lower-back issues', 'Wrist issues', 'Hip issues',
+  'Limited mobility', 'Recovering from surgery',
 ];
 export const MEDICATION_OPTIONS = [
   'GLP-1 (Ozempic, Wegovy…)', 'Insulin', 'Thyroid medication', 'Other appetite-affecting', 'None / skip',
@@ -68,6 +70,26 @@ export const MOTIVATION_OPTIONS = [
 ];
 export const CHECKIN_OPTIONS = ["Quiet — I'll open it", 'Weekly digest only', 'Daily reminder'];
 
+// ── V4 Phase 8a — the PT-intake additions ──────────────────────────────
+
+export const EXPERIENCE_OPTIONS: { key: NonNullable<PtIntake['experience']>; title: string; sub: string }[] = [
+  { key: 'new', title: 'New to training', sub: 'Higher reps to learn movement · conservative loads · the app explains more' },
+  { key: 'under1y', title: 'Under a year', sub: 'Building the base · steady double progression' },
+  { key: '1to3y', title: '1–3 years', sub: 'Standard programming · fewer explanations' },
+  { key: '3plus', title: '3+ years', sub: 'You know what RIR means · the app stays out of the way' },
+];
+export const DAYS_PER_WEEK_OPTIONS = ['1', '2', '3', '4', '5', '6'];
+export const SESSION_MINUTES_OPTIONS = ['30', '45', '60', '75'];
+export const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+export const MEALS_PER_DAY_OPTIONS = ['2', '3', '4', '5'];
+export const COOKING_OPTIONS: { key: NonNullable<NonNullable<PtIntake['diet']>['cookingTime']>; label: string }[] = [
+  { key: 'quick', label: 'Quick — 15 min tops' },
+  { key: 'normal', label: 'Normal' },
+  { key: 'happy_to_cook', label: 'Happy to cook' },
+];
+export const MEDICAL_LINE =
+  'If you have a medical condition, check with a doctor before starting a new training programme.';
+
 export type OnboardingState = {
   name: string;
   age: string;
@@ -92,6 +114,20 @@ export type OnboardingState = {
   checkin: string | null;
   /** V3.4: the theme picked on the final step; null keeps the default. */
   theme: string | null;
+  // V4 Phase 8a — PT intake
+  experience: NonNullable<PtIntake['experience']> | null;
+  daysPerWeek: string | null;
+  sessionMinutes: string | null;
+  weekdays: number[];
+  limitationNote: string;
+  dislikes: string;
+  mealsPerDay: string | null;
+  cookingTime: NonNullable<NonNullable<PtIntake['diet']>['cookingTime']> | null;
+  dumbbellMaxKg: string;
+  kettlebellKg: string;
+  waist: string;
+  /** V4 Phase 8h — null keeps the default (standard). */
+  detail: 'simple' | 'standard' | 'full' | null;
 };
 
 export const initialState: OnboardingState = {
@@ -101,17 +137,29 @@ export const initialState: OnboardingState = {
   allergies: [], diets: [], place: null, equipment: [],
   job: null, exercising: null, sleep: null, stress: null,
   motivations: [], checkin: null, theme: null,
+  experience: null, daysPerWeek: null, sessionMinutes: null, weekdays: [],
+  limitationNote: '', dislikes: '', mealsPerDay: null, cookingTime: null,
+  dumbbellMaxKg: '', kettlebellKg: '', waist: '', detail: null,
 };
 
-export const TOTAL_STEPS = 9;
+// V4: after the theme step, one screen per onboarding-flagged Extra (or
+// group) — derived from the registry, never hand-counted here.
+export const EXTRA_SCREENS = onboardingExtraScreens();
+export const CORE_STEPS = 12;
+export const TOTAL_STEPS = CORE_STEPS + EXTRA_SCREENS.length;
 
-/** Gym-only skips the home-equipment step (7). */
+/** The extras screen shown at `step`, or null on a core step. */
+export function extraScreenAt(step: number) {
+  return step > CORE_STEPS ? EXTRA_SCREENS[step - CORE_STEPS - 1] ?? null : null;
+}
+
+/** Gym-only skips the home-equipment step (now 8). */
 export function nextStep(current: number, state: OnboardingState): number {
-  if (current === 6 && state.place === 'gym') return 8;
+  if (current === 7 && state.place === 'gym') return 9;
   return Math.min(current + 1, TOTAL_STEPS);
 }
 export function prevStep(current: number, state: OnboardingState): number {
-  if (current === 8 && state.place === 'gym') return 6;
+  if (current === 9 && state.place === 'gym') return 7;
   return Math.max(current - 1, 1);
 }
 
@@ -197,6 +245,34 @@ export function checkinKey(label: string | null): 'quiet' | 'weekly' | 'daily' |
   return 'daily';
 }
 
+/** The pt_intake blob — only what was actually answered lands. */
+export function buildPtIntake(state: OnboardingState): PtIntake | null {
+  const intake: PtIntake = {};
+  if (state.experience) intake.experience = state.experience;
+  const schedule: NonNullable<PtIntake['schedule']> = {};
+  if (state.daysPerWeek) schedule.daysPerWeek = parseInt(state.daysPerWeek, 10);
+  if (state.sessionMinutes) schedule.sessionMinutes = parseInt(state.sessionMinutes, 10);
+  if (state.weekdays.length > 0) schedule.weekdays = [...state.weekdays].sort();
+  if (Object.keys(schedule).length > 0) intake.schedule = schedule;
+  const inventory: NonNullable<PtIntake['inventory']> = {};
+  const db = num(state.dumbbellMaxKg);
+  if (db) inventory.dumbbellMaxKg = db;
+  const kb = num(state.kettlebellKg);
+  if (kb) inventory.kettlebellKg = kb;
+  if (state.equipment.includes('Adjustable dumbbells')) inventory.adjustableDumbbells = true;
+  if (Object.keys(inventory).length > 0) intake.inventory = inventory;
+  if (state.limitationNote.trim()) intake.limitations = { note: state.limitationNote.trim() };
+  const diet: NonNullable<PtIntake['diet']> = {};
+  const dislikes = state.dislikes.split(',').map((d) => d.trim()).filter(Boolean);
+  if (dislikes.length > 0) diet.dislikes = dislikes;
+  if (state.mealsPerDay) diet.mealsPerDay = parseInt(state.mealsPerDay, 10);
+  if (state.cookingTime) diet.cookingTime = state.cookingTime;
+  if (Object.keys(diet).length > 0) intake.diet = diet;
+  const waist = num(state.waist);
+  if (waist) intake.measurements = { waistCm: isImperial(state) ? Math.round(waist * CM_PER_IN * 10) / 10 : waist };
+  return Object.keys(intake).length > 0 ? intake : null;
+}
+
 /** The profile row this intake produces — everything editable in Settings. */
 export function buildProfile(state: OnboardingState): Partial<ProfileRecord> {
   const conditions = state.conditions.filter((c) => c !== 'Nothing to note');
@@ -226,6 +302,8 @@ export function buildProfile(state: OnboardingState): Partial<ProfileRecord> {
     motivations: state.motivations,
     checkinPreference: checkinKey(state.checkin),
     useMetric: !isImperial(state),
+    ptIntake: buildPtIntake(state),
+    ...(state.detail ? { detail: state.detail } : {}),
   };
 }
 

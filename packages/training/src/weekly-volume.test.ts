@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { weeklyMuscleVolume, bandForPhase, volumeLine, WEEKLY_SET_BAND, SECONDARY_CREDIT } from './weekly-volume';
+import { weeklyMuscleVolume, bandForPhase, isHardSet, volumeLine, volumeProposals, WEEKLY_SET_BAND, SECONDARY_CREDIT, type RegionVolume } from './weekly-volume';
 
 describe('weeklyMuscleVolume', () => {
   it('primary sets count 1.0, secondary 0.5 — half-credit published', () => {
@@ -56,5 +56,42 @@ describe('volumeLine', () => {
     ]);
     expect(volumeLine(v.find((x) => x.region === 'shoulders')!)).toBe('5.5 of 10–20 sets · below the band');
     expect(volumeLine(v.find((x) => x.region === 'chest')!)).toBe('11 of 10–20 sets · inside the band');
+  });
+});
+
+describe('hard sets + the two-week rule (8-0)', () => {
+  it('RIR ≤ 3 is hard; unknown counts as hard; RIR 4+ is not', () => {
+    expect(isHardSet(0)).toBe(true);
+    expect(isHardSet(3)).toBe(true);
+    expect(isHardSet(null)).toBe(true);
+    expect(isHardSet(undefined)).toBe(true);
+    expect(isHardSet(4)).toBe(false);
+  });
+
+  const rv = (region: string, sets: number): RegionVolume => ({
+    region: region as RegionVolume['region'], sets,
+    bandLow: 10, bandHigh: 20,
+    position: sets < 10 ? 'below' : sets > 20 ? 'above' : 'inside',
+  });
+
+  it('one odd week proposes nothing', () => {
+    expect(volumeProposals([rv('chest', 6)], [rv('chest', 14)])).toEqual([]);
+  });
+
+  it('two weeks under → add a set, citing both weeks', () => {
+    const p = volumeProposals([rv('chest', 7)], [rv('chest', 6)]);
+    expect(p).toHaveLength(1);
+    expect(p[0]!.kind).toBe('add-set');
+    expect(p[0]!.reason).toContain('6, then 7');
+  });
+
+  it('two weeks over → drop a set, no scolding', () => {
+    const p = volumeProposals([rv('back', 24)], [rv('back', 23)]);
+    expect(p[0]!.kind).toBe('drop-set');
+    expect(p[0]!.reason).not.toMatch(/too much|stop|excessive!/i);
+  });
+
+  it('inside weeks propose nothing', () => {
+    expect(volumeProposals([rv('quads', 14)], [rv('quads', 15)])).toEqual([]);
   });
 });

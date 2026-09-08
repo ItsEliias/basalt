@@ -35,3 +35,7 @@ export * from './training-max';
 export * from './tempo';
 export * from './tile-cache';
 export * from './mobility';
+export * from './generator/catalog';
+export * from './generator/templates';
+export * from './generator/generate';
+export * from './pain';

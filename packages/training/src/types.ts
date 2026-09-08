@@ -43,6 +43,7 @@ export type SetEntry = {
   restS: number | null;
   comment: string | null;
   completedAt: string;
+  pain: number | null;
 };
 
 export type SetInput = {
@@ -55,6 +56,8 @@ export type SetInput = {
   rpe?: number | null;
   restS?: number | null;
   comment?: string | null;
+  /** 0–3, the user's own word for how the movement felt (Phase 8d). */
+  pain?: number | null;
   /** Backdates the row's own completion timestamp — without it the DB
    *  default (`now()`) applies even for a set logged inside a backdated
    *  session, which is only wrong for backdated writes (seed scripts). */
@@ -102,6 +105,7 @@ export function mapSetEntry(r: any): SetEntry {
     rpe: r.rpe === null || r.rpe === undefined ? null : Number(r.rpe),
     restS: r.rest_s ?? null,
     comment: r.comment ?? null,
+    pain: r.pain ?? null,
     completedAt: r.completed_at,
   };
 }

@@ -119,17 +119,28 @@ their own guardrails, because calm is the one place gamification does the most d
 
 ## 6. Forbidden
 
-**Since the 2026-09-04 amendment (V3.4) this list is two lists.**
+**Since the 2026-09-04 amendment (V3.4) this list is two lists; the V4
+amendment (§8 Extras) makes it three.**
 
-**Globally forbidden — every theme, no exceptions:** XP/levels/coins/badges-as-currency ·
-confetti · streak shaming · fake precision · narration of results (motivational
-cheerleading, "You're crushing it!", AI summaries that displace data) · hidden formulas ·
-capture paywalls · any mandatory capture modality · sleep stages as anything but display ·
+**Globally forbidden — every theme, every Extra, no exceptions:** streak
+shaming · fake precision · motivational cheerleading that displaces data
+("You're crushing it!") · hidden formulas · capture paywalls · any mandatory
+capture modality · sleep stages as anything but display ·
 emoji in UI copy · dashboard-as-forced-home · low-density big-card diaries that hide
 numbers (the MFP-redesign failure — a density rule, not a corner-radius rule) · upsells
 inside onboarding, countdown timers, pre-selected annual plans, ads to paying users ·
 bright colour without semantic meaning *within a theme's own declared palette* ·
 localStorage in web builds.
+
+**Extras-only — never on by default, never affects a core number:**
+XP/levels/badges · confetti (PR-detected moments only) · streaks (with
+published freeze rules) · mascot growth stages · social
+challenges/leaderboards (friends-only aggregates) · AI narration of a
+completed day (one paragraph, labelled "Generated summary", never a
+notification, never on Trends). Each of these was globally forbidden
+before V4; they are now legal ONLY as registry Extras (§8) — off by
+default, honest inside (published formulas, ranges, real milestones), and
+with every Extra off the app renders pixel-identical to core Basalt.
 
 **Theme-scoped expression — legal only where a theme declares the token for it:**
 rings/circular gauges (`shape.meter: 'ring' | 'dial'` — over-cap words mandatory, see the
@@ -191,6 +202,96 @@ metadata, ghost values) cleared 4.5:1 on `bg` and `surface` but only 4.30:1 on `
 (nested/raised elements) — `text.faint` is now `#848C98`, which clears all three. The
 *fill* use of the same colour (a cap bar's neutral/under-cap state, which only needs 3.0:1)
 keeps the original `#7A828E` unchanged — see `fill.faint` in the contract.
+
+## 8. Extras (V4 amendment)
+
+The Extras framework carries four binding rules:
+
+1. **Default-off.** Every Extra ships off unless its registry entry says
+   otherwise; the only sanctioned default-on groups are capture input
+   methods, glanceability refinements of existing surfaces, and the
+   Basalt-only transparency features — none of which are motivational.
+2. **All-off-identical.** With every Extra off, the app is pixel-identical
+   to core Basalt. Enforced by the all-off snapshot diff run at the end of
+   every phase, not by review.
+3. **Honesty inside Extras.** Published formulas (XP curves and streak
+   rules are public, in-app), ranges not false precision, AI proposes
+   never narrates — except the one Extra whose whole point is narration,
+   which is labelled "Generated summary" and confined to Today. No Extra
+   changes a number the core app shows; Extras add surfaces, never edit
+   data.
+4. **One registry.** `packages/core-data/src/extras/registry.ts` is the
+   list; Settings › Extras, onboarding and every `<ExtraSlot>` derive from
+   it. Nothing else hard-codes an Extra.
+
+The current list lives in the registry file; the report for each V4 phase
+records what was added.
+
+## 9. Targets published + Rails + Coach (V4 Phase 6 amendment)
+
+**§Targets published.** Every nutrition target the app computes is a RANGE
+from a formula stated in-app, in words, next to the number: Mifflin-St
+Jeor ±10% × activity factor for energy (then the user's chosen rate),
+protein 1.6–2.2 g/kg, fat 20–35% of energy, carbs the remainder, fibre
+14 g/1,000 kcal, sugar under 10% of energy, sodium under 2,300 mg, water
+by body weight. Any target may be overridden with a custom value — the
+computed range stays visible beside it, always. The plan's weight input is
+the 7-day trend, never a single reading.
+
+**§Rails.** Safety rails live in engine code with their reasons rendered
+in words, pinned by test: energy floor 1,200 kcal (stated female) /
+1,500 kcal (stated male or unspecified); rate cap 1% of body weight per
+week for loss and 0.5% for gain — a request beyond the cap is clamped and
+the only coaching allowed is "slow down"; an under-18 date of birth hides
+the plan entirely (logging keeps working); the line "Estimates, not
+medical advice." renders wherever the plan does; and **no BMI category
+label may ever appear** — enforced by a source-scan test across app and
+packages.
+
+**§Coach.** The coach (an Extra, requiring Pebble) answers only when
+asked — it never initiates. Every answer cites the exact stored numbers it
+used, by name. It may propose exactly one action, rendered as
+Accept / Ignore through the normal proposal path — it never edits data.
+Hard limits, each pinned by test: no diagnosis, no dosing, disordered-
+eating signals end coaching and point to help, medical questions get
+"one for a doctor". The crisis path (§Wellbeing, Phase 7) runs before the
+coach sees any text.
+
+## 10. Wellbeing (V4 Phase 7 amendment)
+
+Binding rules for the Mind section and every wellbeing Extra:
+
+- **No diagnosis, no screening.** No PHQ-9, no GAD-7, no questionnaire
+  that produces a clinical-sounding result. The check-in is three words
+  a day and an optional sentence — data for the user's own correlations,
+  nothing else.
+- **No mental-health score, ever.** Mood/energy/stress render as words
+  (Low · Flat · OK · Good · High), never as faces, never aggregated into
+  a number about the person.
+- **The crisis path is core and unconditional.** Every self-expression
+  text field runs the on-device crisis detector first; a hit stops all
+  coaching and shows the crisis screen — regional numbers one tap away
+  (call and text), findahelpline.com everywhere else, no mascot, no
+  "are you sure", and the user's entry still saves. No Extra, setting or
+  flag can gate any part of this; the screen may never sit inside an
+  ExtraSlot (lint-pinned).
+- **Journals are private by construction.** Local-only by default; cloud
+  sync is its own switch with the trade in plain words; no engine reads
+  an entry; AI sees one only when the coach Extra is on AND the user
+  taps ask on that entry.
+
+## 11. Detail level (V4 Phase 8h amendment)
+
+A third axis beside theme and Extras: `detail: simple | standard | full`
+(Settings › Display, one onboarding screen after the theme picker,
+default standard). **The law: detail changes what is SHOWN, never what
+is computed.** Every number visible in Simple is the same number Full
+shows — Simple may display it rounder (hero to the nearest 10), never
+differently. Everything hidden stays one tap away behind a MORE
+affordance; the "why" tap works at every level; over-cap always renders
+in words at every level. Pinned by a conformance test (per-level number
+sets are subsets with equal values) and a lint-as-test (no engine call
+inside a `<Detail>` block — display only).
 
 ## 7. Reference files
 

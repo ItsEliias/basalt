@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, ChipGroup, BodyFigure, ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav, GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput, mono, mmss, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
   platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
+  flagPainOnLastSet, substitutionForName, loadPainSummary, PAIN_PROMPT_LINE, type PainSummary,
   emomConfig, TABATA_CONFIG, circuitConfig, circuitLabel, bigThree, recoveryIntensity, MIN_TRANSITION_S,
   getActiveProgram, startProgram, stopProgram, phaseFor, weekIndexFor, phaseLabel, type Program,
   REGION_FOR_MUSCLE, type RegionRecovery, type BodyRegion,
@@ -19,7 +20,12 @@ import { useAppStore } from '../../state/appStore';
 import { useSessionStore, type SessionExerciseState } from '../../state/sessionStore';
 import { equipmentTokens, prevCellText, exerciseMetaText, elapsedText } from './model';
 import { OutdoorTab } from './OutdoorTab';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { ConfettiBurst } from '@basalt/extras';
 import { RacePlanCard } from './RacePlanCard';
+import { ProgrammeCard } from './ProgrammeCard';
+import { GenerateProgrammeSheet } from './GenerateProgrammeSheet';
+import { HardSetsCard } from './HardSetsCard';
 import { AdaptSheet } from './AdaptSheet';
 import { loadDeloadSignals } from '../../lib/periodizationData';
 import { timerServiceFailed } from '../../lib/timerService';
@@ -54,6 +60,17 @@ function SessionTab() {
   const profile = useAppStore((s) => s.profile);
   const bumpToday = useAppStore((s) => s.bumpToday);
   const session = useSessionStore();
+  // Confetti on PRs only (XP Extra): fires when a committed set's quiet PR
+  // mark appears — the same detection the sets table already renders.
+  const xpOn = useExtra('xp');
+  const prTotal = session.exercises.reduce(
+    (n: number, ex: SessionExerciseState) => n + ex.rows.filter((r) => r.committed && r.isPr).length, 0);
+  const lastPrTotal = useRef(prTotal);
+  const [confettiKey, setConfettiKey] = useState(0);
+  useEffect(() => {
+    if (xpOn && prTotal > lastPrTotal.current) setConfettiKey((k) => k + 1);
+    lastPrTotal.current = prTotal;
+  }, [prTotal, xpOn]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [rpeOpen, setRpeOpen] = useState(false);
   const [adaptOpen, setAdaptOpen] = useState(false);
@@ -84,6 +101,8 @@ function SessionTab() {
   const [program, setProgram] = useState<Program | null>(null);
   const [programDays, setProgramDays] = useState<number[]>([1, 3, 5]);
   const [deload, setDeload] = useState<{ advised: boolean; reasons: string[] } | null>(null);
+  const [pain, setPain] = useState<PainSummary | null>(null);
+  const [genOpen, setGenOpen] = useState(false);
   const refreshProgram = () =>
     void getActiveProgram(supabase).then((r) => {
       if (!r.ok) return;
@@ -92,6 +111,7 @@ function SessionTab() {
     });
 
   useEffect(() => {
+    void loadPainSummary(supabase).then((r) => r.ok && setPain(r.data));
     if (!session.sessionId) {
       void listRecentSessions(supabase, 8).then((r) => r.ok && setRecent(r.data));
       refreshTemplates();
@@ -133,6 +153,12 @@ function SessionTab() {
           <CTA label={session.busy ? '…' : 'Start session'} disabled={session.busy} onPress={() => void session.start()} />
         </Card>
 
+        {pain?.promptCheckup ? (
+          <Card>
+            <SrcNote>{PAIN_PROMPT_LINE}</SrcNote>
+          </Card>
+        ) : null}
+
         <Card>
           <ReceiptHeader label="Templates" summary="start with your own plan pre-filled" />
           {templates.length > 0 ? (
@@ -168,6 +194,10 @@ function SessionTab() {
         </Card>
 
         {/* ── Program — the mesocycle, phase + planned rest ──────────── */}
+        <ExtraSlot id="programmes">
+          <ProgrammeCard />
+        </ExtraSlot>
+
         <Card>
           <ReceiptHeader
             label="Program"
@@ -216,9 +246,18 @@ function SessionTab() {
                 disabled={programDays.length === 0}
                 onPress={() => void startProgram(supabase, programDays).then(refreshProgram)}
               />
+              {/* The split generator is CORE (Phase 8c) — reachable with
+                  every Extra off; the programmes Extra adds templates and
+                  check-ins on top, never the generator itself. */}
+              <Pressable onPress={() => setGenOpen(true)} hitSlop={8}>
+                <Text style={[styles.addSet, { color: theme.text.carbs }]}>BUILD MY PROGRAMME FROM MY INTAKE →</Text>
+              </Pressable>
+              <GenerateProgrammeSheet open={genOpen} onClose={() => setGenOpen(false)} onKept={() => { setGenOpen(false); refreshProgram(); }} />
             </>
           )}
         </Card>
+
+        <HardSetsCard />
 
         {/* ── Race plan — one knob, Riegel model, tick-box weeks ────── */}
         <RacePlanCard />
@@ -274,6 +313,11 @@ function SessionTab() {
 
   return (
     <>
+      {confettiKey > 0 ? (
+        <ExtraSlot id="xp">
+          <ConfettiBurst key={confettiKey} />
+        </ExtraSlot>
+      ) : null}
       <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <View style={session.exercises.length === 0 ? { opacity: 0.4 } : null}>
@@ -297,7 +341,7 @@ function SessionTab() {
             key={ex.sessionExerciseId}
             onLayout={(e) => cardYRef.current.set(ex.sessionExerciseId, e.nativeEvent.layout.y)}
           >
-            <ExerciseCard ex={ex} index={i} all={session.exercises} onCommitted={scrollToPartner} />
+            <ExerciseCard ex={ex} index={i} all={session.exercises} onCommitted={scrollToPartner} painFlaggedNames={pain?.flaggedExercises.map((f) => f.name) ?? []} />
           </View>
         ))}
 
@@ -354,12 +398,13 @@ function SessionTab() {
   );
 }
 
-function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseState; index: number; all: SessionExerciseState[]; onCommitted?: (id: string) => void }) {
+function ExerciseCard({ ex, index, all, onCommitted, painFlaggedNames = [] }: { ex: SessionExerciseState; index: number; all: SessionExerciseState[]; onCommitted?: (id: string) => void; painFlaggedNames?: string[] }) {
   const { theme } = useTheme();
   const session = useSessionStore();
   const restHere = session.rest?.sessionExerciseId === ex.sessionExerciseId;
   const [commentFor, setCommentFor] = useState<number | null>(null);
   const [platesOpen, setPlatesOpen] = useState(false);
+  const [painFlagged, setPainFlagged] = useState<number | null>(null);
   const [prsOpen, setPrsOpen] = useState(false);
 
   const supersetLabel = (() => {
@@ -463,6 +508,14 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           </Text>
         </Pressable>
       ) : null}
+      {painFlaggedNames.includes(ex.exercise.name) ? (
+        <Text style={[styles.painNote, { color: theme.text.fat }]}>
+          {(() => {
+            const sub = substitutionForName(ex.exercise.name);
+            return `Pain flagged here last session${sub ? ` — proposed swap: ${sub}` : ''}. Your call, not a mandate.`;
+          })()}
+        </Text>
+      ) : null}
       {ex.target ? (
         <PrevNote>
           {`Target · ${ex.target.sets} × ${ex.target.reps ?? '?'} reps${ex.target.weightKg ? ` @ ${ex.target.weightKg} kg` : ''} · from your template`}
@@ -473,7 +526,20 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           {`Last session · ${prevSummary(ex.prevSets) ?? '—'} · ${new Date(ex.prevPerformedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`}
         </PrevNote>
       ) : null}
-      <SetsHeader columns={['Set', 'Prev', 'kg', 'Reps', 'RIR']} tickColumn />
+      <Pressable
+        onLongPress={() => {}}
+        onPress={() =>
+          Alert.alert(
+            'RIR — reps in reserve',
+            'How many more reps you could honestly have done when you stopped. 0 = nothing left, 2 = two more solid reps in the tank. RPE is the same idea upside down (RPE 8 ≈ RIR 2). Progression listens to it: top of the rep range at RIR ≤ 2 moves the weight up. Guessing is fine — calibration is the point.',
+          )
+        }
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel="What is RIR?"
+      >
+        <SetsHeader columns={['Set', 'Prev', 'kg', 'Reps', 'RIR']} tickColumn />
+      </Pressable>
       {ex.rows.map((row, i) => (
         <SetRow
           key={row.setNumber}
@@ -513,6 +579,37 @@ function ExerciseCard({ ex, index, all, onCommitted }: { ex: SessionExerciseStat
           </Pressable>
         ) : null}
       </View>
+      {ex.rows.some((r) => r.committed) ? (
+        <View style={styles.painRow}>
+          <Text style={[styles.painLabel, { color: theme.text.faint }]}>PAIN?</Text>
+          {[1, 2, 3].map((p) => (
+            <Pressable
+              key={p}
+              onPress={() => {
+                setPainFlagged(p);
+                void flagPainOnLastSet(supabase, ex.sessionExerciseId, p as 1 | 2 | 3).then((r) => {
+                  if (!r.ok) setPainFlagged(null);
+                });
+              }}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={`Flag pain ${p} on the last set`}
+            >
+              <Text style={[styles.painChip, { color: painFlagged === p ? theme.text.fat : theme.text.faint }]}>{String(p)}</Text>
+            </Pressable>
+          ))}
+          {painFlagged !== null ? (
+            <Text style={[styles.painNote, { color: theme.text.mute }]}>
+              {(() => {
+                const sub = substitutionForName(ex.exercise.name);
+                return sub
+                  ? `flagged — next session proposes ${sub} instead; your call`
+                  : 'flagged — next session will say so';
+              })()}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {restHere && session.rest ? (
         <RestTimerBar time={mmss(session.rest.remaining)} onSkip={session.skipRest} />
       ) : null}
@@ -823,6 +920,10 @@ export function ExercisePicker({
 }
 
 const styles = StyleSheet.create({
+  painRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 40, flexWrap: 'wrap' },
+  painLabel: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1 },
+  painChip: { fontFamily: mono, fontSize: 13, paddingVertical: 10, paddingHorizontal: 4 },
+  painNote: { fontSize: 11, flexShrink: 1 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   elapsed: { fontFamily: mono, fontSize: 11, letterSpacing: 1.2, textAlign: 'right', flex: 1, marginHorizontal: 10 },

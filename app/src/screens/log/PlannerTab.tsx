@@ -5,8 +5,10 @@ import {
   listMealPlans, addMealPlan, deleteMealPlan, listRecipes, getRecipeDetail, logRecipeServing,
   listGroceryItems, setGroceryChecked, clearCheckedGroceries, groupByAisle, fmtQty,
   loadPlanOutcomes, OUTCOME_TEXT,
+  addFoodEntry, ateOutEstimate, batchCookWeek, planCapsAdherence, recipeFlags, swapAlternatives,
   type MealPlan, type Recipe, type GroceryItem, type MealType, type ReconciledPlan,
 } from '@basalt/nutrition';
+import { Alert } from 'react-native';
 import { isoDay, todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -38,11 +40,18 @@ function nextDays(n: number): { date: string; label: string }[] {
 export function PlannerTab() {
   const { theme } = useTheme();
   const bumpToday = useAppStore((s) => s.bumpToday);
+  const profile = useAppStore((s) => s.profile);
+  const targets = useAppStore((s) => s.targets);
+  const dietPrefs = {
+    dislikes: profile?.ptIntake?.diet?.dislikes ?? [],
+    cookingTime: profile?.ptIntake?.diet?.cookingTime,
+  };
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [grocery, setGrocery] = useState<GroceryItem[]>([]);
   const [reconciled, setReconciled] = useState<ReconciledPlan[]>([]);
   const [adding, setAdding] = useState(false);
+  const [batchPicks, setBatchPicks] = useState<string[]>([]);
   const [addDate, setAddDate] = useState(nextDays(1)[0]!.date);
   const [addSlot, setAddSlot] = useState<MealType>('dinner');
 
@@ -98,10 +107,57 @@ export function PlannerTab() {
                 dayPlans.map((p) => {
                   const recipe = recipeFor(p.recipeId);
                   return (
-                    <Pressable key={p.id} onPress={() => void logPlan(p)} onLongPress={() => void deleteMealPlan(supabase, p.id).then(refresh)} hitSlop={8}>
+                    <Pressable
+                      key={p.id}
+                      onPress={() => void logPlan(p)}
+                      onLongPress={() => {
+                        const options = [
+                          { text: 'Log it', onPress: () => void logPlan(p) },
+                          {
+                            text: 'Swap (similar macros)',
+                            onPress: () => {
+                              const current = recipeFor(p.recipeId);
+                              if (!current) return;
+                              const alts = swapAlternatives(recipes, current);
+                              if (alts.length === 0) { Alert.alert('No alternatives', 'Save more recipes to swap between.'); return; }
+                              Alert.alert('Swap to', 'Closest by energy per serve:', [
+                                ...alts.map((alt) => ({
+                                  text: `${alt.title} (${groupInt(alt.caloriesPerServe)} kcal)`,
+                                  onPress: () => {
+                                    void deleteMealPlan(supabase, p.id)
+                                      .then(() => addMealPlan(supabase, { date: p.date, mealSlot: p.mealSlot, recipeId: alt.id }))
+                                      .then(refresh);
+                                  },
+                                })),
+                                { text: 'Keep it', style: 'cancel' as const },
+                              ]);
+                            },
+                          },
+                          {
+                            text: 'Ate out — log an estimate',
+                            onPress: () => {
+                              const est = ateOutEstimate(recipeFor(p.recipeId) ?? null, p.mealSlot);
+                              void addFoodEntry(supabase, {
+                                mealType: p.mealSlot,
+                                foodName: `~${est.name} (${est.low}–${est.high} kcal)`,
+                                calories: est.kcal, protein: 0, carbs: 0, fat: 0, fiber: 0,
+                                source: 'quick_add',
+                              }).then(() => {
+                                bumpToday();
+                                Alert.alert('Logged as a range', `${est.note}. The rest of today's meal budgets rebalance from what's left.`);
+                              });
+                            },
+                          },
+                          { text: 'Remove', style: 'destructive' as const, onPress: () => void deleteMealPlan(supabase, p.id).then(refresh) },
+                          { text: 'Cancel', style: 'cancel' as const },
+                        ];
+                        Alert.alert(recipeFor(p.recipeId)?.title ?? 'Planned meal', undefined, options);
+                      }}
+                      hitSlop={8}
+                    >
                       <ReceiptRow
                         name={recipe?.title ?? p.note ?? 'Planned meal'}
-                        meta={`${p.mealSlot} · ×${p.serves} ${p.serves === 1 ? 'serve' : 'serves'} · tap to log · hold to remove`}
+                        meta={`${p.mealSlot} · ×${p.serves} ${p.serves === 1 ? 'serve' : 'serves'} · tap to log · hold for swap, ate-out, remove`}
                         value={recipe ? groupInt(recipe.caloriesPerServe * p.serves) : undefined}
                         unit={recipe ? 'kcal' : undefined}
                       />
@@ -130,19 +186,42 @@ export function PlannerTab() {
                 onChange={(label) => setAddSlot(SLOTS.find((s) => s.label === label)!.key)}
               />
               <Text style={[styles.microLabel, { color: theme.text.mute }]}>RECIPE</Text>
-              {recipes.slice(0, 8).map((r) => (
-                <Pressable
-                  key={r.id}
+              {recipes.slice(0, 8).map((r) => {
+                const flags = recipeFlags(r, dietPrefs);
+                const picked = batchPicks.includes(r.id);
+                return (
+                  <Pressable
+                    key={r.id}
+                    onPress={async () => {
+                      await addMealPlan(supabase, { date: addDate, mealSlot: addSlot, recipeId: r.id });
+                      setAdding(false);
+                      void refresh();
+                    }}
+                    onLongPress={() => setBatchPicks((b) => (picked ? b.filter((x) => x !== r.id) : b.length < 3 ? [...b, r.id] : b))}
+                    hitSlop={8}
+                  >
+                    <ReceiptRow
+                      name={`${picked ? '◉ ' : ''}${r.title}`}
+                      meta={flags.length > 0 ? flags.map((f) => f.text).join(' · ') : `serves ${r.serves} · hold to pick for batch-cook`}
+                      value="plan"
+                      valueColor={flags.length > 0 ? theme.text.fat : theme.text.faint}
+                    />
+                  </Pressable>
+                );
+              })}
+              {batchPicks.length >= 2 ? (
+                <CTA
+                  label={`Batch-cook these ${batchPicks.length} — fill the week's lunches & dinners`}
                   onPress={async () => {
-                    await addMealPlan(supabase, { date: addDate, mealSlot: addSlot, recipeId: r.id });
+                    for (const row of batchCookWeek(batchPicks, days[0]!.date)) {
+                      await addMealPlan(supabase, row);
+                    }
+                    setBatchPicks([]);
                     setAdding(false);
                     void refresh();
                   }}
-                  hitSlop={8}
-                >
-                  <ReceiptRow name={r.title} meta={`serves ${r.serves}`} value="plan" valueColor={theme.text.faint} />
-                </Pressable>
-              ))}
+                />
+              ) : null}
               <Pressable onPress={() => setAdding(false)}>
                 <Text style={[styles.cancel, { color: theme.text.faint }]}>CANCEL</Text>
               </Pressable>
@@ -153,6 +232,12 @@ export function PlannerTab() {
         ) : (
           <SrcNote>Save a recipe first — planning starts from your recipes</SrcNote>
         )}
+        {planCapsAdherence(plans, new Map(recipes.map((r) => [r.id, r])), targets).map((line) => (
+          <SrcNote key={line.slice(0, 24)}>{line}</SrcNote>
+        ))}
+        {(profile?.ptIntake?.diet?.mealsPerDay ?? null) !== null ? (
+          <SrcNote>{`Your intake says ${profile!.ptIntake!.diet!.mealsPerDay} meals a day — the planner offers four slots; use the ones that match your day.`}</SrcNote>
+        ) : null}
       </Card>
 
       {/* ── Planned vs eaten — trailing week, facts only ───────────── */}

@@ -40,6 +40,8 @@ function aiKcalText(item: AiItem): string {
   return `~${Math.round(item.calories)}`;
 }
 import { supabase } from '../../lib/supabase';
+import * as Haptics from 'expo-haptics';
+import { playSound } from '../../lib/sounds';
 import { useAppStore } from '../../state/appStore';
 import {
   barcodeDisplay, offToEntryInput, qualityLine, resultMeta, dietaryConflicts,
@@ -52,13 +54,15 @@ import { writeThroughOutbox } from '../../lib/outbox';
 import { AddEntryForm, type DraftEntry } from './AddEntryForm';
 import { capturePhoto, enqueuePhoto, dequeuePhoto, loadPhotoQueue, readQueuedPhotoB64 } from '../../lib/photoFood';
 import { voiceAvailable, startVoiceCapture } from '../../lib/voiceCapture';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { PlateBuilder, type PlateEntry, type PlateFood } from '@basalt/extras';
 import { queuedLabel, type QueuedPhoto } from '../../lib/photoQueueModel';
 
 // Log / Capture — viewfinder with on-device GS1 verification, OFF lookup,
 // manual add, favorites and "frequent at this hour". Every path ends in the
 // same editable-before-save form; nothing auto-commits.
 
-type Mode = 'search' | 'barcode' | 'manual' | 'ai' | 'photo';
+type Mode = 'search' | 'barcode' | 'manual' | 'ai' | 'photo' | 'plate';
 
 type ScanState =
   | { kind: 'idle' }
@@ -69,10 +73,12 @@ type ScanState =
 
 export function LogScreen() {
   const [sub, setSub] = useState('Capture');
+  const planningOn = useExtra('mealPlanning');
+  const active = sub === 'Planner' && !planningOn ? 'Capture' : sub;
   return (
     <View style={{ flex: 1 }}>
-      <SubNav items={['Capture', 'Recipes', 'Planner']} active={sub} onChange={setSub} />
-      {sub === 'Capture' ? <CaptureTab /> : sub === 'Recipes' ? <RecipesTab /> : <PlannerTab />}
+      <SubNav items={planningOn ? ['Capture', 'Recipes', 'Planner'] : ['Capture', 'Recipes']} active={active} onChange={setSub} />
+      {active === 'Capture' ? <CaptureTab /> : active === 'Recipes' ? <RecipesTab /> : <PlannerTab />}
     </View>
   );
 }
@@ -104,6 +110,48 @@ function CaptureTab() {
   const [photoQueue, setPhotoQueue] = useState<QueuedPhoto[]>([]);
   const [voiceState, setVoiceState] = useState<'idle' | 'listening'>('idle');
   const voiceStopRef = useRef<(() => void) | null>(null);
+  // V4 capture Extras — input surfaces, gated; typing stays the floor.
+  const barcodeOn = useExtra('captureBarcode');
+  const photoOn = useExtra('capturePhoto');
+  const voiceOn = useExtra('captureVoice');
+  const plateOn = useExtra('capturePlate');
+  const modes: Mode[] = [
+    'search',
+    ...(barcodeOn ? ['barcode' as const] : []),
+    ...(photoOn ? ['photo' as const] : []),
+    'ai',
+    ...(plateOn ? ['plate' as const] : []),
+    'manual',
+  ];
+  useEffect(() => {
+    if (!modes.includes(mode)) setMode('search');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barcodeOn, photoOn, plateOn]);
+  const [plateFoods, setPlateFoods] = useState<PlateFood[]>([]);
+  const [plateBusy, setPlateBusy] = useState(false);
+  useEffect(() => {
+    if (mode !== 'plate') return;
+    void listFavorites(supabase, 12).then((r) => {
+      if (!r.ok) return;
+      setPlateFoods(r.data.map((f) => ({
+        key: f.id, foodName: f.foodName, brand: f.brand,
+        calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
+        fiber: f.fiber, sugar: f.sugar, sodiumMg: (f as { sodiumMg?: number }).sodiumMg,
+      })));
+    });
+  }, [mode]);
+  const commitPlate = async (entries: PlateEntry[]) => {
+    setPlateBusy(true);
+    const meal = mealForHour(new Date().getHours());
+    for (const e of entries) {
+      await addFoodEntry(supabase, { ...e, mealType: meal });
+    }
+    setPlateBusy(false);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
+    bumpToday();
+    setMode('search');
+  };
   useEffect(() => {
     void loadPhotoQueue().then(setPhotoQueue);
   }, []);
@@ -346,7 +394,9 @@ function CaptureTab() {
       if (!('queued' in r)) void recordFoodUse(supabase, entry);
       setDraft(null);
       setScan({ kind: 'idle' });
-      bumpToday();
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
+    bumpToday();
       void refreshLists();
     }
   };
@@ -423,6 +473,8 @@ function CaptureTab() {
     logLoggingEvent({ type: 'tray_commit', items: tray.length });
     setTray([]);
     setTrayBusy(false);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
     bumpToday();
     void refreshLists();
   };
@@ -444,6 +496,8 @@ function CaptureTab() {
       });
     }
     logLoggingEvent({ type: 'copy_yesterday', meal, entries: toCopy.length });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound('commit');
     bumpToday();
     void refreshLists();
   };
@@ -503,6 +557,12 @@ function CaptureTab() {
           </View>
         ) : null}
 
+        {mode === 'plate' ? (
+          <ExtraSlot id="capturePlate">
+            <PlateBuilder recentFoods={plateFoods} onCommit={(e) => void commitPlate(e)} busy={plateBusy} />
+          </ExtraSlot>
+        ) : null}
+
         {mode === 'photo' ? (
           <View style={{ paddingBottom: 8 }}>
             <CTA label={photoBusy === 'meal' ? 'Estimating…' : 'Photograph a meal'} disabled={photoBusy !== null} onPress={() => void runPhoto('camera', 'meal')} />
@@ -551,7 +611,7 @@ function CaptureTab() {
               onChangeText={setAiText}
               multiline
             />
-            {voiceAvailable() ? (
+            {voiceOn && voiceAvailable() ? (
               <Pressable onPress={() => void toggleVoice()} hitSlop={8}>
                 <Text style={[styles.voiceLink, { color: theme.text.faint }, voiceState === 'listening' && { color: theme.text.ink }]}>
                   {voiceState === 'listening' ? 'LISTENING — TAP WHEN DONE' : 'SPEAK IT INSTEAD'}
@@ -566,7 +626,7 @@ function CaptureTab() {
         {/* ── Capture-mode segmented control — bottom of the capture area,
                a filled control so it can't be mistaken for the tab sub-nav ── */}
         <View style={[styles.modeSeg, { borderTopColor: theme.surfaces.border }]}>
-          {(['search', 'barcode', 'photo', 'ai', 'manual'] as Mode[]).map((m) => (
+          {modes.map((m) => (
             <Pressable
               key={m}
               onPress={() => setMode(m)}

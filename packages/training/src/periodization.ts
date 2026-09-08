@@ -43,6 +43,10 @@ export type Program = {
   /** Training weekdays, 0=Sunday … 6=Saturday. The complement is planned rest. */
   trainingDays: number[];
   active: boolean;
+  /** Programmes Extra: the template this programme came from, if any. */
+  templateId: string | null;
+  weeks: number | null;
+  ratePct: number | null;
 };
 
 export function weekIndexFor(startedOn: string, today: Date): number {

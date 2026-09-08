@@ -87,9 +87,11 @@ export async function loadDailySeries(
     caffeine_late: new Map(), screens_late: new Map(),
   };
   const mood = new Map<string, number>();
+  const energyLevel = new Map<string, number>();
+  const stressLevel = new Map<string, number>();
   const checkins = await client
     .from('basalt_checkins')
-    .select('date, factors, mood')
+    .select('date, factors, mood, energy, stress')
     .eq('user_id', u.data)
     .gte('date', fromIso);
   if (checkins.error) return err(checkins.error.message);
@@ -99,7 +101,9 @@ export async function loadDailySeries(
       factorSeries[key]!.set(r.date, (r.factors ?? []).includes(key) ? 1 : 0);
     }
     if (r.mood !== null && r.mood !== undefined) mood.set(r.date, Number(r.mood));
+    if (r.energy !== null && r.energy !== undefined) energyLevel.set(r.date, Number(r.energy));
+    if (r.stress !== null && r.stress !== undefined) stressLevel.set(r.date, Number(r.stress));
   }
 
-  return ok({ intakeKcal, proteinG, steps, sleepMin, volumeKg, mood, ...factorSeries });
+  return ok({ intakeKcal, proteinG, steps, sleepMin, volumeKg, mood, energyLevel, stressLevel, ...factorSeries });
 }

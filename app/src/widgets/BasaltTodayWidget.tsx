@@ -1,6 +1,6 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
-import { widgetLines, type WidgetSnapshot } from './widgetModel';
+import { macroLine, widgetLines, type WidgetSnapshot } from './widgetModel';
 
 // The home-screen widget — Basalt's tokens, mono numerals, and the same
 // honesty as the app: the snapshot's age is always stated, hide-the-numbers
@@ -14,6 +14,7 @@ const RECOVERY = '#5E72E4';
 
 export function BasaltTodayWidget({ snapshot, nowMs }: { snapshot: WidgetSnapshot | null; nowMs: number }) {
   const lines = widgetLines(snapshot, nowMs);
+  const macros = macroLine(snapshot);
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -39,6 +40,12 @@ export function BasaltTodayWidget({ snapshot, nowMs }: { snapshot: WidgetSnapsho
         text={lines.sub}
         style={{ fontSize: 9, color: MUTE, fontFamily: 'monospace', marginTop: 2 }}
       />
+      {macros ? (
+        <TextWidget
+          text={macros}
+          style={{ fontSize: 10, color: MUTE, fontFamily: 'monospace', marginTop: 5 }}
+        />
+      ) : null}
       {lines.water !== '' ? (
         <TextWidget
           text={lines.water}

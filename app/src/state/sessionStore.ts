@@ -9,9 +9,11 @@ import {
   getActiveProgram, periodize, phaseFor, weekIndexFor, trainingMax, prescribeFromTm,
   tempoBeatAt, tempoText,
   type Suggestion, type ExerciseFeedback, type RepPr, type AdaptChange, type TimerMode,
-  type SetEntry, type Exercise, type GuidedState, type GuidedEvent, type Program,
+  type SetEntry, type Exercise, type GuidedState, type GuidedEvent, type Program, prEligibleSession,
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
+import { playSound } from '../lib/sounds';
+import { scheduleRestDone, cancelRestDone } from '../lib/restNotification';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // The active training session — lives in a store (not screen state) so
@@ -164,12 +166,23 @@ function ensureTicking(get: () => SessionState & { _tick: (elapsedS?: number) =>
 
 async function historyFor(exerciseId: string): Promise<{ bestE1rm: number | null; repPrs: RepPr[] }> {
   // All prior sets for this exercise: session_exercises ids → set rows.
+  // Import rule: week-dated imported sessions never feed PRs/progression.
   const ex = await supabase
     .from('basalt_session_exercises')
-    .select('id')
+    .select('id, session_id')
     .eq('exercise_id', exerciseId)
     .limit(100);
-  const ids = (ex.data ?? []).map((r: any) => r.id);
+  const exRows = (ex.data ?? []) as { id: string; session_id: string }[];
+  const sessionIds = [...new Set(exRows.map((r) => r.session_id))];
+  const sess = sessionIds.length
+    ? await supabase.from('basalt_workout_sessions').select('id, source, date_confidence').in('id', sessionIds)
+    : { data: [] };
+  const eligible = new Set(
+    ((sess.data ?? []) as { id: string; source: string | null; date_confidence: string | null }[])
+      .filter((r) => prEligibleSession(r.source, r.date_confidence))
+      .map((r) => r.id),
+  );
+  const ids = exRows.filter((r) => eligible.has(r.session_id)).map((r) => r.id);
   if (ids.length === 0) return { bestE1rm: null, repPrs: [] };
   const sets = await supabase
     .from('basalt_set_entries')
@@ -180,6 +193,7 @@ async function historyFor(exerciseId: string): Promise<{ bestE1rm: number | null
     id: r.id, sessionExerciseId: r.session_exercise_id, userId: r.user_id,
     setNumber: r.set_number, setType: r.set_type ?? 'normal', reps: r.reps ?? null,
     weightKg: r.weight_kg == null ? null : Number(r.weight_kg), durationS: r.duration_s ?? null,
+    pain: r.pain ?? null,
     rir: r.rir == null ? null : Number(r.rir), rpe: r.rpe == null ? null : Number(r.rpe),
     restS: r.rest_s ?? null, comment: r.comment ?? null, completedAt: r.completed_at,
   }));
@@ -264,6 +278,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     set({ busy: true });
     await endSession(supabase, id, rpe !== null ? { sessionRpe: rpe } : {});
     set({ sessionId: null, startedAt: null, exercises: [], rest: null, busy: false });
+    void cancelRestDone();
   },
 
   addExercise: async (exercise, timed, target) => {
@@ -272,7 +287,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     set({ busy: true });
     const added = await addSessionExercise(supabase, {
       sessionId: state.sessionId,
-      exerciseId: exercise.id,
+      exerciseId: exercise.id || null,
       exerciseName: exercise.name,
       orderIndex: state.exercises.length,
     });
@@ -402,13 +417,18 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
       })();
     get().updateRow(id, index, { committed: true, isPr: pr });
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void playSound(pr ? 'pr' : 'tick');
 
     // Start the per-exercise rest timer.
     set({ rest: { sessionExerciseId: id, remaining: ex.restSeconds } });
+    void scheduleRestDone(ex.restSeconds);
     ensureTicking(get);
   },
 
-  skipRest: () => set({ rest: null }),
+  skipRest: () => {
+    set({ rest: null });
+    void cancelRestDone();
+  },
 
   setRestSeconds: (id, seconds) => {
     set((s) => ({

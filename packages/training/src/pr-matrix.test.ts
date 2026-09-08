@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { repPrMatrix, type PrSet } from './pr-matrix';
+import { prEligibleSession, repPrMatrix, type PrSet } from './pr-matrix';
 import { warmupSets } from './plates';
 
 const s = (weightKg: number | null, reps: number | null, setType = 'normal', completedAt = '2026-08-01'): PrSet =>
@@ -61,5 +61,16 @@ describe('warmupSets — the published ramp', () => {
 
   it('at or below bar weight: just the empty bar', () => {
     expect(warmupSets(20)).toEqual([{ kg: 20, reps: 10, label: 'empty bar' }]);
+  });
+});
+
+describe('import PR rule — week-dated imports never mint PRs', () => {
+  it('ineligible exactly when source=import and confidence is not day', () => {
+    expect(prEligibleSession('import', 'week')).toBe(false);
+    expect(prEligibleSession('import', null)).toBe(false);
+    expect(prEligibleSession('import', 'day')).toBe(true);
+    expect(prEligibleSession(null, 'week')).toBe(true);
+    expect(prEligibleSession('app', undefined)).toBe(true);
+    expect(prEligibleSession(undefined, undefined)).toBe(true);
   });
 });

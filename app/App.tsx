@@ -7,6 +7,7 @@ import { useFonts } from 'expo-font';
 import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { expressiveFontsReady, loadExpressiveFonts } from './src/lib/expressiveFonts';
+import Constants from 'expo-constants';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
 import { FadeIn } from './src/components/FadeIn';
@@ -28,12 +29,32 @@ import { registerTimerService } from './src/lib/timerService';
 import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
 import { rescheduleMonthlyReportNotif, wireMonthlyReportNotifTap } from './src/lib/monthlyReportNotif';
 import { registerBackgroundWork } from './src/lib/backgroundWork';
+import { ExtrasProvider } from './src/components/ExtrasProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ExtrasIntroModal } from './src/components/ExtrasIntro';
+import { FinishProfileModal, FINISH_PROFILE_SEEN_KEY } from './src/components/FinishProfileModal';
+import { DetailProvider } from './src/components/DetailProvider';
+import { extrasIntroSeen } from './src/lib/extras';
 import { isoDay } from '@basalt/core-data';
+import * as Notifications from 'expo-notifications';
 
 // Foreground-service runner must be registered before any notification is
 // displayed — module scope, once. The outbox drains on start, foreground,
 // and interval — a committed write must never be lost to a dead spot.
 registerTimerService();
+// Without a handler, every notification that arrives while the JS process
+// is alive is silently dropped — and the session foreground service keeps
+// the process alive for the whole workout, so rest-done, meditation bells
+// and hydration reminders all vanished (found on device, §28.10). Bells
+// are foreground BY PURPOSE; the rest banner is cheap next to a lost one.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 wireOutboxDraining();
 void rescheduleMonthlyReportNotif();
 void registerBackgroundWork();
@@ -113,7 +134,7 @@ function MainShell() {
 
   const today = new Date();
   const context = view === 'settings'
-    ? 'v0.1'
+    ? `v${Constants.expoConfig?.version ?? '?'}`
     : today.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
@@ -173,7 +194,35 @@ function Gate() {
   }
   if (!session) return <AuthScreen />;
   if (!profile) return <OnboardingScreen />;
-  return <MainShell />;
+  return (
+    <DetailProvider>
+      <MainShell />
+    </DetailProvider>
+  );
+}
+
+/** Existing users get the Extras offers exactly once after updating. */
+function NewInBasalt() {
+  const profile = useAppStore((s) => s.profile);
+  const [open, setOpen] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
+  useEffect(() => {
+    if (!profile) return;
+    void extrasIntroSeen().then((seen) => { if (!seen) setOpen(true); });
+    // Phase 8a: the PT-intake questions existing users never saw — once.
+    if (profile.ptIntake === null) {
+      void AsyncStorage.getItem(FINISH_PROFILE_SEEN_KEY).then((seen) => {
+        if (seen !== 'yes') setFinishOpen(true);
+      });
+    }
+  }, [profile]);
+  if (!profile) return null;
+  return (
+    <>
+      <ExtrasIntroModal open={open} onClose={() => setOpen(false)} />
+      <FinishProfileModal open={finishOpen && !open} onClose={() => setFinishOpen(false)} />
+    </>
+  );
 }
 
 export default function App() {
@@ -249,7 +298,10 @@ export default function App() {
         {/* Icon color must oppose the theme ground — hardcoded "light" made
             the clock and battery invisible on the paper themes. */}
         <StatusBar style={relativeLuminance(theme.surfaces.bg) > 0.5 ? 'dark' : 'light'} />
-        <Gate />
+        <ExtrasProvider>
+          <Gate />
+          <NewInBasalt />
+        </ExtrasProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

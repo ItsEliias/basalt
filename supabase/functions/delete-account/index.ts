@@ -48,6 +48,9 @@ const BASALT_TABLES = [
   // V2/V3 additions — the wipe list is append-only and audited against the
   // migrations directory; a table missing here is a compliance bug.
   'basalt_workout_templates',
+  'basalt_challenge_progress',
+  'basalt_challenge_members',
+  'basalt_friend_days',
   'basalt_template_exercises',
   'basalt_programs',
   'basalt_race_plans',
@@ -55,6 +58,9 @@ const BASALT_TABLES = [
   'basalt_cycle_entries',
   'basalt_ppg_calibration',
   'basalt_pair_days',
+  'basalt_journal_entries',
+  'basalt_supplement_checks',
+  'basalt_supplements',
 ];
 
 // Tables where the user can be EITHER party — keyed on their own columns,
@@ -63,6 +69,13 @@ const BASALT_TABLES = [
 const TWO_SIDED: { table: string; columns: string[] }[] = [
   { table: 'basalt_share_grants', columns: ['owner_id', 'grantee_id'] },
   { table: 'basalt_pairs', columns: ['a_id', 'b_id'] },
+  { table: 'basalt_friends', columns: ['user_a', 'user_b'] },
+];
+
+// V4 social tables keyed on something other than user_id.
+const KEYED: { table: string; column: string }[] = [
+  { table: 'basalt_friend_invites', column: 'owner_id' },
+  { table: 'basalt_challenges', column: 'creator_id' },
 ];
 
 // Private storage buckets holding the user's files under a `${uid}/` prefix.
@@ -91,6 +104,15 @@ Deno.serve(async (req) => {
   // 1. Wipe every Basalt table.
   for (const table of BASALT_TABLES) {
     const { error } = await admin.from(table).delete().eq('user_id', uid);
+    if (error) {
+      return new Response(JSON.stringify({ error: `Wipe failed at ${table}: ${error.message}` }), {
+        status: 500,
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+  for (const { table, column } of KEYED) {
+    const { error } = await admin.from(table).delete().eq(column, uid);
     if (error) {
       return new Response(JSON.stringify({ error: `Wipe failed at ${table}: ${error.message}` }), {
         status: 500,

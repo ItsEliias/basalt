@@ -6,7 +6,12 @@ import { healthService, labelForPackage, type SleepSessionSummary } from '@basal
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { runHealthSync } from '../../lib/healthSync';
-import { loadReadiness, saveCheckin, getCheckin, CHECKIN_FACTORS, loadSleepNeed, loadDeviation, napCreditLine, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
+import { loadReadiness, loadSleepNeed, loadDeviation, napCreditLine, type SleepNeedReport, type DeviationReport } from '@basalt/analytics';
+import { MindCard } from './MindCard';
+import { WindDownCard } from './WindDownCard';
+import { MeditationCard } from './MeditationCard';
+import { JournalCard } from '../../components/JournalCard';
+import { scheduleWindDownOffer } from '../../lib/windDown';
 import { ProgressPhotosCard } from './ProgressPhotos';
 import { CycleCard } from './CycleCard';
 import { PpgDebugSheet } from './PpgDebugSheet';
@@ -19,6 +24,13 @@ import { isoDay } from '@basalt/core-data';
 import { useAppStore } from '../../state/appStore';
 import { writeThroughOutbox } from '../../lib/outbox';
 import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type BreathProtocol } from './model';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requestWidgetUpdate } from 'react-native-android-widget';
+import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { useDetail } from '../../components/DetailProvider';
+import { readinessWord } from '../../lib/detailModel';
+import { READINESS_SNAPSHOT_KEY } from '../../widgets/handler';
+import { BasaltReadinessWidget, parseReadinessSnapshot } from '../../widgets/BasaltReadinessWidget';
 
 // Recover — Vitals (real-or-hidden, sources named) and Mind (breathing
 // pacer that logs real mindfulness sessions).
@@ -49,13 +61,10 @@ function VitalsTab() {
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [readiness, setReadiness] = useState<Awaited<ReturnType<typeof loadReadiness>> | null>(null);
   const [mathOpen, setMathOpen] = useState(false);
-  const [checkinFactors, setCheckinFactors] = useState<string[]>([]);
-  const [checkinMood, setCheckinMood] = useState<number | null>(null);
-  const [checkinSaved, setCheckinSaved] = useState(false);
   const [activeFast, setActiveFast] = useState<Fast | null>(null);
   const [recentFasts, setRecentFasts] = useState<Fast[]>([]);
   const [fastNow, setFastNow] = useState(Date.now());
-  const fastingEnabled = profile?.fastingEnabled ?? false;
+  const fastingEnabled = useExtra('fasting');
   const [loadFailed, setLoadFailed] = useState(false);
   const [sleepNeed, setSleepNeed] = useState<SleepNeedReport | null>(null);
   const [needMathOpen, setNeedMathOpen] = useState(false);
@@ -78,14 +87,26 @@ function VitalsTab() {
         const w = await listWeightEntries(supabase, 14);
         if (w.ok) setWeights(w.data);
         setReadiness(await loadReadiness(supabase, new Date()));
-        void loadSleepNeed(supabase).then((r) => r.ok && setSleepNeed(r.data));
+        void loadSleepNeed(supabase).then((r) => {
+      if (!r.ok) return;
+      setSleepNeed(r.data);
+      // Wind-down offer (winddown Extra): one-shot at usual bedtime −30
+      // when the debt runs past 90 min — decided fresh on every compute.
+      if (windDownOn) {
+        void supabase
+          .from('basalt_sleep_sessions')
+          .select('bedtime')
+          .order('date', { ascending: false })
+          .limit(14)
+          .then(({ data: rows }) => {
+            void scheduleWindDownOffer({
+              sleepDebtMin: r.data.debt.debtMin,
+              bedtimesIso: (rows ?? []).map((x: any) => x.bedtime).filter(Boolean),
+            });
+          });
+      }
+    });
         void loadDeviation(supabase).then((r) => r.ok && setDeviation(r.data));
-        const c = await getCheckin(supabase, isoDay(new Date()));
-        if (c.ok && c.data) {
-          setCheckinFactors(c.data.factors);
-          setCheckinMood(c.data.mood);
-          setCheckinSaved(true);
-        }
 
         const out: Vitals = { sleep: null, hrv: null, rhr: null, spo2: null, granted: [], available: false };
 
@@ -159,6 +180,23 @@ function VitalsTab() {
   const ready = readiness?.ok ? readiness.data.readiness : null;
   const bands = readiness?.ok ? readiness.data.bands : null;
 
+  const widgetsOn = useExtra('widgets');
+  const detailLevel = useDetail();
+  const windDownOn = useExtra('winddown');
+  useEffect(() => {
+    if (!widgetsOn || !ready) return;
+    const snap = { score: ready.score, note: ready.note, at: new Date().toISOString() };
+    void AsyncStorage.setItem(READINESS_SNAPSHOT_KEY, JSON.stringify(snap)).then(() => {
+      void requestWidgetUpdate({
+        widgetName: 'BasaltReadiness',
+        renderWidget: () => (
+          <BasaltReadinessWidget snapshot={parseReadinessSnapshot(JSON.stringify(snap))} nowMs={Date.now()} />
+        ),
+      }).catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [widgetsOn, ready?.score, ready?.note]);
+
   return (
     <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
       {/* ── Readiness — published formula, math one tap away ───────── */}
@@ -176,7 +214,11 @@ function VitalsTab() {
           </EmptyState>
         ) : (
           <Pressable onPress={() => setMathOpen(true)}>
+            {detailLevel === 'simple' ? (
+              <HeroNumeral value={readinessWord(ready.score)} unit="tap for the number" />
+            ) : (
             <HeroNumeral value={String(ready.score)} unit="/ 100" />
+            )}
             <SrcNote>{`${ready.note} · HRV + RHR vs your 30-day medians · sleep vs target · prior-day load vs your P75 · published formula, tap to see every input`}</SrcNote>
           </Pressable>
         )}
@@ -227,7 +269,9 @@ function VitalsTab() {
         </Card>
       ) : null}
 
-      <ProgressPhotosCard />
+      <ExtraSlot id="photos">
+        <ProgressPhotosCard />
+      </ExtraSlot>
 
       {/* ── Fasting — opt-in window timer, information not advice ──── */}
       {fastingEnabled ? (
@@ -270,41 +314,20 @@ function VitalsTab() {
         </Card>
       ) : null}
 
-      {/* ── Evening check-in — facts for your own correlations ─────── */}
-      <Card>
-        <ReceiptHeader label="Evening check-in" summary={checkinSaved ? 'saved for today' : undefined} />
-        <ChipGroup
-          options={CHECKIN_FACTORS.map((f) => f.label)}
-          values={checkinFactors.map((k) => CHECKIN_FACTORS.find((f) => f.key === k)?.label ?? k)}
-          onToggle={(label) => {
-            const key = CHECKIN_FACTORS.find((f) => f.label === label)?.key;
-            if (!key) return;
-            const next = checkinFactors.includes(key)
-              ? checkinFactors.filter((k) => k !== key)
-              : [...checkinFactors, key];
-            setCheckinFactors(next);
-            setCheckinSaved(true);
-            void writeThroughOutbox(
-              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: next, mood: checkinMood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
-              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: next, mood: checkinMood } },
-            );
-          }}
-        />
-        <ChipRow
-          options={['1', '2', '3', '4', '5']}
-          value={checkinMood !== null ? String(checkinMood) : undefined}
-          onChange={(v) => {
-            const mood = parseInt(v, 10);
-            setCheckinMood(mood);
-            setCheckinSaved(true);
-            void writeThroughOutbox(
-              () => saveCheckin(supabase, { date: isoDay(new Date()), factors: checkinFactors, mood }).then((r) => (r.ok ? { ok: true as const, data: undefined } : r)),
-              { kind: 'checkin', checkin: { date: isoDay(new Date()), factors: checkinFactors, mood } },
-            );
-          }}
-        />
-        <SrcNote>Facts about today, one row per day · they feed Trends' correlations through the same gates (|r| ≥ 0.45, 30+ days) · never scored, never judged · mood 1–5 optional</SrcNote>
-      </Card>
+      {/* ── Mind — the daily check-in, words not faces (V4 Phase 7) ── */}
+      <MindCard />
+
+      <ExtraSlot id="journal">
+        <JournalCard />
+      </ExtraSlot>
+
+      <ExtraSlot id="winddown">
+        <WindDownCard />
+      </ExtraSlot>
+
+      <ExtraSlot id="meditation">
+        <MeditationCard />
+      </ExtraSlot>
 
       {/* ── Sleep ──────────────────────────────────────────────────── */}
       <Card>
@@ -426,7 +449,9 @@ function VitalsTab() {
       ) : null}
 
       {/* ── Cycle — opt-in, facts vs labelled estimates ────────────── */}
-      <CycleCard />
+      <ExtraSlot id="cycle">
+        <CycleCard />
+      </ExtraSlot>
 
       {/* ── Camera-HRV tuning bench — dev builds only for now ──────── */}
       {__DEV__ ? (
