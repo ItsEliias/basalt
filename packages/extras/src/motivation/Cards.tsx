@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import { KV, ReceiptHeader, ReceiptRow, SrcNote, useTheme, ScaledText as Text } from '@basalt/ui';
+import { KV, ReceiptHeader, ReceiptRow, SrcNote, useMotion, useTheme, ScaledText as Text } from '@basalt/ui';
 import { freezeStreak, STREAK_RULES, FREEZES_PER_WEEK } from '../streaks/model';
 import {
   badges, levelFor, totalXp, xpBreakdown, LEVEL_RULE, XP_RULES,

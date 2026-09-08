@@ -100,11 +100,18 @@ export function Card({ children, style, lead }: { children: ReactNode; style?: S
   // its own — blurTarget/blurMethod point it at the BlurTargetView App.tsx
   // wraps around GroundGlow; see theme/provider.tsx's useBlurTarget().
   if (theme.shape.elevation === 'blur') {
+    // No blur target (theme-picker previews, view-shot captures): the
+    // Android blur renders black without one, which made Depth's preview
+    // look like a different theme entirely (V4.1 follow-up). The glass
+    // TINT alone is the honest fallback — same fill, no native blur.
+    if (!blurTarget) {
+      return <View style={[{ overflow: 'hidden' }, cardStyle]}>{children}</View>;
+    }
     return (
       <BlurView
         intensity={40}
         tint="dark"
-        blurTarget={blurTarget ?? undefined}
+        blurTarget={blurTarget}
         blurMethod="dimezisBlurViewSdk31Plus"
         style={[{ overflow: 'hidden' }, cardStyle]}
       >

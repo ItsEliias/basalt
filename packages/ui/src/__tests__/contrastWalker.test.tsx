@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { create, act, type ReactTestRenderer, type ReactTestRendererJSON } from 'react-test-renderer';
+// @ts-expect-error — react-test-renderer ships no types for react 19; the
+// walker only needs create/act/toJSON, typed loosely below.
+import { create, act } from 'react-test-renderer';
+type ReactTestRenderer = { toJSON(): ReactTestRendererJSON | ReactTestRendererJSON[] | null; unmount(): void };
+type ReactTestRendererJSON = { type: string; props: Record<string, any>; children: (ReactTestRendererJSON | string)[] | null };
 import React from 'react';
 import { ThemeProvider } from '../theme/provider';
 import { THEMES, THEME_IDS, type ThemeId } from '../theme/themes';
@@ -60,7 +64,7 @@ function walk(
   }
   if (node.type === 'Text' || node.type === 'Animated.Text') {
     const fg = style.color;
-    const textChildren = (node.children ?? []).filter((c): c is string => typeof c === 'string').join('');
+    const textChildren = (node.children ?? []).filter((c: unknown): c is string => typeof c === 'string').join('');
     if (isHex(fg) && textChildren.trim() !== '') {
       const size = typeof style.fontSize === 'number' ? style.fontSize : 14;
       const bold = style.fontWeight === '600' || style.fontWeight === '700' || style.fontWeight === 'bold' || Number(style.fontWeight) >= 600;
@@ -142,10 +146,10 @@ function battery(): { name: string; el: React.ReactElement }[] {
       name: 'tiles',
       el: (
         <TileGridThemed>
-          <Tile label="Energy" value="1,283" unit="kcal" domain="food" />
-          <Tile label="Steps" value="5,423" domain="recovery" />
-          <Tile label="Sugar" value="72 / 55" over domain="food" />
-          <Tile label="Sleep" empty emptyMessage="no sleep source yet" domain="recovery" />
+          <Tile span="full" label="Energy" value="1,283" unit="kcal" domain="protein" />
+          <Tile span="half" label="Steps" value="5,423" domain="recovery" />
+          <Tile span="half" label="Sugar" value="72 / 55" over domain="protein" />
+          <Tile span="half" label="Sleep" empty emptyMessage="no sleep source yet" domain="recovery" />
         </TileGridThemed>
       ),
     },
@@ -153,7 +157,7 @@ function battery(): { name: string; el: React.ReactElement }[] {
       name: 'pebble',
       el: (
         <PebbleSlot
-          proposal={{ id: 'p1', text: 'Protein is 68 g short — beans at dinner would close it.', actions: [{ kind: 'open-log', label: 'Open log' }, { kind: 'dismiss', label: 'Not now' }] }}
+          proposal={{ id: 'p1', kind: 'macro-shortfall', text: 'Protein is 68 g short — beans at dinner would close it.', actions: [{ kind: 'open-log', label: 'Open log' }, { kind: 'dismiss', label: 'Not now' }] }}
           onAction={() => {}}
         />
       ),

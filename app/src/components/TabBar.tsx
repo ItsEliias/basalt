@@ -56,6 +56,7 @@ export function TabBar({
           <Text
             style={[styles.label, { fontFamily: labelFont, fontWeight: labelWeight, letterSpacing: theme.typography.tracking.label, color: labelColor }]}
             maxFontSizeMultiplier={1.3}
+            numberOfLines={1}
           >
             {label}
           </Text>
@@ -97,8 +98,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'flex-start',
   },
-  tab: { alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4 },
-  tabInner: { alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4 },
+  // flex: 1 — five slots share the row no matter how wide a theme's label
+  // face tracks; V4.1 follow-up: Depth/others clipped TRENDS to "TRE"
+  // because space-around + fixed paddings overflowed the screen edge.
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+  tabInner: { alignItems: 'center', paddingHorizontal: 4, paddingVertical: 4, maxWidth: '100%' },
   label: { fontSize: 10.5, marginTop: 5 },
   // 56dp, raised above the bar line, filled mark/markOn in every theme —
   // the one always-available capture trigger reads as the primary action.
