@@ -25,4 +25,5 @@ export * from './cooking-mode';
 export * from './supplements';
 export * from './uncertainty';
 export * from './plan';
+export * from './plan-week';
 export * from './activity-factor';
