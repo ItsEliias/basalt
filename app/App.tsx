@@ -36,11 +36,25 @@ import { FinishProfileModal, FINISH_PROFILE_SEEN_KEY } from './src/components/Fi
 import { DetailProvider } from './src/components/DetailProvider';
 import { extrasIntroSeen } from './src/lib/extras';
 import { isoDay } from '@basalt/core-data';
+import * as Notifications from 'expo-notifications';
 
 // Foreground-service runner must be registered before any notification is
 // displayed — module scope, once. The outbox drains on start, foreground,
 // and interval — a committed write must never be lost to a dead spot.
 registerTimerService();
+// Without a handler, every notification that arrives while the JS process
+// is alive is silently dropped — and the session foreground service keeps
+// the process alive for the whole workout, so rest-done, meditation bells
+// and hydration reminders all vanished (found on device, §28.10). Bells
+// are foreground BY PURPOSE; the rest banner is cheap next to a lost one.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 wireOutboxDraining();
 void rescheduleMonthlyReportNotif();
 void registerBackgroundWork();
