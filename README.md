@@ -21,7 +21,7 @@ entry is always enough.
 **What it doesn't**
 
 - See your form. A phone can count sets; it cannot watch your spine.
-- Tell muscle from fat on the scale. The trend is honest; its composition isn't knowable from here.
+- Tell muscle from fat on the scale. The trend is honest; its composition isn’t knowable from here.
 - Diagnose anything. Pain flags count; they never conclude.
 - Replace a professional for injuries, eating disorders or medical conditions — those deserve a person.
 
