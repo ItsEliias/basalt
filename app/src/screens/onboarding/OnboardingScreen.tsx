@@ -13,6 +13,8 @@ import {
   EQUIPMENT_OPTIONS, JOB_OPTIONS, EXERCISE_OPTIONS, SLEEP_OPTIONS, STRESS_OPTIONS,
   MOTIVATION_OPTIONS, CHECKIN_OPTIONS, isImperial, type OnboardingState,
   CORE_STEPS, extraScreenAt,
+  EXPERIENCE_OPTIONS, DAYS_PER_WEEK_OPTIONS, SESSION_MINUTES_OPTIONS, WEEKDAY_LABELS,
+  MEALS_PER_DAY_OPTIONS, COOKING_OPTIONS, MEDICAL_LINE,
 } from './model';
 import { ExtrasStep } from '../../components/ExtrasIntro';
 import { markExtrasIntroSeen } from '../../lib/extras';
@@ -21,7 +23,8 @@ import { selectTheme, SAMPLE_PREVIEW, type PickerState } from '../settings/theme
 import { loadExpressiveFonts } from '../../lib/expressiveFonts';
 import { THEME_IDS } from '@basalt/ui';
 
-// The 9-step intake (prototype v11.1 + the V3.4 theme step). Every step
+// The 11-step PT intake (prototype v11.1 + V3.4 theme + V4 Phase 8a
+// experience/schedule/inventory-with-weights additions). Every step
 // skippable, everything editable later, no paywall anywhere near here. The
 // CTA is a fixed footer — its reachability contract lives in layout.ts and
 // is regression-tested.
@@ -110,6 +113,7 @@ export function OnboardingScreen() {
                 <ObInput placeholder={isImperial(state) ? 'Weight (lb)' : 'Weight (kg)'} keyboardType="decimal-pad" value={state.weight} onChangeText={(weight) => patch({ weight })} />
                 <ObInput placeholder="Goal weight (optional)" keyboardType="decimal-pad" value={state.goalWeight} onChangeText={(goalWeight) => patch({ goalWeight })} />
               </ObInRow>
+              <ObInput placeholder={isImperial(state) ? 'Waist (in) — optional' : 'Waist (cm) — optional'} keyboardType="decimal-pad" value={state.waist} onChangeText={(waist) => patch({ waist })} />
               <ObChipLabel>Sex — used only for the energy formula</ObChipLabel>
               {single(state.sex, (sex) => patch({ sex }), SEX_OPTIONS)}
               <ObChipLabel>Units</ObChipLabel>
@@ -139,17 +143,38 @@ export function OnboardingScreen() {
       case 3:
         return (
           <>
+            <ObQuestion>How long have you trained?</ObQuestion>
+            <ObSub>This sets rep ranges, how conservative the starting loads are, and how much the app explains along the way. No wrong answer.</ObSub>
+            <ScrollView style={styles.scroll}>
+              {EXPERIENCE_OPTIONS.map((e) => (
+                <ObOption
+                  key={e.key}
+                  title={e.title}
+                  subtitle={e.sub}
+                  on={state.experience === e.key}
+                  onPress={() => patch({ experience: e.key })}
+                />
+              ))}
+            </ScrollView>
+          </>
+        );
+      case 4:
+        return (
+          <>
             <ObQuestion>Anything we should work around?</ObQuestion>
             <ObSub>Not medical advice — this biases exercise selection and flags, nothing more. Skip freely.</ObSub>
             <ScrollView style={styles.scroll}>
               <ChipGroup options={CONDITION_OPTIONS} values={state.conditions} onToggle={(v) => toggle('conditions', v)} />
               <ObChipLabel>Medication that affects weight or appetite — optional</ObChipLabel>
               <ChipGroup options={MEDICATION_OPTIONS} values={state.medications} onToggle={(v) => toggle('medications', v)} />
+              <ObChipLabel>Anything else, in your own words — optional</ObChipLabel>
+              <ObInput placeholder="e.g. left knee dislikes deep squats" value={state.limitationNote} onChangeText={(limitationNote) => patch({ limitationNote })} />
+              <ObNote>{MEDICAL_LINE}</ObNote>
               <ObNote>Injuries bias the exercise library · conditions & medications enable relevant logging and adjust target expectations — never shown unless you enable them · stored privately, never shared</ObNote>
             </ScrollView>
           </>
         );
-      case 4:
+      case 5:
         return (
           <>
             <ObQuestion>Eating & drinking, honestly.</ObQuestion>
@@ -164,7 +189,7 @@ export function OnboardingScreen() {
             </ScrollView>
           </>
         );
-      case 5:
+      case 6:
         return (
           <>
             <ObQuestion>Dietary requirements</ObQuestion>
@@ -174,10 +199,20 @@ export function OnboardingScreen() {
               <ChipGroup options={ALLERGY_OPTIONS} values={state.allergies} onToggle={(v) => toggle('allergies', v)} />
               <ObChipLabel>Diet & belief</ObChipLabel>
               <ChipGroup options={DIET_OPTIONS} values={state.diets} onToggle={(v) => toggle('diets', v)} />
+              <ObChipLabel>Foods you just don't want — comma-separated</ObChipLabel>
+              <ObInput placeholder="e.g. mushrooms, olives" value={state.dislikes} onChangeText={(dislikes) => patch({ dislikes })} />
+              <ObChipLabel>Meals a day</ObChipLabel>
+              {single(state.mealsPerDay, (mealsPerDay) => patch({ mealsPerDay }), MEALS_PER_DAY_OPTIONS)}
+              <ObChipLabel>Cooking time</ObChipLabel>
+              <ChipRow
+                options={COOKING_OPTIONS.map((c) => c.label)}
+                value={COOKING_OPTIONS.find((c) => c.key === state.cookingTime)?.label}
+                onChange={(label) => patch({ cookingTime: COOKING_OPTIONS.find((c) => c.label === label)?.key ?? null })}
+              />
             </ScrollView>
           </>
         );
-      case 6:
+      case 7:
         return (
           <>
             <ObQuestion>Where do you train?</ObQuestion>
@@ -195,18 +230,47 @@ export function OnboardingScreen() {
             </ScrollView>
           </>
         );
-      case 7:
+      case 8:
         return (
           <>
             <ObQuestion>What's at home?</ObQuestion>
             <ObSub>Home sessions will only ever prescribe movements you can actually do. Change this any time — or add a second location later.</ObSub>
             <ScrollView style={styles.scroll}>
               <ChipGroup options={EQUIPMENT_OPTIONS} values={state.equipment} onToggle={(v) => toggle('equipment', v)} />
-              <ObNote>873-movement library filters to this automatically · gym days ignore it · "train quietly" (no jumps) available per session</ObNote>
+              {state.equipment.some((e) => e.toLowerCase().includes('dumbbell')) ? (
+                <ObInput placeholder="Heaviest dumbbell pair (kg) — needed to pick loads" keyboardType="decimal-pad" value={state.dumbbellMaxKg} onChangeText={(dumbbellMaxKg) => patch({ dumbbellMaxKg })} />
+              ) : null}
+              {state.equipment.includes('Kettlebell') ? (
+                <ObInput placeholder="Kettlebell weight (kg)" keyboardType="decimal-pad" value={state.kettlebellKg} onChangeText={(kettlebellKg) => patch({ kettlebellKg })} />
+              ) : null}
+              <ObNote>873-movement library filters to this automatically · gym days ignore it · "train quietly" (no jumps) available per session · "dumbbells" without a weight can't pick a load — that's why we ask</ObNote>
             </ScrollView>
           </>
         );
-      case 8:
+      case 9:
+        return (
+          <>
+            <ObQuestion>When can you actually train?</ObQuestion>
+            <ObSub>The programme is built for the week you have, not the week you wish you had. Fewer honest days beat six imaginary ones.</ObSub>
+            <ScrollView style={styles.scroll}>
+              <ObChipLabel>Days a week</ObChipLabel>
+              {single(state.daysPerWeek, (daysPerWeek) => patch({ daysPerWeek }), DAYS_PER_WEEK_OPTIONS)}
+              <ObChipLabel>Minutes a session</ObChipLabel>
+              {single(state.sessionMinutes, (sessionMinutes) => patch({ sessionMinutes }), SESSION_MINUTES_OPTIONS)}
+              <ObChipLabel>Which days — optional</ObChipLabel>
+              <ChipGroup
+                options={WEEKDAY_LABELS}
+                values={state.weekdays.map((d) => WEEKDAY_LABELS[d]!)}
+                onToggle={(label) => {
+                  const idx = WEEKDAY_LABELS.indexOf(label);
+                  patch({ weekdays: state.weekdays.includes(idx) ? state.weekdays.filter((d) => d !== idx) : [...state.weekdays, idx] });
+                }}
+              />
+              <ObNote>Sessions are trimmed to fit the minutes you pick — rest times are published, accessories go first</ObNote>
+            </ScrollView>
+          </>
+        );
+      case 10:
         return (
           <>
             <ObQuestion>Your life, roughly.</ObQuestion>
@@ -228,7 +292,7 @@ export function OnboardingScreen() {
             </ScrollView>
           </>
         );
-      case 9: {
+      case 11: {
         const pickerState: PickerState = { selected: (state.theme as ThemeId | null) ?? null };
         return (
           <>

@@ -29,7 +29,9 @@ import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
 import { rescheduleMonthlyReportNotif, wireMonthlyReportNotifTap } from './src/lib/monthlyReportNotif';
 import { registerBackgroundWork } from './src/lib/backgroundWork';
 import { ExtrasProvider } from './src/components/ExtrasProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExtrasIntroModal } from './src/components/ExtrasIntro';
+import { FinishProfileModal, FINISH_PROFILE_SEEN_KEY } from './src/components/FinishProfileModal';
 import { extrasIntroSeen } from './src/lib/extras';
 import { isoDay } from '@basalt/core-data';
 
@@ -183,12 +185,24 @@ function Gate() {
 function NewInBasalt() {
   const profile = useAppStore((s) => s.profile);
   const [open, setOpen] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
   useEffect(() => {
     if (!profile) return;
     void extrasIntroSeen().then((seen) => { if (!seen) setOpen(true); });
+    // Phase 8a: the PT-intake questions existing users never saw — once.
+    if (profile.ptIntake === null) {
+      void AsyncStorage.getItem(FINISH_PROFILE_SEEN_KEY).then((seen) => {
+        if (seen !== 'yes') setFinishOpen(true);
+      });
+    }
   }, [profile]);
   if (!profile) return null;
-  return <ExtrasIntroModal open={open} onClose={() => setOpen(false)} />;
+  return (
+    <>
+      <ExtrasIntroModal open={open} onClose={() => setOpen(false)} />
+      <FinishProfileModal open={finishOpen && !open} onClose={() => setFinishOpen(false)} />
+    </>
+  );
 }
 
 export default function App() {

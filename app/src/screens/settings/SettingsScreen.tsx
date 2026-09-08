@@ -17,6 +17,7 @@ import { collectExport } from '../../lib/exportData';
 import { shareDoctorReport } from '../../lib/doctorReport';
 import { HydrationCard } from './HydrationCard';
 import { PlanCard } from './PlanCard';
+import { FinishProfileModal } from '../../components/FinishProfileModal';
 import { ConnectedServicesCard } from './ConnectedServicesCard';
 import { cancelAllHydrationReminders } from '../../lib/hydrationReminders';
 import { setSupplementsReminderHour } from '../../lib/supplementsReminder';
@@ -135,6 +136,7 @@ export function SettingsScreen() {
 
   const [edit, setEdit] = useState<EditKey>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [finishProfileOpen, setFinishProfileOpen] = useState(false);
   const [hcStatus, setHcStatus] = useState<string | null>(null);
   const [confirmText, setConfirmText] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -288,6 +290,14 @@ export function SettingsScreen() {
             valueColor={theme.text.faint}
           />
         </Pressable>
+        <Pressable onPress={() => setFinishProfileOpen(true)} hitSlop={8}>
+          <ReceiptRow
+            name="PT intake"
+            meta={profile?.ptIntake ? 'experience, schedule, equipment weights, diet preferences' : 'not filled yet — the programme generator asks for this'}
+            value="edit →"
+            valueColor={theme.text.faint}
+          />
+        </Pressable>
         <ReceiptRow
           name="Daily targets"
           meta={
@@ -325,6 +335,7 @@ export function SettingsScreen() {
 
       {/* ── Preferences ────────────────────────────────────────────── */}
       <PlanCard />
+      <FinishProfileModal open={finishProfileOpen} onClose={() => setFinishProfileOpen(false)} />
 
       <Card>
         <ReceiptHeader label="Preferences" />

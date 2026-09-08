@@ -7,6 +7,22 @@ import { todayISO } from './dates';
 // onboarding answer editable later) and basalt_targets (versioned rows so
 // historical charts stay honest when targets change).
 
+/**
+ * PT intake (V4 Phase 8a) — what a trainer would ask that the profile
+ * didn't already hold. Every field optional; the generator states what it
+ * assumed when something is missing.
+ */
+export type PtIntake = {
+  /** Drives rep ranges, starting loads, and how much the app explains. */
+  experience?: 'new' | 'under1y' | '1to3y' | '3plus';
+  schedule?: { daysPerWeek?: number; sessionMinutes?: number; weekdays?: number[] };
+  /** Inventory beyond the name list: weights make load selection possible. */
+  inventory?: { dumbbellMaxKg?: number; kettlebellKg?: number; adjustableDumbbells?: boolean };
+  limitations?: { note?: string };
+  diet?: { dislikes?: string[]; mealsPerDay?: number; cookingTime?: 'quick' | 'normal' | 'happy_to_cook' };
+  measurements?: { waistCm?: number };
+};
+
 export type ProfileRecord = {
   name: string | null;
   biologicalSex: 'female' | 'male' | 'intersex' | 'prefer_not_to_say' | null;
@@ -34,6 +50,7 @@ export type ProfileRecord = {
   hideNumbers: boolean;
   /** Fasting module opt-in — off by default. */
   fastingEnabled: boolean;
+  ptIntake: PtIntake | null;
   /** Monthly-challenge opt-in — private, optional, off by default. */
   challengeEnabled: boolean;
   useMetric: boolean;
@@ -74,6 +91,7 @@ function mapProfile(r: any): ProfileRecord {
     checkinPreference: r.checkin_preference ?? null,
     hideNumbers: r.hide_numbers ?? false,
     fastingEnabled: r.fasting_enabled ?? false,
+    ptIntake: r.pt_intake ?? null,
     challengeEnabled: r.challenge_enabled ?? false,
     useMetric: r.use_metric ?? true,
     textScale: r.text_scale ?? 'system',
@@ -93,7 +111,7 @@ function profilePayload(p: Partial<ProfileRecord>): Record<string, unknown> {
     ['dietaryFlags', 'dietary_flags'], ['dietPatterns', 'diet_patterns'], ['trainLocation', 'train_location'],
     ['equipment', 'equipment'], ['jobActivity', 'job_activity'], ['exerciseFrequency', 'exercise_frequency'],
     ['typicalSleep', 'typical_sleep'], ['stressLevel', 'stress_level'], ['motivations', 'motivations'],
-    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'], ['challengeEnabled', 'challenge_enabled'],
+    ['checkinPreference', 'checkin_preference'], ['useMetric', 'use_metric'], ['hideNumbers', 'hide_numbers'], ['fastingEnabled', 'fasting_enabled'], ['ptIntake', 'pt_intake'], ['challengeEnabled', 'challenge_enabled'],
     ['textScale', 'text_scale'], ['density', 'density'],
     ['theme', 'theme'], ['todayLayout', 'today_layout'],
   ];
