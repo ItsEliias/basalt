@@ -51,16 +51,17 @@ banners up.
 1. Testing → Closed testing → create track `closed-alpha-1`.
 2. Upload the AAB:
    `app/android/app/build/outputs/bundle/release/app-release.aab`
-   (**96.2 MB**, versionCode 2 / 0.2.0, rebuilt from d8d4464 — Phase 8 +
-   all three device-session fixes (uuid template add, doctor-report
-   label, notification handler) — upload-key signed; opt in to Play App
-   Signing when prompted). Device-session install artifact:
-   `basalt-0.2.0-universal.apk` (158.0 MB, universal = all ABIs, built
-   from this AAB with bundletool 1.18.2 + the upload key). Release notes
-   below should ALSO name Phase 8: PT intake, programme generator with
-   published rules, pain flags, rest notification, meal-plan swaps/batch
-   cook, complete weekly check-in, the promise screen, and the Detail
-   level (simple/standard/full).
+   (versionCode 3 / **0.2.1**, built from the V4.1 branch head — verified
+   via bundletool dump — upload-key signed; opt in to Play App Signing
+   when prompted). Device-session install artifact:
+   `basalt-0.2.1-universal.apk` (universal = all ABIs, bundletool 1.18.2
+   + the upload key; installed and sweep-verified on the S22 Ultra).
+   0.2.1 release notes, on top of 0.2.0's: home-screen widgets fixed
+   (they rendered blank), Settings reorganised into sections, selection
+   is now a visible fill in every theme, an 11-theme visual audit with
+   fixes, Pebble now lives on Today with an Ask field (Coach), and a
+   motion layer — splash, count-ups, springs — with full reduced-motion
+   support.
 3. Release notes (0.2.0):
 
    > First closed test — the honest health ledger, now with Extras.
