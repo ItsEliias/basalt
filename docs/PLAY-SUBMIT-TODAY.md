@@ -51,8 +51,9 @@ banners up.
 1. Testing → Closed testing → create track `closed-alpha-1`.
 2. Upload the AAB:
    `app/android/app/build/outputs/bundle/release/app-release.aab`
-   (**96.2 MB**, versionCode 2 / 0.2.0, rebuilt from Phase 8 HEAD a68c40a
-   — verified via bundletool dump — upload-key signed; opt in to Play App
+   (**96.2 MB**, versionCode 2 / 0.2.0, rebuilt from 39886ce — Phase 8 +
+   both device-session fixes (uuid template add, doctor-report label) —
+   verified via bundletool dump — upload-key signed; opt in to Play App
    Signing when prompted). Device-session install artifact:
    `basalt-0.2.0-universal.apk` (158.0 MB, universal = all ABIs, built
    from this AAB with bundletool 1.18.2 + the upload key). Release notes

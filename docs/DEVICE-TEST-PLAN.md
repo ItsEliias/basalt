@@ -302,3 +302,63 @@ this phone eats first-taps and the dev banner overlaps the tab bar).
    delete-account run), rich walk notification + pause on the lock
    screen, physical widget placement, hydration notification firing,
    store screenshots.
+
+### §28.10 — Post-Phase-8 session (same day, second run, release universal APK)
+
+Fresh install of `basalt-0.2.0-universal.apk` (Phase 8 build a68c40a),
+burner account `readme.shot+p8@example.com` created in-app. Shots in
+`docs/report-assets/v4-device-session/p8-*.png`.
+
+1. **Onboarding end-to-end: PASS.** All 12 core steps on the real
+   keyboard, gym path — experience, schedule, equipment with weights,
+   limitations chips + medical line, diet extras, waist, theme, detail
+   level (three live Today previews render from the theme-picker
+   component). Targets computed on finish; Today landed seeded with real
+   intake maths, no placeholder zeros anywhere.
+2. **Generator live: PASS, matches worked example 1.** Intake (new to
+   training, 3 days, ~40 min, bodyweight-only, knee limitation) →
+   Full body ×3, 3×10–15 accessories, knee-capped squat pattern,
+   "bodyweight — progress by reps" load lines, rules sheet published
+   in-app (`p8-generator-{week,rules}.png`). KEEP wrote three ordinary
+   templates + an active 8-week programme (`p8-programme-active.png`,
+   `p8-templates.png`).
+3. **BUG (P1) found + fixed in-session (commit 8a6b208):** starting a
+   session from a generated (name-only) template added zero exercises —
+   `''` sent as a uuid to `set_entries.exercise_id`; on-screen error
+   captured in `p8-bug-uuid-error.png`. Both call layers now coerce
+   `'' → null`. Verified by code path + tests; device re-verify rides
+   the next install.
+4. **Generator entry placement fixed (commit 9d930a6):** the 8c "build
+   my programme" row is core (Program card), no longer gated behind the
+   off-default programmes Extra.
+5. **Detail level on device: PASS.** Simple Today rounds the hero and
+   words the macros (`p8-today-simple.png`, QA account: hero 280 for
+   283, "carbs and fat on track", MORE affordances); standard shows the
+   numbers (`p8-today-standard.png`). Today renders identically at
+   standard and full **by design** — full's additions surface in the
+   plan maths and why-sheets; pinned by
+   `p8-plan-full.png` ("BMR 1,805 kcal · TDEE 2,290–2,799 kcal · rate
+   0 kcal/day — the maths, inline because you asked for Full").
+6. **Promise screen: PASS** (`p8-promise.png`) — full does/doesn't list
+   readable on device, srcnote footer intact.
+7. **§26 delete-account: FULL PASS** (closes the §26 carryover). Type-
+   DELETE flow ran on the burner; client returned to sign-in; SQL
+   verified 0 auth rows for the address and 0 orphan `basalt_profiles`.
+8. **Meditation (rewritten to scheduled bells): no crash.** Extra
+   flipped on, timer started from Recover — app stayed alive (the §28.5
+   FGS crash is gone). Bell-at-interval firing not held for — verify by
+   ear in normal use.
+9. **Fixed in-session (commit 39886ce):** Settings doctor-report row
+   said "last 30 days"; the collector has been 90 days since Phase 4.
+10. **Automation gotchas (append to the list):** the Settings screen
+    renders its own ⚙ at the same header coords — a doubled tap opens
+    then closes it (use verified single taps); the floating + FAB owns
+    roughly y>1950, so rows/chips near the scroll bottom must be nudged
+    above it before tapping (three separate captures hit the quick-log
+    sheet instead); RN chip rows expose only `content-desc` on a
+    non-self-closing ViewGroup node — text-node matching misses them.
+11. **Still deferred to manual/next pass:** set-commit + pain chips in a
+    live session (uiautomator can't idle while the session clock ticks),
+    rest-notification firing, walk notification + lock-screen pause,
+    physical widget placement, hydration reminder firing, store
+    screenshots refresh.

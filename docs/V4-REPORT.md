@@ -856,3 +856,18 @@ Device session (the stop after this build): screenshots of the intake,
 a generated programme, a session with the rest timer + plate calculator,
 the promise screen, and Today at all three detail levels; plus the
 carried-over items from §28.9.
+
+### Phase 8 device session — run 2026-09-08 (DEVICE-TEST-PLAN §28.10)
+
+Ran on the release universal APK with a burner account, deleted after
+(§26 full pass, SQL-verified). Intake end-to-end, generator live
+matching worked example 1, promise + detail-level shots in
+`docs/report-assets/v4-device-session/`. One P1 found and fixed
+in-session: name-only template exercises passed `''` as a uuid and
+silently added nothing (8a6b208); generator entry also moved into the
+core Program card (9d930a6), doctor-report row label corrected to
+90 days (39886ce). Rebuilt 0.2.0 AAB + universal APK from 39886ce.
+One design note the shots made explicit: Today is identical at
+standard and full — full pays out in the plan maths and why-sheets
+(`p8-plan-full.png`), which is the shown-never-computed law working
+as intended.
