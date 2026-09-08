@@ -85,4 +85,5 @@ export const clay: Theme = {
     nav: 'label',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 130, base: 260, slow: 320 }, easing: 'ease-out', spring: { damping: 16, stiffness: 190 } },
 };

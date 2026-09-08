@@ -11,10 +11,12 @@ import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
 import { loadReadiness, listCheckins, stressProposal } from '@basalt/analytics';
+import { openSettingsSection } from '../../lib/settingsNav';
+import { FadeRise } from '@basalt/ui';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { SupplementsCard } from '../../components/SupplementsCard';
 import { IntakeRangeNote } from '../../components/IntakeRangeNote';
-import { CoachCard } from '../../components/CoachCard';
+import { PebbleTodayCard } from '../../components/PebbleTodayCard';
 import { Detail, useDetail } from '../../components/DetailProvider';
 import { heroDisplay, simpleMacroLine } from '../../lib/detailModel';
 import { HeroWhySheet } from '../../components/HeroWhySheet';
@@ -316,6 +318,31 @@ export function TodayScreen({ onOpenTab }: {
     if (action.kind === 'open-recover') onOpenTab?.('recover');
   };
 
+  const coachNumbers = {
+    todayKcal: data ? Math.round(data.totals.calories) : null,
+    targetKcal: targets?.calories ?? null,
+    proteinG: data ? Math.round(data.totals.protein) : null,
+    proteinTargetG: targets?.proteinG ?? null,
+    trendWeightKg: null,
+    sleepDebtMin: null,
+    readiness: null,
+    sessionsThisWeek: null,
+  };
+  const onCoachAction = (kind: 'open-recover' | 'open-plan' | 'open-train') => {
+    if (kind === 'open-recover') onOpenTab?.('recover');
+    else if (kind === 'open-train') onOpenTab?.('train');
+    else openSettingsSection('profile');
+  };
+  const pebbleCard = (
+    <PebbleTodayCard
+      proposal={shownProposal}
+      onAction={onPebbleAction}
+      mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
+      numbers={coachNumbers}
+      onCoachAction={onCoachAction}
+    />
+  );
+
   // Widget snapshot: written on every Today computation; the widget shows
   // this with its age — never a number the app didn't compute.
   useEffect(() => {
@@ -352,13 +379,13 @@ export function TodayScreen({ onOpenTab }: {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
-        <ExtraSlot id="pebble">
-          <PebbleSlot
-            proposal={shownProposal}
-            onAction={onPebbleAction}
-            mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
-          />
-        </ExtraSlot>
+        <PebbleTodayCard
+          proposal={shownProposal}
+          onAction={onPebbleAction}
+          mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
+          numbers={coachNumbers}
+          onCoachAction={onCoachAction}
+        />
         <TileGridThemed>
           {filterTiles(tileSpecs, hidden).map((t) => (
             <Tile
@@ -392,13 +419,9 @@ export function TodayScreen({ onOpenTab }: {
         ) : null}
       </ExtraSlot>
 
-      <ExtraSlot id="pebble">
-        <PebbleSlot
-          proposal={shownProposal}
-          onAction={onPebbleAction}
-          mascot={growthStage ? <StagedPebble stage={growthStage} size={44} /> : undefined}
-        />
-      </ExtraSlot>
+      {/* Pebble card placement (V4.1 §5): above the rings on Rings,
+          below the hero on Ledger — same card either way. */}
+      {layout === 'rings' || theme.shape.meter === 'ring' ? pebbleCard : null}
 
       {/* ── Hero: energy remaining ─────────────────────────────────── */}
       <Card lead>
@@ -461,7 +484,12 @@ export function TodayScreen({ onOpenTab }: {
           <>
             <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
             <Pressable onPress={() => setWhyOpen(true)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Why this number">
-              <HeroNumeral value={groupInt(heroDisplay(hero.remaining, detail))} unit={hero.over ? 'kcal over' : 'kcal'} />
+              <HeroNumeral
+                value={groupInt(heroDisplay(hero.remaining, detail))}
+                countTo={heroDisplay(hero.remaining, detail)}
+                format={(n) => groupInt(Math.round(n))}
+                unit={hero.over ? 'kcal over' : 'kcal'}
+              />
             </Pressable>
             <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
             {data ? (
@@ -483,12 +511,16 @@ export function TodayScreen({ onOpenTab }: {
         ) : heroMode === 'no-targets' ? (
           <>
             <MicroLabel>Energy</MicroLabel>
-            <EmptyState>
-              No daily targets yet. Finish onboarding in Settings → Profile and your energy budget appears here.
-            </EmptyState>
+            <Pressable onPress={() => openSettingsSection('profile')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Open profile settings">
+              <EmptyState>
+                No daily targets yet. Finish onboarding in Settings → Profile and your energy budget appears here. Tap to go there.
+              </EmptyState>
+            </Pressable>
           </>
         ) : null}
       </Card>
+
+      {layout !== 'rings' && theme.shape.meter !== 'ring' ? pebbleCard : null}
 
       {targets && data ? (
         <HeroWhySheet
@@ -499,26 +531,6 @@ export function TodayScreen({ onOpenTab }: {
           activeKcal={data.activeKcal}
         />
       ) : null}
-
-      <ExtraSlot id="coach">
-        <CoachCard
-          numbers={{
-            todayKcal: data ? Math.round(data.totals.calories) : null,
-            targetKcal: targets?.calories ?? null,
-            proteinG: data ? Math.round(data.totals.protein) : null,
-            proteinTargetG: targets?.proteinG ?? null,
-            trendWeightKg: null,
-            sleepDebtMin: null,
-            readiness: null,
-            sessionsThisWeek: null,
-          }}
-          onAction={(kind) => {
-            if (kind === 'open-recover') onOpenTab?.('recover');
-            else if (kind === 'open-train') onOpenTab?.('train');
-            else Alert.alert('The plan', 'Settings › Nutrition plan — every number a range, formulas published.');
-          }}
-        />
-      </ExtraSlot>
 
       <ExtraSlot id="supplements">
         <SupplementsCard />
@@ -602,7 +614,7 @@ export function TodayScreen({ onOpenTab }: {
           summary={
             data && (data.entries.length > 0 || data.sessions.length > 0)
               ? hideNumbers
-                ? `${data.entries.length + data.sessions.length} entries`
+                ? `${data.entries.length + data.sessions.length} ${data.entries.length + data.sessions.length === 1 ? 'entry' : 'entries'}`
                 : `${data.entries.length + data.sessions.length} entries · ${groupInt(data.totals.calories)} kcal`
               : undefined
           }
@@ -613,7 +625,8 @@ export function TodayScreen({ onOpenTab }: {
               <View key={s.meal}>
                 <MealTag>{`${s.label}${s.time ? ` — ${s.time}` : ''}`}</MealTag>
                 {s.entries.map((e, i) => (
-                  <Pressable key={e.id} onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)} hitSlop={8}>
+                  <FadeRise key={e.id} index={i}>
+                  <Pressable onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)} hitSlop={8}>
                     <ReceiptRow
                       name={e.foodName}
                       thumb={
@@ -628,6 +641,7 @@ export function TodayScreen({ onOpenTab }: {
                       last={i === s.entries.length - 1}
                     />
                   </Pressable>
+                  </FadeRise>
                 ))}
               </View>
             ))}

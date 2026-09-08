@@ -20,3 +20,6 @@ export * from './components/groundGlow';
 export * from './components/scaledText';
 export * from './components/meters';
 export * from './pebble/Pebble';
+export * from './motion/motionTokens';
+export * from './motion/useMotion';
+export * from './motion/Motion';

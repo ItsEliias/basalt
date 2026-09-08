@@ -80,4 +80,5 @@ export const depth: Theme = {
     nav: 'label',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 120, base: 240, slow: 280 }, easing: 'ease-in-out' },
 };

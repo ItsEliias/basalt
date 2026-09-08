@@ -48,13 +48,19 @@ export function CTA({ label, onPress, style, disabled, secondary }: {
   );
 }
 
-export function Chip({ label, on, onPress, accent }: {
+export function Chip({ label, on, onPress, accent, tick }: {
   label: string; on?: boolean; onPress?: () => void;
-  /** Accent color for semantically-meaningful chips (e.g. "My equipment"). */
+  /** Accent color for semantically-meaningful chips (e.g. "My equipment") —
+   *  shown as a border hint; the selected fill is always mark/markOn. */
   accent?: string;
+  /** Prefix the selected label with a tick — for multi-select choice rows,
+   *  where several chips can be on and the fill alone reads as a palette. */
+  tick?: boolean;
 }) {
   const { theme } = useTheme();
   const upper = theme.typography.labelCase === 'upper';
+  // V4.1 §3: selection is a FILL, not a text-weight change. The mark/markOn
+  // pair is contrast-pinned per theme, so this is legible in all 11 at once.
   return (
     <Pressable
       onPress={onPress}
@@ -62,8 +68,8 @@ export function Chip({ label, on, onPress, accent }: {
       style={[
         styles.chip,
         { borderColor: theme.surfaces.border, borderRadius: theme.shape.radius.sm },
-        on && { borderColor: theme.surfaces.borderStrong, backgroundColor: theme.surfaces.surface },
-        on && accent ? { borderColor: `${accent}59` } : null,
+        on && { borderColor: theme.fill.mark, backgroundColor: theme.fill.mark },
+        on && accent ? { borderColor: accent } : null,
       ]}
     >
       <Text
@@ -74,10 +80,10 @@ export function Chip({ label, on, onPress, accent }: {
             fontWeight: String(theme.typography.weight.regular) as TextStyle['fontWeight'],
             letterSpacing: theme.typography.tracking.label, color: theme.text.mute,
           },
-          on && { color: accent ?? theme.text.ink },
+          on && { color: theme.fill.markOn },
         ]}
       >
-        {upper ? label.toUpperCase() : label}
+        {(on && tick ? '✓ ' : '') + (upper ? label.toUpperCase() : label)}
       </Text>
     </Pressable>
   );
@@ -101,7 +107,7 @@ export function ChipGroup({ options, values, onToggle }: {
   return (
     <View style={styles.chips}>
       {options.map((o) => (
-        <Chip key={o} label={o} on={values.includes(o)} onPress={() => onToggle?.(o)} />
+        <Chip key={o} label={o} on={values.includes(o)} tick onPress={() => onToggle?.(o)} />
       ))}
     </View>
   );

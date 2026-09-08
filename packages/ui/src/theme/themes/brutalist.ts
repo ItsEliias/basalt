@@ -71,4 +71,5 @@ export const brutalist: Theme = {
     nav: 'inverted',
     rowMinHeight: 50,
   },
+  motion: { duration: { fast: 80, base: 160, slow: 200 }, easing: 'ease-out' },
 };

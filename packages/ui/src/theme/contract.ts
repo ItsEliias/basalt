@@ -129,6 +129,20 @@ export interface ThemeExpression {
   rowMinHeight: number;   // never below 48 for tappable rows
 }
 
+/** Motion (V4.1 §5b). THE RULES, enforced by conformance test + source
+ *  scan: motion never delays a tap or hides a number; nothing runs longer
+ *  than 400 ms except the splash; every animation has a reduced-motion
+ *  path; meaning is never carried by motion alone. Components take every
+ *  duration/spring from here — hard-coding a duration in a component is a
+ *  lint failure. Personalities: snap themes omit `spring` (ease-out,
+ *  160–220 ms); ease themes omit it too but sit at 220–280 ms; bubbly
+ *  themes declare a spring with subtle overshoot (scale ≤ 1.04). */
+export interface ThemeMotion {
+  duration: { fast: number; base: number; slow: number };
+  easing: 'ease-out' | 'ease-in-out';
+  spring?: { damping: number; stiffness: number };
+}
+
 export interface Theme {
   id: string;
   name: string;
@@ -141,6 +155,7 @@ export interface Theme {
   typography: ThemeTypography;
   shape: ThemeShape;
   expression: ThemeExpression;
+  motion: ThemeMotion;
 }
 
 /** Invariants asserted for every theme in __tests__/themeConformance.test.ts */

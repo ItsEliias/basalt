@@ -89,4 +89,5 @@ export const gummy: Theme = {
     nav: 'label',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 130, base: 280, slow: 340 }, easing: 'ease-out', spring: { damping: 14, stiffness: 210 } },
 };

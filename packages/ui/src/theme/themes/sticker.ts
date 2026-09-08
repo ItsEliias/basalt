@@ -85,4 +85,5 @@ export const sticker: Theme = {
     nav: 'label',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 120, base: 260, slow: 320 }, easing: 'ease-out', spring: { damping: 13, stiffness: 230 } },
 };

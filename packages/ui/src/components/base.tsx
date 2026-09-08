@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { space, type as typeScale } from '../tokens';
 import { monoTabular } from '../typography';
 import { useTheme, useBlurTarget, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER, type Theme } from '../theme';
+import { useCountUp } from '../motion/Motion';
 
 // Base primitives: Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState.
 // Every component copies the prototype's exact metrics for Minimal — do not
@@ -70,10 +71,14 @@ export function useContainerStyle(theme: Theme): object[] {
   return [base, border, hardShadow, softDrop].filter(Boolean) as object[];
 }
 
-/** The clay/gloss top sheen — the "inner highlight" half of those looks. */
-export function elevationSheen(theme: Theme): { height: `${number}%`; opacity: number } | null {
-  if (theme.shape.elevation === 'clay') return { height: '45%', opacity: 0.5 };
-  if (theme.shape.elevation === 'gloss') return { height: '34%', opacity: 0.22 };
+/** The clay/gloss top sheen — the "inner highlight" half of those looks.
+ *  V4.1 §4 law: the sheen NEVER sits under text. Its height is the card's
+ *  own top padding (the text-free zone), not a fraction of the card — a
+ *  45% clay sheen put every heading on a half-lightened ground, and no
+ *  opacity survives Gummy's mute text on a lightened violet. */
+export function elevationSheen(theme: Theme): { opacity: number } | null {
+  if (theme.shape.elevation === 'clay') return { opacity: 0.5 };
+  if (theme.shape.elevation === 'gloss') return { opacity: 0.22 };
   return null;
 }
 
@@ -126,7 +131,7 @@ export function Card({ children, style, lead }: { children: ReactNode; style?: S
         {sheen ? (
           <View
             pointerEvents="none"
-            style={[styles.sheen, { height: sheen.height, opacity: sheen.opacity, borderRadius: theme.shape.radius.md }]}
+            style={[styles.sheen, { height: space.card + DENSITY_PAD[density], opacity: sheen.opacity, borderRadius: theme.shape.radius.md }]}
           />
         ) : null}
         {children}
@@ -272,8 +277,15 @@ export function SrcNote({ children, center, style }: { children: ReactNode; cent
  * its card at the largest system text sizes — the user's preference still
  * moves it, just with a ceiling.
  */
-export function HeroNumeral({ value, unit, style }: { value: string; unit?: string; style?: StyleProp<TextStyle> }) {
+export function HeroNumeral({ value, unit, style, countTo, format }: {
+  value: string; unit?: string; style?: StyleProp<TextStyle>;
+  /** When set, the numeral counts to this value (V4.1 §5b) — `format`
+   *  turns the animated number back into the display string. */
+  countTo?: number; format?: (n: number) => string;
+}) {
   const { theme } = useTheme();
+  const counted = useCountUp(countTo ?? 0);
+  const shown = countTo !== undefined && format ? format(counted) : value;
   return (
     <Text
       style={[
@@ -290,7 +302,7 @@ export function HeroNumeral({ value, unit, style }: { value: string; unit?: stri
       ]}
       maxFontSizeMultiplier={1.3}
     >
-      {value}
+      {shown}
       {unit ? (
         <Text
           style={[

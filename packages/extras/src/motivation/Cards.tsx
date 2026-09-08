@@ -84,10 +84,15 @@ export function ConfettiBurst({ onDone }: { onDone?: () => void }) {
       color: [theme.fill.protein, theme.fill.carbs, theme.fill.recovery, theme.fill.accent][i % 4]!,
     })),
   );
+  // V4.1 §5b: the 400 ms law applies here too — the burst is quick, and
+  // reduced motion skips it entirely (the words already said "done").
+  const { ms, reduced } = useMotion();
   useEffect(() => {
+    if (reduced) { onDone?.(); return; }
     Animated.timing(progress, {
-      toValue: 1, duration: 1200, easing: Easing.out(Easing.quad), useNativeDriver: true,
+      toValue: 1, duration: ms('slow'), easing: Easing.out(Easing.quad), useNativeDriver: true,
     }).start(() => onDone?.());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, onDone]);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

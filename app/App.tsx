@@ -4,13 +4,14 @@ import { BlurTargetView } from 'expo-blur';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
+import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { expressiveFontsReady, loadExpressiveFonts } from './src/lib/expressiveFonts';
 import Constants from 'expo-constants';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
-import { FadeIn } from './src/components/FadeIn';
+import { Crossfade } from '@basalt/ui';
+import { SplashColumns } from './src/motion/SplashColumns';
 import { QuickLogSheet, type QuickAction } from './src/components/QuickLogSheet';
 import * as Haptics from 'expo-haptics';
 import { addWater } from '@basalt/nutrition';
@@ -25,6 +26,7 @@ import { RecoverScreen } from './src/screens/recover/RecoverScreen';
 import { TrendsScreen } from './src/screens/trends/TrendsScreen';
 import { WeightSheet } from './src/components/WeightSheet';
 import { wireWeekReviewNotifTap } from './src/lib/weekReviewNotif';
+import { registerSettingsOpener } from './src/lib/settingsNav';
 import { registerTimerService } from './src/lib/timerService';
 import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
 import { rescheduleMonthlyReportNotif, wireMonthlyReportNotifTap } from './src/lib/monthlyReportNotif';
@@ -87,6 +89,10 @@ function MainShell() {
   const bumpToday = useAppStore((s) => s.bumpToday);
 
   const view: ViewKey = settingsOpen ? 'settings' : tab;
+
+  // Deep links land on a settings SECTION (V4.1 §2) — the pending key is
+  // consumed by SettingsScreen on mount, this just opens the view.
+  useEffect(() => registerSettingsOpener(() => setSettingsOpen(true)), []);
 
   // A tap on the Week in Review notification lands on Trends, where the
   // digest is composed live from the ledger — cold start included.
@@ -154,7 +160,7 @@ function MainShell() {
           onPressGear={() => setSettingsOpen(!settingsOpen)}
         />
         <View style={{ flex: 1 }}>
-          <FadeIn viewKey={view}>{body[view]}</FadeIn>
+          <Crossfade viewKey={view}>{body[view]}</Crossfade>
         </View>
         <TabBar
           active={tab}
@@ -302,13 +308,23 @@ export default function App() {
           <Gate />
           <NewInBasalt />
         </ExtrasProvider>
+        <SplashGate />
       </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
+/** V4.1 §5b — the column-wave splash rides OVER the booting app, so it
+ *  never delays content: the app renders beneath and the splash lifts at
+ *  ≤ 1.2 s or on tap, whichever comes first. */
+function SplashGate() {
+  const [done, setDone] = useState(false);
+  if (done) return null;
+  return <SplashColumns onDone={() => setDone(true)} />;
+}
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.bg },
-  loading: { flex: 1, backgroundColor: color.bg, alignItems: 'center', justifyContent: 'center' },
-  brand: { fontFamily: mono, fontSize: 12, letterSpacing: 3, color: color.faint },
+  root: { flex: 1 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  brand: { fontFamily: mono, fontSize: 12, letterSpacing: 3 },
 });

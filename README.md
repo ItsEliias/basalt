@@ -1,303 +1,196 @@
 # Basalt
 
-**A non-gamified, honesty-first health ledger for Android** — food, training, sleep,
-and vitals in one place, so the numbers can talk to each other. No rings, no streak
-shaming, no fabricated data: real numbers or a quiet empty state, always with a source.
+**A non-gamified, honesty-first health ledger for Android** — food, training,
+sleep and vitals in one place, so the numbers can talk to each other. The
+honesty laws in plain words: real data or a quiet empty state, never a
+fabricated chart; every formula published; AI proposes and never narrates;
+over-target is stated plainly ("41 / 36 g · 5 over") and never scolded;
+every synced number shows its source; capture is never paywalled and manual
+entry is always enough.
 
-Four claims, each verifiable:
+## What Basalt does and doesn't do
 
-- **Every formula is published.** Readiness weights, progression rules, sleep need and
-  debt, correlation gates, deviation thresholds — all of it, generated from the same
-  constants the app compiles against, at
-  [basalt.itseliias.com/formulas](https://basalt.itseliias.com/formulas).
-- **No streak shaming.** Streaks are rest-aware by a published rule: planned rest days
-  and rest-advised days *maintain* a run and never start one. Missing a day is stated,
-  never scolded.
-- **AI proposes, never narrates.** Every AI estimate arrives as a range (`~480–720`),
-  editable, unconfirmed until you say so — and no AI summary ever replaces your data.
-  The evaluation harnesses that hold the AI to this are committed in this repo.
-- **Readiness that doesn't require a wearable.** The readiness inputs come from
-  whatever sources you actually have, each shown with its math — and a camera-based
-  fingertip HRV measurement is in calibration, gated on agreeing with a reference
-  wearable before it's allowed to feed anything. Optical wrist sensors fail on
-  tattooed wrists; a camera and a published quality gate don't.
+*The in-app promise, verbatim (Settings → About):*
 
-Internal codename **LEDGER** appears in older docs — same product.
+**What it does**
 
-## One app, six faces
+- Builds your programme and meal plan from your own numbers — your equipment, your week, your history.
+- Shows the maths behind every target, every suggestion, every adjustment. Nothing is a black box.
+- Corrects itself weekly against your trend weight — one bounded change at a time, with the reason attached.
 
-The same Today screen in all six themes. Every theme is defined entirely through a
-token contract — colour, type, shape, meter geometry, elevation — with zero component
-branches (`packages/ui/src/theme/contract.ts`).
+**What it doesn't**
 
-| | | |
+- See your form. A phone can count sets; it cannot watch your spine.
+- Tell muscle from fat on the scale. The trend is honest; its composition isn’t knowable from here.
+- Diagnose anything. Pain flags count; they never conclude.
+- Replace a professional for injuries, eating disorders or medical conditions — those deserve a person.
+
+Every formula in the app is printed next to its number. If you ever find
+one that isn't, that's a bug — tell us.
+
+## Screenshots
+
+| Today — Minimal | Today — Gummy | Today — Simple detail |
 |---|---|---|
-| ![Today screen in the Minimal theme: near-black background, mono numerals, hairline rules](docs/readme-assets/theme-minimal.png) | ![Today screen in the Humanist theme: warm paper background, rounded cards, sentence-case labels in a humanist sans](docs/readme-assets/theme-humanist.png) | ![Today screen in the Athletic theme: high-contrast dark with bold condensed numerals and all-caps labels](docs/readme-assets/theme-athletic.png) |
-| ![Today screen in the Brutalist theme: off-white paper, heavy black card borders, bold grotesque numerals](docs/readme-assets/theme-brutalist.png) | ![Today screen in the Depth theme: blue-green aurora gradient over layered dark surfaces](docs/readme-assets/theme-depth.png) | ![Today screen in the Atelier theme: dark ink background with serif display numerals and brass accents](docs/readme-assets/theme-atelier.png) |
+| ![Today in Minimal](docs/readme-assets/today-minimal.png) | ![Today in Gummy](docs/readme-assets/today-gummy.png) | ![Today at Simple](docs/readme-assets/today-simple.png) |
 
-## Walkthrough
+## Themes
 
-Everything below is the Minimal theme (the default), captured from the seeded 90-day
-demo dataset via the repeatable pipeline in `scripts/readme-shots/`.
+Eleven themes, one contract: every colour pair is contrast-verified in CI
+(4.5:1 text, 3:1 marks — plus a rendered-tree contrast walker), so the
+bubbly ones are exactly as legible as the stern ones. Motion is a token
+too: Minimal snaps, Gummy springs, and Android's "Remove animations"
+turns all of it off.
 
-### Today
+![All eleven themes](docs/readme-assets/themes-strip.png)
 
-| | |
-|---|---|
-| ![Today in the Ledger layout: energy remaining hero, macro rows with targets, logged meals as receipt rows](docs/readme-assets/today-ledger.png) | ![Today in the Tiles layout: the same data as large glanceable tiles](docs/readme-assets/today-tiles.png) |
+Minimal · Humanist · Athletic · Brutalist · Depth · Atelier · Clay ·
+Gummy · Soft · Sticker · Candy Rings
 
-The day opens on energy remaining against your published target, macros with their
-targets, and the day's entries as receipt rows. Two layouts — Ledger and Tiles — carry
-identical data. Sections can be hidden (hiding is omission, never a locked placeholder);
-the energy hero is the one anchor that always shows.
+## Extras
 
-| | |
-|---|---|
-| ![Macros card where the sugar cap row reads over the cap, stated plainly with the excess amount](docs/readme-assets/today-overcap.png) | ![Today with hide-the-numbers on: entries listed, all numbers replaced by qualitative words](docs/readme-assets/today-hidden.png) |
+Everything beyond the core ledger is an **Extra**: off by default
+(capture inputs excepted), one switch each, honest inside. With
+everything off, Basalt is exactly the core app. This list is generated
+from the registry the app compiles against, so it can't drift:
 
-Over a cap, the row says so — "64 / 55 g · 9 over" — and nothing scolds. And for
-anyone who tracks better without numbers staring back, hide-the-numbers keeps
-recording everything while the interface speaks qualitatively; the data stays in your
-ledger and exports.
+**Capture**
 
-### Log
+- **Photo to meal** · on by default — Point the camera at a plate — AI proposes items with portion ranges; you correct, then log.
+- **Voice logging** · on by default — Say the meal — your phone transcribes on-device, the same proposal engine parses it.
+- **Barcode & label scan** · on by default — Scan a barcode, or photograph the nutrition panel — uncertain reads come back as ranges.
+- **Plate builder** · on by default — Drag your recent foods onto a plate and size the portions — commits as ordinary entries.
 
-| | |
-|---|---|
-| ![The Log capture screen: barcode viewfinder with mode row for barcode, search, manual, AI and photo entry](docs/readme-assets/log-capture-modes.png) | ![The Tray mid-log: three items staged with a running total line before one commit](docs/readme-assets/log-tray.png) |
+**Motivation**
 
-Five capture lanes — barcode, search, manual, AI text (typed or spoken via the OS),
-photo — all ending in the same editable-before-save form. The Tray stages a multi-item
-meal with a live running total and commits once. A favorite logs in two taps from app
-open.
+- **Streaks** — Day runs for logging, training and sleep — two automatic freezes a week, rules published on Trends.
+- **XP, levels & badges** — XP from real actions with the formula printed in-app; badges only for real milestones; confetti only on PRs.
+- **Friends & challenges** — Invite-code friends, weekly challenges, leaderboards among friends only — aggregates, never your food.
+- **Daily summary** — One AI-written paragraph about yesterday, from your real numbers — labelled as generated, never a notification.
+- **Pebble grows** · needs pebble — Five stages from a published 30-day consistency score — regression is allowed and visible.
+- **Pebble** — A quiet mascot that only speaks when there’s something to do.
 
-![An AI estimate showing calorie ranges before confirmation, with the often-forgotten companions card underneath](docs/readme-assets/log-ai-range.png)
+**Glanceability**
 
-AI estimates wear `~` and a calibrated range until you confirm — a true value inside
-an honest range beats a tight wrong number, and the committed eval harness enforces
-exactly that. The omissions card suggests commonly forgotten companions (oil,
-dressing, the sugar in your coffee); nothing is ever auto-added.
+- **Sounds** — Three short samples on set commit, log commit and a PR — off by default; haptics stay regardless.
+- **Extra home-screen widgets** — Macros join the Today widget and a Readiness widget becomes available — system placements you add yourself.
 
-### Train
+**More tools**
 
-| | |
-|---|---|
-| ![A training session: set table with previous performance, and a suggestion line stating its basis](docs/readme-assets/train-session.png) | ![The guided set timer running with phase and remaining time in large type](docs/readme-assets/train-guided.png) |
+- **Meal planning & grocery list** — A week plan from your recent foods against your macro gaps; the grocery list aggregates it.
+- **Fasting timer** — Start and end fasts on Recover — elapsed time stated plainly, no coaching about hunger.
+- **Hydration reminders** — Scheduled nudges to drink water, at hours you set — a reminder, never a guilt trip.
+- **Supplements checklist** — Your own list, ticked per day — no products suggested, no doses proposed, ever.
+- **Cycle tracking** — Log-only dates and symptoms; Trends shows a band and a published average-cycle estimate with its range.
+- **Progress photos** — Side-by-side and overlay compare. Photos stay on this phone unless you flip cloud sync on, separately.
+- **Programmes** — Template blocks with a weekly check-in that proposes exactly one thing — hold, one bounded step, or slow down.
+- **Connected services** — Strava, Garmin and Oura imports with source attribution — sessions and sleep, never edited.
 
-Sets land as their own rows with your previous performance beside them. Suggestions
-state their basis — including the mesocycle phase and, when history supports it, the
-percentage-of-training-max math ("72.5 kg = 85% of TM 85 kg") — and every suggestion
-says what it is: a suggestion, never a mandate.
+**Wellbeing tools**
 
-| | |
-|---|---|
-| ![Plate calculator showing per-side plates and the warm-up ramp sets](docs/readme-assets/train-plates.png) | ![The rep-PR matrix: best weight at each rep count as a grid](docs/readme-assets/train-pr-matrix.png) |
+- **Journal** — Free writing, on this phone only by default — cloud sync is a separate switch; a doctor-PDF export exists.
+- **Wind-down** — Box breathing, a 5-minute body scan, a 10-minute quiet timer — offered when sleep debt runs high.
+- **Meditation timer** — A quiet timer with an interval bell — minutes land in your ledger as sessions, nothing more.
 
-| | |
-|---|---|
-| ![Walk start screen with GPS accuracy and a weather line: temperature, wind, sunset](docs/readme-assets/walk-ready-weather.png) | ![A saved walk expanded in the recent list: route map with distance, duration, pace and elevation — the dev basemap tiles carry an API-key watermark pending a production tile key](docs/readme-assets/walk-summary.png) |
+**Basalt**
 
-Walks record with honest GPS filters (bad fixes rejected, jitter never inflates
-distance). The start screen shows the weather from your rounded coordinates only;
-saved walks carry the route, per-km splits, and an attribution line that also states
-what the map can't do yet — the current dev tiles are watermarked and don't permit
-offline caching, and the card says so rather than hiding the map. Guided interval
-walks cue by vibration first, talk-test effort language second, and never a pace
-target.
+- **Visible uncertainty** · on by default — The day’s intake as a range that narrows as entries are weighed — per-source model published in-app.
+- **Pebble Coach** · needs pebble — Ask about your own numbers — answers cite exactly what they used, propose at most one action, never edit anything.
 
-![A shareable walk card with the route drawing and stats on a dark background](docs/readme-assets/share-card.png)
+## Detail levels
 
-### Recover
+A third axis beside theme and layout: **Simple** ("Just tell me what to
+do.") · **Standard** ("Show me the numbers.") · **Full** ("Show me the
+maths."). The law is *shown, never computed* — every level runs the same
+engines on the same numbers; a conformance test pins that Simple's
+numbers are a subset of Standard's are a subset of Full's, equal
+wherever shared. Anything hidden stays one tap away.
 
-| | |
-|---|---|
-| ![Readiness card tapped open, each component showing its literal arithmetic against your own baselines](docs/readme-assets/recover-readiness.png) | ![Sleep card with personal need, debt, suggested bedtime window and the bedtime variance line](docs/readme-assets/recover-sleep.png) |
+## Pebble
 
-Readiness opens into its own math — each component's ratio against your own baseline,
-weights published. Sleep need is the median of your own nights (a stated default until
-14 exist); naps credit the day without shrinking what a night is expected to be; debt,
-a suggested bedtime window, and bedtime variance each carry their formula one tap away.
-Sleep stages are display-only by law: they never enter any score or suggestion.
+An optional companion (off by default). The law: **Pebble proposes,
+never comments** — every message is a proposal with an action and a
+dismiss, built from your own numbers; it never reviews your day.
+**Pebble Coach** (a further Extra) answers questions on Today — every
+answer lists exactly which of your numbers it used, proposes at most one
+action, and never edits anything. Hard limits (medical, dosing,
+disordered-eating patterns) answer with a referral instead. The **crisis
+path** runs before everything else on every free-text field, cannot be
+disabled by any setting, and nothing about it leaves your phone.
 
-| | |
-|---|---|
-| ![The breathing pacer mid-session: a scaling square with phase label and elapsed time](docs/readme-assets/recover-pacer.png) | ![A mobility routine mid-hold: body figure with target regions highlighted, countdown, and cue text](docs/readme-assets/recover-mobility.png) |
+## Nutrition and programmes
 
-The breath pacer is a scaling square (no rings here, even decoratively) with haptic
-phase changes — fully usable silent. Mobility is three fixed routines, not a library;
-the optional self-assessment only reorders emphasis, because a "mobility score" is a
-trap this app refuses to build.
+- **Targets are published maths**: BMR (Mifflin-St Jeor), activity from
+  your own step/session history when it's earned (±20 % banded),
+  goal-rate rails with floors and "slow down" caps — every number a
+  range, the mid shown, the why one tap away.
+- **The programme generator** is deterministic and rules-published:
+  your PT intake (experience, days, minutes, equipment, limitations)
+  in; a split with sets, reps, rest and starting loads out — knee pain
+  caps squat-pattern difficulty, bodyweight-only progresses by reps,
+  and unfixable volume gaps are stated, not hidden.
+- **The weekly check-in** reads your week (safety → adherence → energy →
+  volume, published priority), states the facts, and asks exactly one
+  question. Illness never counts against adherence.
 
-![The camera HRV tuning bench after a failed read: the captured waveform, a DISCARDED verdict naming its reasons — frame rate, clean-beat count, artifact fraction — and the quality row reading FAIL with the raw metrics](docs/readme-assets/recover-ppg.png)
+## Wellbeing
 
-Fingertip-over-camera HRV, in calibration. The quality gates are published (signal-to-
-noise, clean beat count, artifact fraction) and a read that fails any of them is
-discarded with the reasons named — never a shaky number. It feeds nothing until
-side-by-side readings against a reference wearable earn it.
+Mood, energy and stress as words (never scores), a local-first journal,
+wind-down, meditation bells, and the crisis screen above. Sleep stages
+are display-only — they never enter any score or suggestion.
 
-### Trends
+## The engines, with their formulas
 
-| | |
-|---|---|
-| ![Correlations card reading zero past the gates, with every checked pair and its actual r value listed under checked-not-shown](docs/readme-assets/trends-correlations.png) | ![Monthly behavior report stating it lacks enough evening check-ins to report honestly](docs/readme-assets/trends-monthly.png) |
-
-Correlations show only at published gates (|r| ≥ 0.45, n ≥ 30 days). In this capture
-nothing clears the bar, and the card says so — then lists every pair it checked with
-the real r values, because a dashboard that only shows hits is lying by omission.
-The monthly report follows the same rule: short of its evidence threshold, it states
-that instead of padding. Everything is labelled correlation, never cause.
-
-![Week in Review: the week's facts in plain sentences with numbers](docs/readme-assets/trends-week-review.png)
-
-### Settings
-
-| | |
-|---|---|
-| ![Settings Display card: text size, density, six theme chips, Today layout, and section visibility toggles](docs/readme-assets/settings-display.png) | ![Sharing card: a coach grant with its domain list, and the claim-a-code field](docs/readme-assets/settings-sharing.png) |
-
-Sharing is read-only grants by single-use code: pick the domains, hand over the code,
-revoke with one hold — access dies at the other side's next query, enforced by the
-database. Walk routes and sleep stages are never shared; cycle data only ever by its
-own explicit grant.
-
-![Export options: JSON, sectioned CSV, and a per-table archive](docs/readme-assets/settings-export.png)
-
-Your data exports completely — every row of every table — in one tap. Deletion is a
-verified server-side cascade of everything, and a schema-enumerating test fails the
-suite if any table is ever missing from the wipe.
-
-### Onboarding
-
-| | |
-|---|---|
-| ![The onboarding goals step: six goal cards with sub-descriptions, two selected, and the copy stating plainly that conflicting pairs lean toward recomposition](docs/readme-assets/onboarding-goals.png) | ![The same goal choices reopened later from Settings as a sheet, with save-and-recompute-targets](docs/readme-assets/settings-goals.png) |
-
-Onboarding asks only what it needs to compute your targets, every question is
-skippable, and conflicting goals are resolved in the open ("lose weight + build
-muscle leans the plan toward recomposition; we'll say so, not hide it"). Every answer
-is editable later from Settings — the same picker, one recompute away. No upsells —
-there is nothing to upsell; this app has no monetisation and never will.
-
-## The honesty rules
-
-These are product law, not style preferences, and most are pinned by tests:
-
-- **Real or hidden.** No placeholder zeros, no fabricated charts, no invented values.
-  A screen without data shows a quiet typographic empty state that says why.
-
-![A brand-new account's Today screen: every card states what is missing and how to connect it — no targets yet, nothing logged, no step source — and the water goal shows its formula](docs/readme-assets/today-empty.png)
-
-That rule on a fresh account: no demo chart, no zeroed rings — each card names its
-absence and the path to fill it, and the one computed number on screen (the water
-goal) states its formula.
-- **Published formulas.** Every derived number's math is one tap away in-app and on
-  the [formulas page](https://basalt.itseliias.com/formulas), which is generated from
-  the app's own constants so it cannot drift.
-- **`~` and ranges.** Unconfirmed AI values are marked and ranged; inferred chart
-  values draw dashed, measured ones solid.
-- **Over-caps stated plainly.** "5 over" is information. There is no red alarm, no
-  guilt copy — pinned by no-cheerleading and no-scolding tests across the app.
-- **Sources on everything synced.** Every Health Connect datum names its origin app.
-- **Correlation, never cause.** And the checked-but-not-shown list keeps the
-  correlations card honest about its misses.
-- **Capture is never paywalled, no capture modality is ever mandatory, sleep stages
-  never enter a score** — the full amended law is in
-  [`docs/basalt-design-spec.md`](docs/basalt-design-spec.md).
-
-## Status
-
-**Not yet on Google Play.** This is a working app in pre-release: the full suite is
-green (869 tests across seven packages), the backend is live, and the privacy and
-deletion pages are in force — but several native features await verification on
-physical hardware, and the camera-HRV measurement is explicitly in calibration. The
-complete, honest list of what still needs a device is
-[`docs/DEVICE-TEST-PLAN.md`](docs/DEVICE-TEST-PLAN.md). Nothing in this README should
-be read as "shipped to users" until a Play listing exists.
+Readiness, progression, correlations, sleep need & debt, and graded
+uncertainty (unconfirmed AI values are ranges and render dashed/banded)
+are all published at
+[basalt.itseliias.com/formulas](https://basalt.itseliias.com/formulas) —
+generated from the same constants the app compiles against.
 
 ## Architecture
 
-pnpm workspace:
+pnpm workspace: `app/` (Expo ~56 / RN 0.85 / Zustand / Supabase) +
+vendored packages `core-data` · `nutrition` · `training` ·
+`analytics` · `health-connect` (28 record types) · `ui` (the theme
+contract + components) · `extras`. Every write goes through the
+service layer (`Result<T>`) so the offline outbox can replay it; RLS
+`auth.uid() = user_id` on every table; AI calls and privileged
+operations live in Supabase Edge Functions — no secrets in the client,
+ever.
 
-```
-app/                  Expo ~56 / RN 0.85 / React Navigation 7 / Zustand 5 / Supabase
-packages/
-  core-data/           Result<T>, dates, Supabase client factory, sharing, deletion guard
-  health-connect/      Android Health Connect provider (read-only, source-labelled)
-  nutrition/           food CRUD, water, Open Food Facts, recipes, cooking mode, fill-gap
-  training/            sessions → exercises → sets, periodization, race plans, mobility
-  analytics/           readiness, streaks, correlations, sleep need/debt, cycle, PPG
-  ui/                  six-theme design system (token contract, zero theme branches)
-docs/                  binding docs + dated batch reports
-supabase/              migrations, edge functions (all AI runs server-side)
-scripts/               seeder, eval harnesses, formulas-page generator, screenshot pipeline
-```
+## Stats
 
-- Every write goes through the service layer (`Result<T>`); an offline outbox replays
-  failed writes as service-call intents, so a dead spot never loses a log.
-- Supabase with RLS (`auth.uid() = user_id`) on every table; **no secrets in the
-  client bundle** — all AI goes through Edge Functions, and the committed eval
-  harnesses (`pnpm eval:quick-add`, `eval:recipe-ideas`, `eval:sharing-rls`) run
-  against the deployed functions.
-- The six themes exist only as token-contract implementations: if a theme would need
-  a component override, the contract grows a token instead.
-- `pnpm test` from the repo root: **869 tests, seven packages, green at every commit.**
+| | |
+|---|---|
+| Date | 2026-09-09 |
+| Lines of TS/TSX | 51104 |
+| Test blocks | ~1022 |
+| Commits | 286 |
+| Active days | 14 |
 
-## Privacy
-
-The in-force policy lives at
-[basalt.itseliias.com/privacy](https://basalt.itseliias.com/privacy/). The short
-version: your data sits in your own row-level-secured account; there are no
-analytics, ads, or trackers; and the complete list of what ever leaves the device is
-short — sync to your own account, the AI inputs you explicitly submit (typed/spoken
-text as text, photos you choose, ingredient lists), barcode digits to Open Food
-Facts, rounded coordinates to Open-Meteo for the walk-screen weather, and map tiles
-for the area a route map displays. Deleting your account removes every row and file,
-server-side, verified.
-
-## Getting started
+## Building and running
 
 ```bash
 pnpm install
-cp app/.env.example app/.env   # fill in Supabase URL + publishable key
-pnpm test                       # everything, from repo root
+pnpm test                 # every package, must stay green
+cd app && npx expo start  # dev client
+# release: cd app/android && ./gradlew bundleRelease
 ```
 
-Run the app:
+`.env` in `app/` needs `EXPO_PUBLIC_SUPABASE_URL` and
+`EXPO_PUBLIC_SUPABASE_KEY` (publishable key only).
 
-```bash
-cd app
-pnpm start           # Metro only — pair with a running native build
-pnpm android          # full native build + install + launch (first run, or after native changes)
-```
+## Privacy and data
 
-`pnpm android` is only needed after native-affecting changes (new native module,
-manifest/permissions change); plain `pnpm start` + Metro reload covers JS-only work
-once a native build is installed. Screenshots in this README regenerate via
-`scripts/readme-shots/screenshots.md`.
+Local-first where it matters (journal, progress photos by default,
+crisis detection entirely on-device), full export (JSON, CSV, per-table
+zip archive, doctor-report PDF), and deletion that is a true cascade —
+every row in every table, then the sign-in record itself. The backend
+currently shares a Supabase project with another app of mine; every
+Basalt table is prefixed and isolated, and the move to a dedicated
+project is documented in `docs/DECOMMISSION.md`.
 
-## Backend rules (Supabase)
+## Status
 
-- Every Basalt table is prefixed `basalt_`; RLS on all of them; no gamification
-  columns anywhere.
-- **Migration-safety rule: no destructive SQL that isn't scoped to `basalt_`-prefixed
-  objects, ever** (the project is currently shared with another app — see
-  `docs/DECOMMISSION.md` for the move-out runbook).
-- Account deletion cascades across every `basalt_` table + storage, on both the
-  in-app and server paths — enforced by a test that enumerates the schema.
-
-## Workflow
-
-- Branch discipline: topic branches, merged to `main` with tests passing; never
-  force-push `main`.
-- Commit after each coherent unit with its tests green.
-
-## Docs index
-
-`docs/basalt-design-spec.md` (the binding UI contract + honesty laws) ·
-`docs/basalt-theme-contract.md` · `docs/basalt-layouts.md` ·
-`docs/THEME-SYSTEM-REPORT.md` (six-theme rollout) ·
-`docs/SHARING-RLS-DESIGN.md` (the sharing security model) ·
-`docs/DEVICE-TEST-PLAN.md` (what still needs hardware) ·
-`docs/DECOMMISSION.md` (Supabase move-out runbook) ·
-dated `docs/V*-REPORT.md` files are snapshots of each work batch — history, not
-necessarily current state.
+**Closed testing** (0.2.1). Feedback: Settings → About → Send feedback
+(opens your mail app — nothing is sent silently), or open an issue here.

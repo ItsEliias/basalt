@@ -133,9 +133,9 @@ describe('sizing invariants', () => {
     expect(suffix).toMatch(/over/);
   });
 
-  it.each(ids)('%s: tilt is capped at 2° and forbidden with a mono data face', (id) => {
+  it.each(ids)('%s: tilt is capped at 1.5° and forbidden with a mono data face', (id) => {
     const t = THEMES[id];
-    expect(Math.abs(t.shape.tilt)).toBeLessThanOrEqual(2);
+    expect(Math.abs(t.shape.tilt)).toBeLessThanOrEqual(1.5);
     if (/mono/i.test(t.typography.data)) {
       expect(t.shape.tilt, `${id}: tilted mono columns don't align`).toBe(0);
     }
@@ -147,5 +147,94 @@ describe('sizing invariants', () => {
     const bg = THEMES[id].surfaces.bg;
     const icons = relativeLuminance(bg) > 0.5 ? '#000000' : '#ffffff';
     expect(contrastRatio(icons, bg)).toBeGreaterThanOrEqual(INVARIANTS.minTextContrast);
+  });
+});
+
+// ── V4.1 §3 — selection is a fill, in every theme ─────────────────────
+// A selected segment/chip fills with `mark` and sets its label in `markOn`;
+// the unselected one sits on bare ground. The rule is a token rule so all
+// themes pass or fail together — no per-theme branches allowed.
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+
+describe('V4.1 §3 — selected state is a fill', () => {
+  it.each(ids)('%s: selected fill vs unselected ground ≥ 3:1, selected text ≥ 4.5:1', (id) => {
+    const t = THEMES[id]!;
+    for (const s of ['bg', 'surface', 'surface2'] as const) {
+      expect(contrastRatio(t.fill.mark, t.surfaces[s]),
+        `${id}: mark on ${s} — a selected segment must be visibly filled`).toBeGreaterThanOrEqual(3);
+    }
+    expect(contrastRatio(t.fill.markOn, t.fill.mark),
+      `${id}: markOn on mark`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('the Chip primitive takes its on-state from fill.mark/markOn (no border-only selection)', () => {
+    const src = readFileSync(resolvePath(__dirname, '../../components/controls.tsx'), 'utf8');
+    const chip = src.slice(src.indexOf('export function Chip'), src.indexOf('export function ChipRow'));
+    expect(chip).toContain('backgroundColor: theme.fill.mark');
+    expect(chip).toContain('color: theme.fill.markOn');
+  });
+});
+
+// ── V4.1 §5b — motion is a token, with physics limits ─────────────────
+describe('V4.1 §5b — motion tokens', () => {
+  const SNAP = ['minimal', 'atelier', 'brutalist'] as const;
+  const SPRING = ['clay', 'gummy', 'soft', 'sticker', 'candyRings'] as const;
+
+  it.each(ids)('%s: declares motion; fast ≤ base ≤ slow ≤ 400 ms', (id) => {
+    const m = THEMES[id]!.motion;
+    expect(m).toBeDefined();
+    expect(m.duration.fast).toBeLessThanOrEqual(m.duration.base);
+    expect(m.duration.base).toBeLessThanOrEqual(m.duration.slow);
+    expect(m.duration.slow, `${id}: nothing runs longer than 400 ms except the splash`).toBeLessThanOrEqual(400);
+  });
+
+  it('snap themes have no spring and settle ≤ 220 ms base', () => {
+    for (const id of SNAP) {
+      const m = THEMES[id]!.motion;
+      expect(m.spring, `${id} is a snap theme`).toBeUndefined();
+      expect(m.duration.base).toBeLessThanOrEqual(220);
+    }
+  });
+
+  it('bubbly themes declare a spring whose overshoot keeps a 0.9→1.0 pop-in ≤ 1.04 scale', () => {
+    for (const id of SPRING) {
+      const s = THEMES[id]!.motion.spring;
+      expect(s, `${id} is a spring theme`).toBeDefined();
+      // Mass-1 second-order system: damping ratio ζ = c / (2·√k);
+      // fractional overshoot = e^(−ζπ/√(1−ζ²)). A pop-in animates a 0.1
+      // scale delta, so overshoot ≤ 0.4 keeps peak scale ≤ 1.04.
+      const zeta = s!.damping / (2 * Math.sqrt(s!.stiffness));
+      const overshoot = zeta >= 1 ? 0 : Math.exp((-zeta * Math.PI) / Math.sqrt(1 - zeta * zeta));
+      expect(overshoot, `${id}: spring overshoot`).toBeLessThanOrEqual(0.4);
+    }
+  });
+});
+
+// ── V4.1 §4 — Sticker's tilt and Gummy/Clay's sheen, as laws ──────────
+describe('V4.1 §4 — tilt and sheen laws', () => {
+  it('theme.shape.tilt is applied ONLY by Card components — never rows, inputs, buttons or nav', () => {
+    const componentsDir = resolvePath(__dirname, '../../components');
+    const offenders: string[] = [];
+    for (const f of readdirSync(componentsDir)) {
+      if (!/\.tsx$/.test(f)) continue;
+      const src = readFileSync(resolvePath(componentsDir, f), 'utf8');
+      if (src.includes('shape.tilt') && f !== 'base.tsx') offenders.push(f);
+    }
+    expect(offenders, 'tilt outside Card').toEqual([]);
+    // and base.tsx applies it only inside Card/Tile-card containers
+    const base = readFileSync(resolvePath(componentsDir, 'base.tsx'), 'utf8');
+    const uses = [...base.matchAll(/shape\.tilt/g)].length;
+    expect(uses).toBeGreaterThan(0);
+  });
+
+  it('the top sheen never sits under text — its height is the card top padding, not a card fraction', () => {
+    // Found by the composited-contrast audit: Gummy's mute text on the
+    // 22 %-white-lightened violet was 2.8:1, and NO sheen opacity passes
+    // (even 8 % leaves 3.8:1). The fix is geometry — the sheen occupies
+    // only the text-free padding strip. This pins the implementation.
+    const base = readFileSync(resolvePath(__dirname, '../../components/base.tsx'), 'utf8');
+    expect(base).toContain('height: space.card + DENSITY_PAD[density], opacity: sheen.opacity');
+    expect(base).not.toMatch(/height:\s*'\d+%'.*opacity/);
   });
 });

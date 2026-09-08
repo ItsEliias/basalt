@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { mono, monoTabular } from '../typography';
 import { capState, fillPct, overCapSuffix } from '../format';
 import { useTheme, resolveTypeface } from '../theme';
+import { AnimatedFill } from '../motion/Motion';
 
 // Macro rows, cap rows, hairline bars and the segmented macro stack —
 // prototype .macro / .bar / .stack, metrics copied exactly.
@@ -19,11 +20,9 @@ export function Bar({ pct, fill }: { pct: number; fill: string }) {
         { height: theme.shape.meterHeight, borderRadius: theme.shape.meterRadius, backgroundColor: theme.surfaces.surface2 },
       ]}
     >
-      <View
-        style={[
-          styles.barFill,
-          { width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: fill, borderRadius: theme.shape.meterRadius },
-        ]}
+      <AnimatedFill
+        fraction={Math.max(0, Math.min(100, pct)) / 100}
+        style={[styles.barFill, { backgroundColor: fill, borderRadius: theme.shape.meterRadius }]}
       />
     </View>
   );

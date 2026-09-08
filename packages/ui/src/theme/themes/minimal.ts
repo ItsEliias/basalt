@@ -74,4 +74,5 @@ export const minimal: Theme = {
     nav: 'iconLabel',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 90, base: 160, slow: 220 }, easing: 'ease-out' },
 };
