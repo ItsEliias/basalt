@@ -636,7 +636,7 @@ export function SettingsScreen() {
         >
           <ReceiptRow
             name={busy === 'doctor' ? 'Building…' : 'Doctor report — PDF'}
-            meta="last 30 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
+            meta="last 90 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
             value="→"
             valueColor={theme.text.faint}
           />
