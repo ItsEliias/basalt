@@ -11,6 +11,7 @@ import { join, resolve, sep } from 'node:path';
 
 const REPO = resolve(__dirname, '../../../../..');
 const ROOTS = [join(REPO, 'app', 'src'), join(REPO, 'packages', 'ui', 'src')];
+const EXTRA_FILES = [join(REPO, 'app', 'App.tsx'), join(REPO, 'app', 'index.ts')];
 
 // The theme system and the token definition are the only legitimate readers.
 const ALLOWED = [
@@ -35,6 +36,9 @@ const IMPORT_RE =
 describe('theme bypass guard', () => {
   it('no file outside the theme system imports the static `color` palette', () => {
     const offenders: string[] = [];
+    for (const file of EXTRA_FILES) {
+      if (IMPORT_RE.test(readFileSync(file, 'utf8'))) offenders.push(file);
+    }
     for (const root of ROOTS) {
       for (const file of walk(root)) {
         if (ALLOWED.some((a) => file.includes(a))) continue;

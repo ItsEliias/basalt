@@ -71,10 +71,14 @@ export function useContainerStyle(theme: Theme): object[] {
   return [base, border, hardShadow, softDrop].filter(Boolean) as object[];
 }
 
-/** The clay/gloss top sheen — the "inner highlight" half of those looks. */
-export function elevationSheen(theme: Theme): { height: `${number}%`; opacity: number } | null {
-  if (theme.shape.elevation === 'clay') return { height: '45%', opacity: 0.5 };
-  if (theme.shape.elevation === 'gloss') return { height: '34%', opacity: 0.22 };
+/** The clay/gloss top sheen — the "inner highlight" half of those looks.
+ *  V4.1 §4 law: the sheen NEVER sits under text. Its height is the card's
+ *  own top padding (the text-free zone), not a fraction of the card — a
+ *  45% clay sheen put every heading on a half-lightened ground, and no
+ *  opacity survives Gummy's mute text on a lightened violet. */
+export function elevationSheen(theme: Theme): { opacity: number } | null {
+  if (theme.shape.elevation === 'clay') return { opacity: 0.5 };
+  if (theme.shape.elevation === 'gloss') return { opacity: 0.22 };
   return null;
 }
 
@@ -127,7 +131,7 @@ export function Card({ children, style, lead }: { children: ReactNode; style?: S
         {sheen ? (
           <View
             pointerEvents="none"
-            style={[styles.sheen, { height: sheen.height, opacity: sheen.opacity, borderRadius: theme.shape.radius.md }]}
+            style={[styles.sheen, { height: space.card + DENSITY_PAD[density], opacity: sheen.opacity, borderRadius: theme.shape.radius.md }]}
           />
         ) : null}
         {children}

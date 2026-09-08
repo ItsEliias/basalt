@@ -188,7 +188,7 @@ function ThemeRow({
         style={[
           styles.tick,
           { borderColor: theme.surfaces.borderStrong },
-          ticked && { backgroundColor: '#3E9B78', borderColor: '#3E9B78' },
+          ticked && { backgroundColor: theme.fill.mark, borderColor: theme.fill.mark },
         ]}
       >
         {ticked ? <Text style={[styles.tickGlyph, { color: theme.fill.markOn }]} allowFontScaling={false}>✓</Text> : null}

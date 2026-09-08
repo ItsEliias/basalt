@@ -4,7 +4,7 @@ import { BlurTargetView } from 'expo-blur';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
+import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { expressiveFontsReady, loadExpressiveFonts } from './src/lib/expressiveFonts';
 import Constants from 'expo-constants';
@@ -324,7 +324,7 @@ function SplashGate() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.bg },
-  loading: { flex: 1, backgroundColor: color.bg, alignItems: 'center', justifyContent: 'center' },
-  brand: { fontFamily: mono, fontSize: 12, letterSpacing: 3, color: color.faint },
+  root: { flex: 1 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  brand: { fontFamily: mono, fontSize: 12, letterSpacing: 3 },
 });

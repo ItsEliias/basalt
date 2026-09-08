@@ -133,9 +133,9 @@ describe('sizing invariants', () => {
     expect(suffix).toMatch(/over/);
   });
 
-  it.each(ids)('%s: tilt is capped at 2° and forbidden with a mono data face', (id) => {
+  it.each(ids)('%s: tilt is capped at 1.5° and forbidden with a mono data face', (id) => {
     const t = THEMES[id];
-    expect(Math.abs(t.shape.tilt)).toBeLessThanOrEqual(2);
+    expect(Math.abs(t.shape.tilt)).toBeLessThanOrEqual(1.5);
     if (/mono/i.test(t.typography.data)) {
       expect(t.shape.tilt, `${id}: tilted mono columns don't align`).toBe(0);
     }
@@ -154,7 +154,7 @@ describe('sizing invariants', () => {
 // A selected segment/chip fills with `mark` and sets its label in `markOn`;
 // the unselected one sits on bare ground. The rule is a token rule so all
 // themes pass or fail together — no per-theme branches allowed.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 
 describe('V4.1 §3 — selected state is a fill', () => {
@@ -208,5 +208,33 @@ describe('V4.1 §5b — motion tokens', () => {
       const overshoot = zeta >= 1 ? 0 : Math.exp((-zeta * Math.PI) / Math.sqrt(1 - zeta * zeta));
       expect(overshoot, `${id}: spring overshoot`).toBeLessThanOrEqual(0.4);
     }
+  });
+});
+
+// ── V4.1 §4 — Sticker's tilt and Gummy/Clay's sheen, as laws ──────────
+describe('V4.1 §4 — tilt and sheen laws', () => {
+  it('theme.shape.tilt is applied ONLY by Card components — never rows, inputs, buttons or nav', () => {
+    const componentsDir = resolvePath(__dirname, '../../components');
+    const offenders: string[] = [];
+    for (const f of readdirSync(componentsDir)) {
+      if (!/\.tsx$/.test(f)) continue;
+      const src = readFileSync(resolvePath(componentsDir, f), 'utf8');
+      if (src.includes('shape.tilt') && f !== 'base.tsx') offenders.push(f);
+    }
+    expect(offenders, 'tilt outside Card').toEqual([]);
+    // and base.tsx applies it only inside Card/Tile-card containers
+    const base = readFileSync(resolvePath(componentsDir, 'base.tsx'), 'utf8');
+    const uses = [...base.matchAll(/shape\.tilt/g)].length;
+    expect(uses).toBeGreaterThan(0);
+  });
+
+  it('the top sheen never sits under text — its height is the card top padding, not a card fraction', () => {
+    // Found by the composited-contrast audit: Gummy's mute text on the
+    // 22 %-white-lightened violet was 2.8:1, and NO sheen opacity passes
+    // (even 8 % leaves 3.8:1). The fix is geometry — the sheen occupies
+    // only the text-free padding strip. This pins the implementation.
+    const base = readFileSync(resolvePath(__dirname, '../../components/base.tsx'), 'utf8');
+    expect(base).toContain('height: space.card + DENSITY_PAD[density], opacity: sheen.opacity');
+    expect(base).not.toMatch(/height:\s*'\d+%'.*opacity/);
   });
 });
