@@ -52,8 +52,16 @@ import {
   GOAL_OPTIONS, SEX_OPTIONS, ALLERGY_OPTIONS, DIET_OPTIONS, EQUIPMENT_OPTIONS,
   CHECKIN_OPTIONS, checkinKey, sexKey,
 } from '../onboarding/model';
+import {
+  SETTINGS_SECTIONS, type SettingsSectionKey,
+  profileSummary, appearanceSummary, pebbleSummary, extrasSummary,
+  nutritionSummary, notificationsSummary, accountSummary, aboutSummary,
+} from './settingsHomeModel';
+import { consumePendingSection } from '../../lib/settingsNav';
 
-// Settings — every onboarding answer editable, your data yours fully, delete
+// Settings — V4.1 §2: a HOME of eight section rows (name · current values ·
+// chevron), each opening its own screen. Nothing lives on the home except
+// those rows and the version. Every onboarding answer stays editable; delete
 // is a true full cascade (Edge Function; unconditional — rows, storage, then
 // the sign-in record).
 
@@ -66,12 +74,6 @@ function textScaleKey(label: string | null): 'system' | 'plus1' | 'plus2' {
   return 'system';
 }
 
-// THEME_IDS order is the registry's own — Minimal first (the default).
-const THEME_OPTIONS = THEME_IDS.map((id) => THEMES[id].name);
-function themeIdForLabel(label: string): ThemeId {
-  return THEME_IDS.find((id) => THEMES[id].name === label) ?? 'minimal';
-}
-
 const LAYOUT_OPTIONS = ['Ledger', 'Tiles', 'Rings'];
 function layoutKey(label: string): 'ledger' | 'tiles' | 'rings' {
   if (label === 'Tiles') return 'tiles';
@@ -82,6 +84,7 @@ function layoutKey(label: string): 'ledger' | 'tiles' | 'rings' {
 export function SettingsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const [section, setSection] = useState<SettingsSectionKey | null>(() => consumePendingSection());
   const [importOpen, setImportOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const [hiddenToday, setHiddenToday] = useState<string[]>([]);
@@ -264,471 +267,569 @@ export function SettingsScreen() {
     await signOut();
   };
 
-  return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
-      {/* ── Profile ────────────────────────────────────────────────── */}
-      <Card>
-        <ReceiptHeader label="Profile" summary="everything editable" />
-        <Pressable onPress={() => setEdit('basics')} hitSlop={8}>
-          <ReceiptRow
-            name={profile?.name?.trim() || 'Your details'}
-            meta={[
-              profile?.heightCm ? `${profile.heightCm} cm` : null,
-              profile?.ageYears ? `${profile.ageYears} y` : null,
-              profile?.useMetric === false ? 'imperial' : 'metric',
-            ].filter(Boolean).join(' · ') || 'not set yet'}
-            value="edit →"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => setEdit('goals')} hitSlop={8}>
-          <ReceiptRow
-            name="Goals"
-            meta={
-              (profile?.goalTypes?.length ?? 0) > 0
-                ? profile!.goalTypes.map((g) => GOAL_OPTIONS.find((o) => o.key === g)?.title ?? g).join(' + ')
-                : 'none set'
-            }
-            value="change →"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => setFinishProfileOpen(true)} hitSlop={8}>
-          <ReceiptRow
-            name="PT intake"
-            meta={profile?.ptIntake ? 'experience, schedule, equipment weights, diet preferences' : 'not filled yet — the programme generator asks for this'}
-            value="edit →"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <ReceiptRow
-          name="Daily targets"
-          meta={
-            targets
-              ? `${groupInt(targets.calories)} kcal · P ${targets.proteinG}${targets.sugarCapG != null ? ` · sugar cap ${targets.sugarCapG} g` : ''}`
-              : 'no targets yet — set goals + basics and recompute'
-          }
-          value={targets ? undefined : undefined}
-        />
-        {targets?.reason ? <SrcNote>{`Why: ${targets.reason}`}</SrcNote> : null}
-        <Pressable onPress={() => setEdit('dietary')} hitSlop={8}>
-          <ReceiptRow
-            name="Dietary requirements"
-            meta={
-              [...(profile?.dietaryFlags ?? []), ...(profile?.dietPatterns ?? [])].join(' · ') || 'none set'
-            }
-            value="edit →"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => setEdit('training')} hitSlop={8}>
-          <ReceiptRow
-            name="Training setup"
-            meta={
-              profile?.trainLocation
-                ? `${profile.trainLocation}${profile.trainLocation !== 'gym' ? ` · ${profile.equipment.length} items at home` : ''}`
-                : 'not set'
-            }
-            value="edit →"
-            valueColor={theme.text.faint}
-            last
-          />
-        </Pressable>
-      </Card>
+  const version = Constants.expoConfig?.version ?? null;
+  const detailNow = DETAIL_OPTIONS.find((x) => x.key === (profile?.detail ?? 'standard'));
+  const notifOnCount = [weekNotif, monthNotif, illnessNotif].filter((v) => v === true).length;
+  const extrasOnCount = EXTRAS.filter((e) => extras.extras[e.id]).length;
 
-      {/* ── Preferences ────────────────────────────────────────────── */}
-      <PlanCard />
+  const summaries: Record<SettingsSectionKey, string> = {
+    profile: profileSummary({
+      name: profile?.name, goalCount: profile?.goalTypes?.length ?? 0,
+      targetsKcal: targets ? targets.calories : null,
+    }),
+    appearance: appearanceSummary({
+      themeName: THEMES[profile?.theme ?? 'minimal'].name,
+      detailTitle: detailNow?.title ?? 'Standard',
+      layoutLabel: profile?.todayLayout === 'tiles' ? 'Tiles' : profile?.todayLayout === 'rings' ? 'Rings' : 'Ledger',
+    }),
+    pebble: pebbleSummary(extras.extras.pebble, growsOn && growth ? stageFor(growthScore(growth)) : null),
+    extras: extrasSummary(extrasOnCount, EXTRAS.length),
+    nutrition: nutritionSummary({
+      hideNumbers: profile?.hideNumbers ?? false,
+      challengeOn: profile?.challengeEnabled ?? false,
+    }),
+    notifications: notificationsSummary(notifOnCount),
+    account: accountSummary(session?.user.email ?? null),
+    about: aboutSummary(version),
+  };
+
+  const back = (
+    <Pressable onPress={() => setSection(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Back to Settings">
+      <Text style={[styles.back, { color: theme.text.faint }]}>← SETTINGS</Text>
+    </Pressable>
+  );
+
+  const sectionTitle = (key: SettingsSectionKey) =>
+    SETTINGS_SECTIONS.find((s) => s.key === key)?.name ?? '';
+
+  return (
+    <ScrollView key={section ?? 'home'} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+      {section === null ? (
+        <>
+          <Card>
+            {SETTINGS_SECTIONS.map((s, i) => (
+              <Pressable key={s.key} onPress={() => setSection(s.key)} hitSlop={4} accessibilityRole="button" accessibilityLabel={`${s.name} settings`}>
+                <ReceiptRow
+                  name={s.name}
+                  meta={summaries[s.key]}
+                  value="›"
+                  valueColor={theme.text.faint}
+                  last={i === SETTINGS_SECTIONS.length - 1}
+                />
+              </Pressable>
+            ))}
+          </Card>
+          <SrcNote>{version ? `Basalt v${version}` : 'Basalt'}</SrcNote>
+        </>
+      ) : null}
+
+      {section === 'profile' ? (
+        <>
+          {back}
+          <Card>
+            <ReceiptHeader label="Profile" summary="everything editable" />
+            <Pressable onPress={() => setEdit('basics')} hitSlop={8}>
+              <ReceiptRow
+                name={profile?.name?.trim() || 'Your details'}
+                meta={[
+                  profile?.heightCm ? `${profile.heightCm} cm` : null,
+                  profile?.ageYears ? `${profile.ageYears} y` : null,
+                  profile?.useMetric === false ? 'imperial' : 'metric',
+                ].filter(Boolean).join(' · ') || 'not set yet'}
+                value="edit →"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => setEdit('goals')} hitSlop={8}>
+              <ReceiptRow
+                name="Goals"
+                meta={
+                  (profile?.goalTypes?.length ?? 0) > 0
+                    ? profile!.goalTypes.map((g) => GOAL_OPTIONS.find((o) => o.key === g)?.title ?? g).join(' + ')
+                    : 'none set'
+                }
+                value="change →"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => setFinishProfileOpen(true)} hitSlop={8}>
+              <ReceiptRow
+                name="PT intake"
+                meta={profile?.ptIntake ? 'experience, schedule, equipment weights, diet preferences' : 'not filled yet — the programme generator asks for this'}
+                value="edit →"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <ReceiptRow
+              name="Daily targets"
+              meta={
+                targets
+                  ? `${groupInt(targets.calories)} kcal · P ${targets.proteinG}${targets.sugarCapG != null ? ` · sugar cap ${targets.sugarCapG} g` : ''}`
+                  : 'no targets yet — set goals + basics and recompute'
+              }
+            />
+            {targets?.reason ? <SrcNote>{`Why: ${targets.reason}`}</SrcNote> : null}
+            <Pressable onPress={() => setEdit('dietary')} hitSlop={8}>
+              <ReceiptRow
+                name="Dietary requirements"
+                meta={
+                  [...(profile?.dietaryFlags ?? []), ...(profile?.dietPatterns ?? [])].join(' · ') || 'none set'
+                }
+                value="edit →"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => setEdit('training')} hitSlop={8}>
+              <ReceiptRow
+                name="Training setup"
+                meta={
+                  profile?.trainLocation
+                    ? `${profile.trainLocation}${profile.trainLocation !== 'gym' ? ` · ${profile.equipment.length} items at home` : ''}`
+                    : 'not set'
+                }
+                value="edit →"
+                valueColor={theme.text.faint}
+                last
+              />
+            </Pressable>
+          </Card>
+          <PlanCard />
+          <Card>
+            <ReceiptHeader label="Check-ins" />
+            <ObChipLabel>Weekly check-in preference</ObChipLabel>
+            <ChipRow
+              options={CHECKIN_OPTIONS}
+              value={CHECKIN_OPTIONS.find((o) => checkinKey(o) === profile?.checkinPreference)}
+              onChange={(v) => void save({ checkinPreference: checkinKey(v) })}
+            />
+          </Card>
+        </>
+      ) : null}
+
+      {section === 'appearance' ? (
+        <>
+          {back}
+          <Card>
+            <ReceiptHeader label="Appearance" summary="legibility — applies everywhere" />
+            <ObChipLabel>Theme</ObChipLabel>
+            <Pressable onPress={() => setThemePickerOpen(true)} accessibilityRole="button" accessibilityLabel="Choose theme">
+              <ReceiptRow
+                name={THEMES[profile?.theme ?? 'minimal'].name}
+                meta={THEMES[profile?.theme ?? 'minimal'].description}
+                value="change →"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <SrcNote>Live previews in your own numbers · every colour contrast-verified · nothing changes until you confirm</SrcNote>
+            <ObChipLabel>Detail — what is shown, never what is computed</ObChipLabel>
+            <ChipRow
+              options={DETAIL_OPTIONS.map((o) => `${o.title} — ${o.quote}`)}
+              value={(() => { const o = DETAIL_OPTIONS.find((x) => x.key === (profile?.detail ?? 'standard')); return o ? `${o.title} — ${o.quote}` : undefined; })()}
+              onChange={(label) => {
+                const o = DETAIL_OPTIONS.find((x) => `${x.title} — ${x.quote}` === label);
+                if (o) void save({ detail: o.key });
+              }}
+            />
+            <ObChipLabel>Today layout</ObChipLabel>
+            <ChipRow
+              options={LAYOUT_OPTIONS}
+              value={profile?.todayLayout === 'tiles' ? 'Tiles' : profile?.todayLayout === 'rings' ? 'Rings' : 'Ledger'}
+              onChange={(v) => {
+                const next = layoutKey(v);
+                logThemeLayoutEvent({ type: 'layout_selected', surface: 'today', layout: next, previous: profile?.todayLayout ?? 'ledger' });
+                void save({ todayLayout: next });
+              }}
+            />
+            <SrcNote>Tiles is Today only — Log, Train, Recover and Trends stay ledger for now</SrcNote>
+            <ObChipLabel>Text size</ObChipLabel>
+            <ChipRow
+              options={TEXT_SCALE_OPTIONS}
+              value={TEXT_SCALE_OPTIONS.find((o) => textScaleKey(o) === (profile?.textScale ?? 'system'))}
+              onChange={(v) => void save({ textScale: textScaleKey(v) })}
+            />
+            <SrcNote>Layered on top of your phone's own text-size setting, not a replacement for it</SrcNote>
+            <ObChipLabel>Density</ObChipLabel>
+            <ChipRow
+              options={['Comfortable', 'Compact']}
+              value={profile?.density === 'compact' ? 'Compact' : 'Comfortable'}
+              onChange={(v) => void save({ density: v.toLowerCase() === 'compact' ? 'compact' : 'comfortable' })}
+            />
+            <SrcNote>Comfortable adds extra breathing room to every row and card — on by default</SrcNote>
+            <ObChipLabel>Today sections — hiding is omission, never a ghost</ObChipLabel>
+            {HIDEABLE_SECTIONS.map((sec, i) => (
+              <ReceiptRow
+                key={sec.key}
+                name={sec.label}
+                meta={hiddenToday.includes(sec.key) ? 'hidden — still recorded' : 'shown'}
+                last={i === HIDEABLE_SECTIONS.length - 1}
+                right={
+                  <Switch
+                    value={!hiddenToday.includes(sec.key)}
+                    onValueChange={() => toggleTodaySection(sec.key)}
+                    trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                    thumbColor={theme.text.ink}
+                    accessibilityLabel={`${sec.label} section`}
+                  />
+                }
+              />
+            ))}
+            <SrcNote>The energy hero is the day's anchor and always shows · hidden sections still record — everything stays in your ledger and exports</SrcNote>
+          </Card>
+        </>
+      ) : null}
+
+      {section === 'pebble' ? (
+        <>
+          {back}
+          <Card>
+            <ReceiptHeader label="Pebble" summary="off by default" />
+            <View style={styles.pebbleIntro}>
+              <Pebble size={56} />
+              <Text style={[styles.pebbleBlurb, { color: theme.text.faint }]}>
+                Pebble only speaks when there's something to do.
+              </Text>
+            </View>
+            <ReceiptRow
+              name="Show Pebble in the app"
+              meta="proposals with actions, never commentary"
+              right={
+                <Switch
+                  value={extras.extras.pebble}
+                  onValueChange={(v) => void flipExtra('pebble', v)}
+                  trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                  thumbColor={theme.text.ink}
+                  accessibilityLabel="Show Pebble in the app"
+                />
+              }
+            />
+            <ReceiptRow
+              name="Notifications come from Pebble"
+              meta={pebble.showInApp ? 'same messages, Pebble voice' : 'needs Pebble on first'}
+              right={
+                <Switch
+                  value={pebble.notifVoice}
+                  disabled={!pebble.showInApp}
+                  onValueChange={(v) => patchPebble({ notifVoice: v })}
+                  trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                  thumbColor={theme.text.ink}
+                  accessibilityLabel="Notifications come from Pebble"
+                />
+              }
+            />
+            <ReceiptRow
+              name="Pebble on Trends and data screens"
+              meta="default off even when Pebble is on"
+              last
+              right={
+                <Switch
+                  value={pebble.onDataScreens}
+                  onValueChange={(v) => patchPebble({ onDataScreens: v })}
+                  trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                  thumbColor={theme.text.ink}
+                  accessibilityLabel="Pebble on Trends and data screens"
+                />
+              }
+            />
+            <SrcNote>Pebble never comments on how you did. Every message is a proposal with an action, and you can dismiss any of them. Turning Pebble off keeps the same notifications in Basalt's plain voice.</SrcNote>
+            <ExtraSlot id="pebbleGrows">
+              {growth ? (() => {
+                const score = growthScore(growth);
+                return (
+                  <View style={styles.growthRow}>
+                    <StagedPebble stage={stageFor(score)} size={56} />
+                    <View style={styles.growthText}>
+                      <Text style={{ color: theme.text.ink, fontSize: 13.5, fontWeight: '600' }}>
+                        Stage {stageFor(score)} of 5 · consistency {scoreText(score)}
+                      </Text>
+                      <Text style={{ color: theme.text.faint, fontSize: 11, lineHeight: 15, marginTop: 3 }}>
+                        {GROWTH_RULES.join(' ')}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })() : null}
+            </ExtraSlot>
+          </Card>
+        </>
+      ) : null}
+
+      {section === 'extras' ? (
+        <>
+          {back}
+          <Card>
+            <ReceiptHeader label="Extras" summary="all off — Basalt is complete without them" />
+            {(Object.keys(EXTRA_GROUP_TITLES) as ExtraGroup[]).map((group) => {
+              const inGroup = EXTRAS.filter((e) => e.group === group);
+              if (inGroup.length === 0) return null;
+              return (
+                <View key={group}>
+                  <ObChipLabel>{EXTRA_GROUP_TITLES[group]}</ObChipLabel>
+                  {inGroup.map((e, i) => {
+                    const deps = e.requires ?? [];
+                    const depsOn = deps.every((d) => extras.extras[d]);
+                    return (
+                      <ReceiptRow
+                        key={e.id}
+                        name={e.title}
+                        meta={depsOn ? e.oneLiner : `needs ${deps.map((d) => extraDef(d).title).join(' + ')} on first`}
+                        last={i === inGroup.length - 1}
+                        right={
+                          <Switch
+                            value={extras.extras[e.id]}
+                            disabled={!depsOn}
+                            onValueChange={(v) => void flipExtra(e.id, v)}
+                            trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
+                            thumbColor={theme.text.ink}
+                            accessibilityLabel={`${e.title} extra`}
+                          />
+                        }
+                      />
+                    );
+                  })}
+                </View>
+              );
+            })}
+            <SrcNote>Every Extra is off by default and honest inside — published formulas, ranges not false precision. With everything off, Basalt is exactly the core app.</SrcNote>
+          </Card>
+        </>
+      ) : null}
+
+      {section === 'nutrition' ? (
+        <>
+          {back}
+          <Card>
+            <ReceiptHeader label="Nutrition" />
+            <ObChipLabel>Nutrition display</ObChipLabel>
+            <Pressable onPress={() => void save({ hideNumbers: !(profile?.hideNumbers ?? false) })} disabled={busy !== null} hitSlop={8}>
+              <ReceiptRow
+                name="Hide the numbers"
+                meta="log-only mode: everything is still recorded and exported — calories and macros just aren't shown. For anyone the numbers aren't kind to."
+                value={profile?.hideNumbers ? 'on' : 'off'}
+                valueColor={profile?.hideNumbers ? theme.text.carbs : theme.text.faint}
+                last
+              />
+            </Pressable>
+            <ObChipLabel>Monthly challenge</ObChipLabel>
+            <Pressable onPress={() => void save({ challengeEnabled: !(profile?.challengeEnabled ?? false) })} disabled={busy !== null} hitSlop={8}>
+              <ReceiptRow
+                name="Personal monthly challenge"
+                meta="a private target computed from your own baseline — no leaderboards, no badges, off unless you want it"
+                value={profile?.challengeEnabled ? 'on' : 'off'}
+                valueColor={profile?.challengeEnabled ? theme.text.carbs : theme.text.faint}
+                last
+              />
+            </Pressable>
+          </Card>
+          <ExtraSlot id="hydration">
+            <HydrationCard />
+          </ExtraSlot>
+        </>
+      ) : null}
+
+      {section === 'notifications' ? (
+        <>
+          {back}
+          <Card>
+            <ReceiptHeader label="Notifications" summary="fixed prompts — never data in the notification itself" />
+            <ObChipLabel>Week in review</ObChipLabel>
+            <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null} hitSlop={8}>
+              <ReceiptRow
+                name="Sunday 18:00 notification"
+                meta={weekNotifNote ?? 'a fixed prompt — never data in the notification itself'}
+                metaAccent={weekNotifNote ? theme.text.fat : undefined}
+                value={weekNotif === null ? '…' : weekNotif ? 'on' : 'off'}
+                valueColor={weekNotif ? theme.text.carbs : theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => void toggleMonthNotif()} disabled={busy !== null || monthNotif === null} hitSlop={8}>
+              <ReceiptRow
+                name="Monthly behavior report — 1st, 18:00"
+                meta="same rule: a fixed prompt, the report composes in Trends"
+                value={monthNotif === null ? '…' : monthNotif ? 'on' : 'off'}
+                valueColor={monthNotif ? theme.text.carbs : theme.text.faint}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                const next = !illnessNotif;
+                setIllnessNotif(next);
+                void setIllnessNotifEnabled(next);
+              }}
+              hitSlop={8}
+            >
+              <ReceiptRow
+                name="Vitals-deviation alert"
+                meta="off by default · at most one a day, only when ≥2 vitals sit outside your own 30-day range · an observation, never a diagnosis"
+                value={illnessNotif === null ? '…' : illnessNotif ? 'on' : 'off'}
+                valueColor={illnessNotif ? theme.text.carbs : theme.text.faint}
+                last
+              />
+            </Pressable>
+            <SrcNote>Hydration and supplement reminders live with their Extras — Nutrition and Extras sections.</SrcNote>
+          </Card>
+        </>
+      ) : null}
+
+      {section === 'account' ? (
+        <>
+          {back}
+          <SharingSection />
+          <Card>
+            <ReceiptHeader label="Connected sources" />
+            <CTA label={busy === 'hc' ? '…' : 'Connect Health Connect'} onPress={connectSources} disabled={busy !== null} />
+            {hcStatus ? <SrcNote>{hcStatus}</SrcNote> : (
+              <SrcNote>Steps, sleep, vitals and more — read-only, every synced value shows its source</SrcNote>
+            )}
+          </Card>
+          <ExtraSlot id="imports">
+            <ConnectedServicesCard />
+          </ExtraSlot>
+          <Card>
+            <ReceiptHeader label="Your data" summary="yours, fully" />
+            {/* The outbox's one visible surface — quiet, never a banner. */}
+            {pendingLine(pendingWrites) ? (
+              <Pressable onPress={() => void drainOutbox()} hitSlop={8}>
+                <SrcNote>{`${pendingLine(pendingWrites)} · retries by itself · tap to retry now`}</SrcNote>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => void exportJson()} disabled={busy !== null} hitSlop={8}>
+              <ReceiptRow
+                name={busy === 'basalt-export.json' ? 'Exporting…' : 'Export everything — JSON'}
+                meta="every table, one file, one tap"
+                value="→"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => void exportCsv()} disabled={busy !== null} hitSlop={8}>
+              <ReceiptRow
+                name={busy === 'basalt-export.csv' ? 'Exporting…' : 'Export everything — CSV'}
+                meta="sectioned per table, spreadsheet-ready"
+                value="→"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable
+              onPress={async () => {
+                setBusy('doctor');
+                try {
+                  await shareDoctorReport();
+                } catch (e: any) {
+                  Alert.alert('Report failed', e?.message ?? 'Could not build the PDF.');
+                }
+                setBusy(null);
+              }}
+              disabled={busy !== null}
+              hitSlop={8}
+            >
+              <ReceiptRow
+                name={busy === 'doctor' ? 'Building…' : 'Doctor report — PDF'}
+                meta="last 90 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
+                value="→"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => setIncludePhotos(!includePhotos)} hitSlop={8}>
+              <ReceiptRow
+                name="Include progress-photo records"
+                meta="off by default — the vault stays out of exports unless you say so (records only; the photos themselves stay in private storage)"
+                value={includePhotos ? 'on' : 'off'}
+                valueColor={includePhotos ? theme.text.carbs : theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => void exportZip()} disabled={busy !== null} hitSlop={8}>
+              <ReceiptRow
+                name={busy === 'basalt-export.zip' ? 'Exporting…' : 'Export everything — CSV archive'}
+                meta="one file per table, zipped · README lists every table incl. empty ones"
+                value="→"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable onPress={() => setImportOpen(true)} disabled={busy !== null} hitSlop={8}>
+              <ReceiptRow
+                name="Import training history"
+                meta="Strong, Hevy, generic CSV, or a Basalt export · dry-run preview before anything commits"
+                value="→"
+                valueColor={theme.text.faint}
+                last
+              />
+            </Pressable>
+          </Card>
+          <Card>
+            <ReceiptHeader label="Account" />
+            <ReceiptRow name={session?.user.email ?? '—'} meta="free plan" />
+            <Pressable
+              onPress={() => void Linking.openURL('https://basalt.itseliias.com/privacy/')}
+              hitSlop={8}
+              accessibilityRole="link"
+              accessibilityLabel="Privacy policy"
+            >
+              <ReceiptRow name="Privacy policy" meta="what's collected, where it lives, how deletion works" value="→" valueColor={theme.text.faint} />
+            </Pressable>
+            <Pressable onPress={() => void signOut()} hitSlop={8}>
+              <ReceiptRow name="Sign out" />
+            </Pressable>
+            <Pressable onPress={() => setDeleteOpen(true)} hitSlop={8}>
+              <ReceiptRow
+                name="Delete account & all data"
+                meta="type-to-confirm · removes every table row, then the sign-in record"
+                metaAccent={theme.text.fat}
+                value="→"
+                valueColor={theme.text.fat}
+                last
+              />
+            </Pressable>
+          </Card>
+          <SrcNote>
+            Delete is a full cascade — required by Google Play & App Store policy, and also just right.
+            Every row in every table goes, then the sign-in record itself, unconditionally.
+          </SrcNote>
+        </>
+      ) : null}
+
+      {section === 'about' ? (
+        <>
+          {back}
+          <Card>
+            <ReceiptHeader label="About" />
+            <ReceiptRow name="Version" meta={version ? `v${version}` : '—'} />
+            <Pressable onPress={() => setPromiseOpen(true)} hitSlop={8}>
+              <ReceiptRow
+                name="What Basalt does and doesn't do"
+                meta="the promise, in plain words"
+                value="read →"
+                valueColor={theme.text.faint}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                const androidC = Platform.OS === 'android'
+                  ? (Platform.constants as { Model?: string; Release?: string })
+                  : {};
+                void Linking.openURL(buildFeedbackMailto({
+                  version: Constants.expoConfig?.version ?? null,
+                  build: Constants.nativeBuildVersion ?? null,
+                  theme: profile?.theme ?? 'minimal',
+                  model: androidC.Model ?? null,
+                  androidRelease: androidC.Release ?? null,
+                }));
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Send feedback"
+            >
+              <ReceiptRow name="Send feedback" meta="opens your mail app — nothing is sent silently" value="→" valueColor={theme.text.faint} last />
+            </Pressable>
+          </Card>
+        </>
+      ) : null}
+
+      {/* ── Modals — live outside the section switch so deep links and
+             sheets work from anywhere ─────────────────────────────────── */}
       <FinishProfileModal open={finishProfileOpen} onClose={() => setFinishProfileOpen(false)} />
       <PromiseScreen open={promiseOpen} onClose={() => setPromiseOpen(false)} />
-
-      <Card>
-        <ReceiptHeader label="Preferences" />
-        <ObChipLabel>Check-ins</ObChipLabel>
-        <ChipRow
-          options={CHECKIN_OPTIONS}
-          value={CHECKIN_OPTIONS.find((o) => checkinKey(o) === profile?.checkinPreference)}
-          onChange={(v) => void save({ checkinPreference: checkinKey(v) })}
-        />
-        <ObChipLabel>Connected sources</ObChipLabel>
-        <CTA label={busy === 'hc' ? '…' : 'Connect Health Connect'} onPress={connectSources} disabled={busy !== null} />
-        {hcStatus ? <SrcNote>{hcStatus}</SrcNote> : (
-          <SrcNote>Steps, sleep, vitals and more — read-only, every synced value shows its source</SrcNote>
-        )}
-        <ObChipLabel>Nutrition display</ObChipLabel>
-        <Pressable onPress={() => void save({ hideNumbers: !(profile?.hideNumbers ?? false) })} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name="Hide the numbers"
-            meta="log-only mode: everything is still recorded and exported — calories and macros just aren't shown. For anyone the numbers aren't kind to."
-            value={profile?.hideNumbers ? 'on' : 'off'}
-            valueColor={profile?.hideNumbers ? theme.text.carbs : theme.text.faint}
-            last
-          />
-        </Pressable>
-        <ObChipLabel>Monthly challenge</ObChipLabel>
-        <Pressable onPress={() => void save({ challengeEnabled: !(profile?.challengeEnabled ?? false) })} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name="Personal monthly challenge"
-            meta="a private target computed from your own baseline — no leaderboards, no badges, off unless you want it"
-            value={profile?.challengeEnabled ? 'on' : 'off'}
-            valueColor={profile?.challengeEnabled ? theme.text.carbs : theme.text.faint}
-            last
-          />
-        </Pressable>
-        <ObChipLabel>Week in review</ObChipLabel>
-        <Pressable onPress={() => void toggleWeekNotif()} disabled={busy !== null || weekNotif === null} hitSlop={8}>
-          <ReceiptRow
-            name="Sunday 18:00 notification"
-            meta={weekNotifNote ?? 'a fixed prompt — never data in the notification itself'}
-            metaAccent={weekNotifNote ? theme.text.fat : undefined}
-            value={weekNotif === null ? '…' : weekNotif ? 'on' : 'off'}
-            valueColor={weekNotif ? theme.text.carbs : theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => void toggleMonthNotif()} disabled={busy !== null || monthNotif === null} hitSlop={8}>
-          <ReceiptRow
-            name="Monthly behavior report — 1st, 18:00"
-            meta="same rule: a fixed prompt, the report composes in Trends"
-            value={monthNotif === null ? '…' : monthNotif ? 'on' : 'off'}
-            valueColor={monthNotif ? theme.text.carbs : theme.text.faint}
-          />
-        </Pressable>
-        <Pressable
-          onPress={() => {
-            const next = !illnessNotif;
-            setIllnessNotif(next);
-            void setIllnessNotifEnabled(next);
-          }}
-          hitSlop={8}
-        >
-          <ReceiptRow
-            name="Vitals-deviation alert"
-            meta="off by default · at most one a day, only when ≥2 vitals sit outside your own 30-day range · an observation, never a diagnosis"
-            value={illnessNotif === null ? '…' : illnessNotif ? 'on' : 'off'}
-            valueColor={illnessNotif ? theme.text.carbs : theme.text.faint}
-            last
-          />
-        </Pressable>
-      </Card>
-
-      {/* ── Display ────────────────────────────────────────────────── */}
-      <Card>
-        <ReceiptHeader label="Display" summary="legibility — applies everywhere" />
-        <ObChipLabel>Detail — what is shown, never what is computed</ObChipLabel>
-        <ChipRow
-          options={DETAIL_OPTIONS.map((o) => `${o.title} — ${o.quote}`)}
-          value={(() => { const o = DETAIL_OPTIONS.find((x) => x.key === (profile?.detail ?? 'standard')); return o ? `${o.title} — ${o.quote}` : undefined; })()}
-          onChange={(label) => {
-            const o = DETAIL_OPTIONS.find((x) => `${x.title} — ${x.quote}` === label);
-            if (o) void save({ detail: o.key });
-          }}
-        />
-        <ObChipLabel>Text size</ObChipLabel>
-        <ChipRow
-          options={TEXT_SCALE_OPTIONS}
-          value={TEXT_SCALE_OPTIONS.find((o) => textScaleKey(o) === (profile?.textScale ?? 'system'))}
-          onChange={(v) => void save({ textScale: textScaleKey(v) })}
-        />
-        <SrcNote>Layered on top of your phone's own text-size setting, not a replacement for it</SrcNote>
-        <ObChipLabel>Density</ObChipLabel>
-        <ChipRow
-          options={['Comfortable', 'Compact']}
-          value={profile?.density === 'compact' ? 'Compact' : 'Comfortable'}
-          onChange={(v) => void save({ density: v.toLowerCase() === 'compact' ? 'compact' : 'comfortable' })}
-        />
-        <SrcNote>Comfortable adds extra breathing room to every row and card — on by default</SrcNote>
-        <ObChipLabel>Theme</ObChipLabel>
-        <Pressable onPress={() => setThemePickerOpen(true)} accessibilityRole="button" accessibilityLabel="Choose theme">
-          <ReceiptRow
-            name={THEMES[profile?.theme ?? 'minimal'].name}
-            meta={THEMES[profile?.theme ?? 'minimal'].description}
-            value="change →"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <SrcNote>Live previews in your own numbers · every colour contrast-verified · nothing changes until you confirm</SrcNote>
-        <ObChipLabel>Today layout</ObChipLabel>
-        <ChipRow
-          options={LAYOUT_OPTIONS}
-          value={profile?.todayLayout === 'tiles' ? 'Tiles' : profile?.todayLayout === 'rings' ? 'Rings' : 'Ledger'}
-          onChange={(v) => {
-            const next = layoutKey(v);
-            logThemeLayoutEvent({ type: 'layout_selected', surface: 'today', layout: next, previous: profile?.todayLayout ?? 'ledger' });
-            void save({ todayLayout: next });
-          }}
-        />
-        <SrcNote>Tiles is Today only — Log, Train, Recover and Trends stay ledger for now</SrcNote>
-        <ObChipLabel>Today sections — hiding is omission, never a ghost</ObChipLabel>
-        {HIDEABLE_SECTIONS.map((sec, i) => (
-          <ReceiptRow
-            key={sec.key}
-            name={sec.label}
-            meta={hiddenToday.includes(sec.key) ? 'hidden — still recorded' : 'shown'}
-            last={i === HIDEABLE_SECTIONS.length - 1}
-            right={
-              <Switch
-                value={!hiddenToday.includes(sec.key)}
-                onValueChange={() => toggleTodaySection(sec.key)}
-                trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
-                thumbColor={theme.text.ink}
-                accessibilityLabel={`${sec.label} section`}
-              />
-            }
-          />
-        ))}
-        <SrcNote>The energy hero is the day's anchor and always shows · hidden sections still record — everything stays in your ledger and exports</SrcNote>
-      </Card>
-
-      {/* ── Extras ─────────────────────────────────────────────────── */}
-      <Card>
-        <ReceiptHeader label="Extras" summary="all off — Basalt is complete without them" />
-        {(Object.keys(EXTRA_GROUP_TITLES) as ExtraGroup[]).map((group) => {
-          const inGroup = EXTRAS.filter((e) => e.group === group);
-          if (inGroup.length === 0) return null;
-          return (
-            <View key={group}>
-              <ObChipLabel>{EXTRA_GROUP_TITLES[group]}</ObChipLabel>
-              {inGroup.map((e, i) => {
-                const deps = e.requires ?? [];
-                const depsOn = deps.every((d) => extras.extras[d]);
-                return (
-                  <ReceiptRow
-                    key={e.id}
-                    name={e.title}
-                    meta={depsOn ? e.oneLiner : `needs ${deps.map((d) => extraDef(d).title).join(' + ')} on first`}
-                    last={i === inGroup.length - 1}
-                    right={
-                      <Switch
-                        value={extras.extras[e.id]}
-                        disabled={!depsOn}
-                        onValueChange={(v) => void flipExtra(e.id, v)}
-                        trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
-                        thumbColor={theme.text.ink}
-                        accessibilityLabel={`${e.title} extra`}
-                      />
-                    }
-                  />
-                );
-              })}
-            </View>
-          );
-        })}
-        <SrcNote>Every Extra is off by default and honest inside — published formulas, ranges not false precision. With everything off, Basalt is exactly the core app.</SrcNote>
-      </Card>
-
-      <ExtraSlot id="hydration">
-        <HydrationCard />
-      </ExtraSlot>
-
-      <ExtraSlot id="imports">
-        <ConnectedServicesCard />
-      </ExtraSlot>
-
-      {/* ── Pebble ─────────────────────────────────────────────────── */}
-      <Card>
-        <ReceiptHeader label="Pebble" summary="off by default" />
-        <View style={styles.pebbleIntro}>
-          <Pebble size={56} />
-          <Text style={[styles.pebbleBlurb, { color: theme.text.faint }]}>
-            Pebble only speaks when there's something to do.
-          </Text>
-        </View>
-        <ReceiptRow
-          name="Show Pebble in the app"
-          meta="proposals with actions, never commentary"
-          right={
-            <Switch
-              value={extras.extras.pebble}
-              onValueChange={(v) => void flipExtra('pebble', v)}
-              trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
-              thumbColor={theme.text.ink}
-              accessibilityLabel="Show Pebble in the app"
-            />
-          }
-        />
-        <ReceiptRow
-          name="Notifications come from Pebble"
-          meta={pebble.showInApp ? 'same messages, Pebble voice' : 'needs Pebble on first'}
-          right={
-            <Switch
-              value={pebble.notifVoice}
-              disabled={!pebble.showInApp}
-              onValueChange={(v) => patchPebble({ notifVoice: v })}
-              trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
-              thumbColor={theme.text.ink}
-              accessibilityLabel="Notifications come from Pebble"
-            />
-          }
-        />
-        <ReceiptRow
-          name="Pebble on Trends and data screens"
-          meta="default off even when Pebble is on"
-          last
-          right={
-            <Switch
-              value={pebble.onDataScreens}
-              onValueChange={(v) => patchPebble({ onDataScreens: v })}
-              trackColor={{ false: theme.surfaces.surface2, true: theme.fill.carbs }}
-              thumbColor={theme.text.ink}
-              accessibilityLabel="Pebble on Trends and data screens"
-            />
-          }
-        />
-        <SrcNote>Pebble never comments on how you did. Every message is a proposal with an action, and you can dismiss any of them. Turning Pebble off keeps the same notifications in Basalt's plain voice.</SrcNote>
-        <ExtraSlot id="pebbleGrows">
-          {growth ? (() => {
-            const score = growthScore(growth);
-            return (
-              <View style={styles.growthRow}>
-                <StagedPebble stage={stageFor(score)} size={56} />
-                <View style={styles.growthText}>
-                  <Text style={{ color: theme.text.ink, fontSize: 13.5, fontWeight: '600' }}>
-                    Stage {stageFor(score)} of 5 · consistency {scoreText(score)}
-                  </Text>
-                  <Text style={{ color: theme.text.faint, fontSize: 11, lineHeight: 15, marginTop: 3 }}>
-                    {GROWTH_RULES.join(' ')}
-                  </Text>
-                </View>
-              </View>
-            );
-          })() : null}
-        </ExtraSlot>
-      </Card>
-
-      {/* ── Your data ──────────────────────────────────────────────── */}
-      <SharingSection />
-
-      <Card>
-        <ReceiptHeader label="Your data" summary="yours, fully" />
-        {/* The outbox's one visible surface — quiet, never a banner. */}
-        {pendingLine(pendingWrites) ? (
-          <Pressable onPress={() => void drainOutbox()} hitSlop={8}>
-            <SrcNote>{`${pendingLine(pendingWrites)} · retries by itself · tap to retry now`}</SrcNote>
-          </Pressable>
-        ) : null}
-        <Pressable onPress={() => void exportJson()} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name={busy === 'basalt-export.json' ? 'Exporting…' : 'Export everything — JSON'}
-            meta="every table, one file, one tap"
-            value="→"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => void exportCsv()} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name={busy === 'basalt-export.csv' ? 'Exporting…' : 'Export everything — CSV'}
-            meta="sectioned per table, spreadsheet-ready"
-            value="→"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <Pressable
-          onPress={async () => {
-            setBusy('doctor');
-            try {
-              await shareDoctorReport();
-            } catch (e: any) {
-              Alert.alert('Report failed', e?.message ?? 'Could not build the PDF.');
-            }
-            setBusy(null);
-          }}
-          disabled={busy !== null}
-          hitSlop={8}
-        >
-          <ReceiptRow
-            name={busy === 'doctor' ? 'Building…' : 'Doctor report — PDF'}
-            meta="last 90 days: weight trend, sleep, activity, vitals — sources named, absent data stated, nothing estimated"
-            value="→"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => setIncludePhotos(!includePhotos)} hitSlop={8}>
-          <ReceiptRow
-            name="Include progress-photo records"
-            meta="off by default — the vault stays out of exports unless you say so (records only; the photos themselves stay in private storage)"
-            value={includePhotos ? 'on' : 'off'}
-            valueColor={includePhotos ? theme.text.carbs : theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => void exportZip()} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name={busy === 'basalt-export.zip' ? 'Exporting…' : 'Export everything — CSV archive'}
-            meta="one file per table, zipped · README lists every table incl. empty ones"
-            value="→"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <Pressable onPress={() => setImportOpen(true)} disabled={busy !== null} hitSlop={8}>
-          <ReceiptRow
-            name="Import training history"
-            meta="Strong, Hevy, generic CSV, or a Basalt export · dry-run preview before anything commits"
-            value="→"
-            valueColor={theme.text.faint}
-            last
-          />
-        </Pressable>
-      </Card>
       <ThemePickerModal open={themePickerOpen} onClose={() => setThemePickerOpen(false)} />
       <ImportSheet open={importOpen} onClose={() => setImportOpen(false)} onImported={() => void refreshCore()} />
 
-      {/* ── Account ────────────────────────────────────────────────── */}
-      <Card>
-        <ReceiptHeader label="Account" />
-        <Pressable onPress={() => setPromiseOpen(true)} hitSlop={8}>
-          <ReceiptRow
-            name="What Basalt does and doesn't do"
-            meta="the promise, in plain words"
-            value="read →"
-            valueColor={theme.text.faint}
-          />
-        </Pressable>
-        <ReceiptRow name={session?.user.email ?? '—'} meta="free plan" />
-        <Pressable
-          onPress={() => {
-            const androidC = Platform.OS === 'android'
-              ? (Platform.constants as { Model?: string; Release?: string })
-              : {};
-            void Linking.openURL(buildFeedbackMailto({
-              version: Constants.expoConfig?.version ?? null,
-              build: Constants.nativeBuildVersion ?? null,
-              theme: profile?.theme ?? 'minimal',
-              model: androidC.Model ?? null,
-              androidRelease: androidC.Release ?? null,
-            }));
-          }}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Send feedback"
-        >
-          <ReceiptRow name="Send feedback" meta="opens your mail app — nothing is sent silently" value="→" valueColor={theme.text.faint} />
-        </Pressable>
-        <Pressable
-          onPress={() => void Linking.openURL('https://basalt.itseliias.com/privacy/')}
-          hitSlop={8}
-          accessibilityRole="link"
-          accessibilityLabel="Privacy policy"
-        >
-          <ReceiptRow name="Privacy policy" meta="what's collected, where it lives, how deletion works" value="→" valueColor={theme.text.faint} />
-        </Pressable>
-        <Pressable onPress={() => void signOut()} hitSlop={8}>
-          <ReceiptRow name="Sign out" />
-        </Pressable>
-        <Pressable onPress={() => setDeleteOpen(true)} hitSlop={8}>
-          <ReceiptRow
-            name="Delete account & all data"
-            meta="type-to-confirm · removes every table row, then the sign-in record"
-            metaAccent={theme.text.fat}
-            value="→"
-            valueColor={theme.text.fat}
-            last
-          />
-        </Pressable>
-      </Card>
-      <SrcNote>
-        Delete is a full cascade — required by Google Play & App Store policy, and also just right.
-        Every row in every table goes, then the sign-in record itself, unconditionally.
-      </SrcNote>
-
-      {/* ── Edit sheets ────────────────────────────────────────────── */}
       <EditSheet open={edit !== null} onClose={() => setEdit(null)} bottomInset={insets.bottom}>
         {edit === 'basics' ? <BasicsEditor profile={profile} busy={busy !== null} onSave={save} /> : null}
         {edit === 'goals' ? <GoalsEditor profile={profile} busy={busy !== null} onSave={save} /> : null}
@@ -736,7 +837,6 @@ export function SettingsScreen() {
         {edit === 'training' ? <TrainingEditor profile={profile} busy={busy !== null} onSave={save} /> : null}
       </EditSheet>
 
-      {/* ── Delete confirm ─────────────────────────────────────────── */}
       <EditSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} bottomInset={insets.bottom}>
         <Text style={[styles.deleteTitle, { color: theme.text.fat }]}>Delete account & all data</Text>
         <Text style={[styles.deleteBody, { color: theme.text.ink2 }]}>
@@ -875,6 +975,7 @@ type EditorProps = {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 24 },
+  back: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1.05, paddingVertical: 12 },
   pebbleIntro: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   growthRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 12 },
   growthText: { flex: 1 },

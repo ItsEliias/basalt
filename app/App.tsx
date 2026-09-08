@@ -25,6 +25,7 @@ import { RecoverScreen } from './src/screens/recover/RecoverScreen';
 import { TrendsScreen } from './src/screens/trends/TrendsScreen';
 import { WeightSheet } from './src/components/WeightSheet';
 import { wireWeekReviewNotifTap } from './src/lib/weekReviewNotif';
+import { registerSettingsOpener } from './src/lib/settingsNav';
 import { registerTimerService } from './src/lib/timerService';
 import { wireOutboxDraining, writeThroughOutbox } from './src/lib/outbox';
 import { rescheduleMonthlyReportNotif, wireMonthlyReportNotifTap } from './src/lib/monthlyReportNotif';
@@ -87,6 +88,10 @@ function MainShell() {
   const bumpToday = useAppStore((s) => s.bumpToday);
 
   const view: ViewKey = settingsOpen ? 'settings' : tab;
+
+  // Deep links land on a settings SECTION (V4.1 §2) — the pending key is
+  // consumed by SettingsScreen on mount, this just opens the view.
+  useEffect(() => registerSettingsOpener(() => setSettingsOpen(true)), []);
 
   // A tap on the Week in Review notification lands on Trends, where the
   // digest is composed live from the ledger — cold start included.

@@ -11,6 +11,7 @@ import { useAppStore } from '../../state/appStore';
 import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, microTotals, todayTileSpecs, type SessionRow, filterTiles, microDetail,
 } from './model';
 import { loadReadiness, listCheckins, stressProposal } from '@basalt/analytics';
+import { openSettingsSection } from '../../lib/settingsNav';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { SupplementsCard } from '../../components/SupplementsCard';
 import { IntakeRangeNote } from '../../components/IntakeRangeNote';
@@ -483,9 +484,11 @@ export function TodayScreen({ onOpenTab }: {
         ) : heroMode === 'no-targets' ? (
           <>
             <MicroLabel>Energy</MicroLabel>
-            <EmptyState>
-              No daily targets yet. Finish onboarding in Settings → Profile and your energy budget appears here.
-            </EmptyState>
+            <Pressable onPress={() => openSettingsSection('profile')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Open profile settings">
+              <EmptyState>
+                No daily targets yet. Finish onboarding in Settings → Profile and your energy budget appears here. Tap to go there.
+              </EmptyState>
+            </Pressable>
           </>
         ) : null}
       </Card>
