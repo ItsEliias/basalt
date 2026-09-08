@@ -11,6 +11,7 @@ import { loadDerivedActivityFactor } from '../../lib/activityFactorData';
 import { listWeightEntries, saveTargets, type ProfileRecord, type TargetsRecord } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
+import { useDetail } from '../../components/DetailProvider';
 
 // Profile & Targets — the Nutrition plan card (V4 Phase 6a, core).
 // Placement decision (recorded in V4-REPORT): directly under the Profile
@@ -48,6 +49,7 @@ export function PlanCard() {
   const [weightUsed, setWeightUsed] = useState<{ kg: number; label: string } | null>(null);
   const [editing, setEditing] = useState<null | { field: 'calories' | 'proteinG' | 'carbsG' | 'fatG'; value: string }>(null);
   const [derived, setDerived] = useState<DerivedFactor | null>(null);
+  const detailLevel = useDetail();
 
   useEffect(() => {
     void AsyncStorage.getItem(PLAN_RATE_KEY).then((raw) => {
@@ -196,6 +198,11 @@ export function PlanCard() {
             <Text style={[styles.rail, { color: theme.text.fat }]}>{plan.rate.capReason}</Text>
           ) : null}
           {row('Energy', fmtRange(plan.energy, 'kcal'), 'calories', targets?.calories, ' kcal')}
+          {detailLevel === 'full' ? (
+            <Text style={[styles.rail, { color: theme.text.faint }]}>
+              {`BMR ${plan.bmr.toLocaleString('en-US')} kcal · TDEE ${plan.tdee.low.toLocaleString('en-US')}–${plan.tdee.high.toLocaleString('en-US')} kcal · rate ${plan.rate.kcalPerDay > 0 ? '+' : ''}${plan.rate.kcalPerDay} kcal/day — the maths, inline because you asked for Full`}
+            </Text>
+          ) : null}
           <Text style={[styles.rail, { color: theme.text.faint }]}>
             {derived
               ? `Activity factor ${derived.low}–${derived.high} derived from your last 3 weeks (${derived.activityKcalPerDay} kcal/day of movement) — in use. ${ACTIVITY_FACTOR_EXPLAINER}`

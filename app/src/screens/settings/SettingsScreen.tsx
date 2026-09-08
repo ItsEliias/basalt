@@ -18,6 +18,8 @@ import { shareDoctorReport } from '../../lib/doctorReport';
 import { HydrationCard } from './HydrationCard';
 import { PlanCard } from './PlanCard';
 import { FinishProfileModal } from '../../components/FinishProfileModal';
+import { PromiseScreen } from '../../components/PromiseScreen';
+import { DETAIL_OPTIONS } from '../../lib/detailModel';
 import { ConnectedServicesCard } from './ConnectedServicesCard';
 import { cancelAllHydrationReminders } from '../../lib/hydrationReminders';
 import { setSupplementsReminderHour } from '../../lib/supplementsReminder';
@@ -137,6 +139,7 @@ export function SettingsScreen() {
   const [edit, setEdit] = useState<EditKey>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [finishProfileOpen, setFinishProfileOpen] = useState(false);
+  const [promiseOpen, setPromiseOpen] = useState(false);
   const [hcStatus, setHcStatus] = useState<string | null>(null);
   const [confirmText, setConfirmText] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -336,6 +339,7 @@ export function SettingsScreen() {
       {/* ── Preferences ────────────────────────────────────────────── */}
       <PlanCard />
       <FinishProfileModal open={finishProfileOpen} onClose={() => setFinishProfileOpen(false)} />
+      <PromiseScreen open={promiseOpen} onClose={() => setPromiseOpen(false)} />
 
       <Card>
         <ReceiptHeader label="Preferences" />
@@ -409,6 +413,15 @@ export function SettingsScreen() {
       {/* ── Display ────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Display" summary="legibility — applies everywhere" />
+        <ObChipLabel>Detail — what is shown, never what is computed</ObChipLabel>
+        <ChipRow
+          options={DETAIL_OPTIONS.map((o) => `${o.title} — ${o.quote}`)}
+          value={(() => { const o = DETAIL_OPTIONS.find((x) => x.key === (profile?.detail ?? 'standard')); return o ? `${o.title} — ${o.quote}` : undefined; })()}
+          onChange={(label) => {
+            const o = DETAIL_OPTIONS.find((x) => `${x.title} — ${x.quote}` === label);
+            if (o) void save({ detail: o.key });
+          }}
+        />
         <ObChipLabel>Text size</ObChipLabel>
         <ChipRow
           options={TEXT_SCALE_OPTIONS}
@@ -660,6 +673,14 @@ export function SettingsScreen() {
       {/* ── Account ────────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader label="Account" />
+        <Pressable onPress={() => setPromiseOpen(true)} hitSlop={8}>
+          <ReceiptRow
+            name="What Basalt does and doesn't do"
+            meta="the promise, in plain words"
+            value="read →"
+            valueColor={theme.text.faint}
+          />
+        </Pressable>
         <ReceiptRow name={session?.user.email ?? '—'} meta="free plan" />
         <Pressable
           onPress={() => {

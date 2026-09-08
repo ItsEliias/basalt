@@ -15,6 +15,8 @@ import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { SupplementsCard } from '../../components/SupplementsCard';
 import { IntakeRangeNote } from '../../components/IntakeRangeNote';
 import { CoachCard } from '../../components/CoachCard';
+import { Detail, useDetail } from '../../components/DetailProvider';
+import { heroDisplay, simpleMacroLine } from '../../lib/detailModel';
 import { HeroWhySheet } from '../../components/HeroWhySheet';
 import { StagedPebble, growthScore, stageFor, NarrativeCard, narrativeDateFor, friendsLoggedLine } from '@basalt/extras';
 import { loadGrowthInputs } from '../../lib/growthData';
@@ -139,6 +141,7 @@ export function TodayScreen({ onOpenTab }: {
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [microWallOpen, setMicroWallOpen] = useState(false);
   const [whyOpen, setWhyOpen] = useState(false);
+  const detail = useDetail();
   // Tiles Today layout (docs/basalt-layouts.md) — Settings → Display.
   const layout = profile?.todayLayout ?? 'ledger';
 
@@ -458,13 +461,15 @@ export function TodayScreen({ onOpenTab }: {
           <>
             <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
             <Pressable onPress={() => setWhyOpen(true)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Why this number">
-              <HeroNumeral value={groupInt(hero.remaining)} unit={hero.over ? 'kcal over' : 'kcal'} />
+              <HeroNumeral value={groupInt(heroDisplay(hero.remaining, detail))} unit={hero.over ? 'kcal over' : 'kcal'} />
             </Pressable>
             <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
             {data ? (
-              <ExtraSlot id="uncertainty">
-                <IntakeRangeNote entries={data.entries} />
-              </ExtraSlot>
+              <Detail min="standard" moreLabel="MORE — THE RANGE →">
+                <ExtraSlot id="uncertainty">
+                  <IntakeRangeNote entries={data.entries} />
+                </ExtraSlot>
+              </Detail>
             ) : null}
             <SegmentedStack
               segments={[
@@ -530,10 +535,21 @@ export function TodayScreen({ onOpenTab }: {
       {/* ── Macros + caps ──────────────────────────────────────────── */}
       {targets && data && !hideNumbers && !hidden.has('macros') ? (
         <Card>
+          {detail === 'simple' ? (
+            <Text style={[styles.simpleLine, { color: theme.text.mute }]}>
+              {simpleMacroLine({
+                carbsOverG: Math.max(0, data.totals.carbs - targets.carbsG),
+                fatOverG: Math.max(0, data.totals.fat - targets.fatG),
+                proteinShortG: Math.max(0, targets.proteinG - data.totals.protein),
+              })}
+            </Text>
+          ) : null}
           <MacroRow name="Protein" dot={theme.fill.protein} value={data.totals.protein} target={targets.proteinG} />
+          <Detail min="standard" moreLabel="MORE — CARBS, FAT, FIBRE, CAPS →">
           <MacroRow name="Carbohydrate" dot={theme.fill.carbs} value={data.totals.carbs} target={targets.carbsG} />
           <MacroRow name="Fat" dot={theme.fill.fat} value={data.totals.fat} target={targets.fatG} />
           <MacroRow name="Fibre" dot={theme.fill.faint} value={data.totals.fiber} target={targets.fiberG} />
+          </Detail>
           {targets.sugarCapG !== null || targets.sodiumCapMg !== null ? (
             <>
               <Rule />
@@ -698,6 +714,7 @@ export function TodayScreen({ onOpenTab }: {
 }
 
 const styles = StyleSheet.create({
+  simpleLine: { fontSize: 13, marginBottom: 6 },
   friendsLine: { fontFamily: mono, fontSize: 11, letterSpacing: 0.5, marginTop: 6, marginBottom: 2, textAlign: 'center' },
   microMeta: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.4, marginTop: -2, marginBottom: 6 },
   scroll: { flex: 1 },

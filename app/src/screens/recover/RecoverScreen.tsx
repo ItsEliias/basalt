@@ -27,6 +27,8 @@ import { PROTOCOLS, phaseAt, cycleSeconds, weeklyWeightRate, sparkPoints, type B
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { useDetail } from '../../components/DetailProvider';
+import { readinessWord } from '../../lib/detailModel';
 import { READINESS_SNAPSHOT_KEY } from '../../widgets/handler';
 import { BasaltReadinessWidget, parseReadinessSnapshot } from '../../widgets/BasaltReadinessWidget';
 
@@ -179,6 +181,7 @@ function VitalsTab() {
   const bands = readiness?.ok ? readiness.data.bands : null;
 
   const widgetsOn = useExtra('widgets');
+  const detailLevel = useDetail();
   const windDownOn = useExtra('winddown');
   useEffect(() => {
     if (!widgetsOn || !ready) return;
@@ -211,7 +214,11 @@ function VitalsTab() {
           </EmptyState>
         ) : (
           <Pressable onPress={() => setMathOpen(true)}>
+            {detailLevel === 'simple' ? (
+              <HeroNumeral value={readinessWord(ready.score)} unit="tap for the number" />
+            ) : (
             <HeroNumeral value={String(ready.score)} unit="/ 100" />
+            )}
             <SrcNote>{`${ready.note} · HRV + RHR vs your 30-day medians · sleep vs target · prior-day load vs your P75 · published formula, tap to see every input`}</SrcNote>
           </Pressable>
         )}

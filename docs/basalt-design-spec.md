@@ -280,6 +280,19 @@ Binding rules for the Mind section and every wellbeing Extra:
   an entry; AI sees one only when the coach Extra is on AND the user
   taps ask on that entry.
 
+## 11. Detail level (V4 Phase 8h amendment)
+
+A third axis beside theme and Extras: `detail: simple | standard | full`
+(Settings › Display, one onboarding screen after the theme picker,
+default standard). **The law: detail changes what is SHOWN, never what
+is computed.** Every number visible in Simple is the same number Full
+shows — Simple may display it rounder (hero to the nearest 10), never
+differently. Everything hidden stays one tap away behind a MORE
+affordance; the "why" tap works at every level; over-cap always renders
+in words at every level. Pinned by a conformance test (per-level number
+sets are subsets with equal values) and a lint-as-test (no engine call
+inside a `<Detail>` block — display only).
+
 ## 7. Reference files
 
 `basalt-app-prototype.html` (v11 — source of truth: all components live, 5 tabs + settings + 8-step onboarding) · `basalt-master-roadmap.md` (scope & phasing) · `basalt-feature-adoption-matrix.md` (feature detail + sources) · `health-app-migration-report.md` (code audit: what ports from Arise/Oathbound) · `ui-benchmark-review.md` (market rationale).

@@ -126,6 +126,8 @@ export type OnboardingState = {
   dumbbellMaxKg: string;
   kettlebellKg: string;
   waist: string;
+  /** V4 Phase 8h — null keeps the default (standard). */
+  detail: 'simple' | 'standard' | 'full' | null;
 };
 
 export const initialState: OnboardingState = {
@@ -137,13 +139,13 @@ export const initialState: OnboardingState = {
   motivations: [], checkin: null, theme: null,
   experience: null, daysPerWeek: null, sessionMinutes: null, weekdays: [],
   limitationNote: '', dislikes: '', mealsPerDay: null, cookingTime: null,
-  dumbbellMaxKg: '', kettlebellKg: '', waist: '',
+  dumbbellMaxKg: '', kettlebellKg: '', waist: '', detail: null,
 };
 
 // V4: after the theme step, one screen per onboarding-flagged Extra (or
 // group) — derived from the registry, never hand-counted here.
 export const EXTRA_SCREENS = onboardingExtraScreens();
-export const CORE_STEPS = 11;
+export const CORE_STEPS = 12;
 export const TOTAL_STEPS = CORE_STEPS + EXTRA_SCREENS.length;
 
 /** The extras screen shown at `step`, or null on a core step. */
@@ -301,6 +303,7 @@ export function buildProfile(state: OnboardingState): Partial<ProfileRecord> {
     checkinPreference: checkinKey(state.checkin),
     useMetric: !isImperial(state),
     ptIntake: buildPtIntake(state),
+    ...(state.detail ? { detail: state.detail } : {}),
   };
 }
 

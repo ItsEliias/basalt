@@ -33,6 +33,7 @@ import { ExtrasProvider } from './src/components/ExtrasProvider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExtrasIntroModal } from './src/components/ExtrasIntro';
 import { FinishProfileModal, FINISH_PROFILE_SEEN_KEY } from './src/components/FinishProfileModal';
+import { DetailProvider } from './src/components/DetailProvider';
 import { extrasIntroSeen } from './src/lib/extras';
 import { isoDay } from '@basalt/core-data';
 
@@ -179,7 +180,11 @@ function Gate() {
   }
   if (!session) return <AuthScreen />;
   if (!profile) return <OnboardingScreen />;
-  return <MainShell />;
+  return (
+    <DetailProvider>
+      <MainShell />
+    </DetailProvider>
+  );
 }
 
 /** Existing users get the Extras offers exactly once after updating. */

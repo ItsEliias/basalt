@@ -15,6 +15,7 @@ import { CoopCard } from './CoopCard';
 import { loadWeeklyVolume, type WeeklyVolumeReport } from '../../lib/weeklyVolumeData';
 import { volumeLine } from '@basalt/training';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
+import { Detail } from '../../components/DetailProvider';
 import { StreaksCard, XpCard, SocialCard, makeInviteCode, type BadgeInputs, type SocialChallenge, type ChallengeKind } from '@basalt/extras';
 import {
   challengeBoard, createChallenge, createInvite, listFriends, myChallenges, myUserId, redeemInvite,
@@ -359,6 +360,7 @@ export function TrendsScreen() {
       ) : null}
 
       {/* ── Correlations — gated, disclaimed, checked-not-shown named ── */}
+      <Detail min="standard" moreLabel="MORE — CORRELATIONS →">
       <Card>
         <ReceiptHeader label="Correlations" summary={correlations ? `${correlations.shown.length} past the gates` : undefined} />
         {loadFailed && correlations === null ? (
@@ -390,6 +392,7 @@ export function TrendsScreen() {
           </>
         )}
       </Card>
+      </Detail>
 
       {/* ── Monthly behavior impact — facts + gated correlations ───── */}
       {monthly ? (

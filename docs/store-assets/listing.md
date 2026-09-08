@@ -51,6 +51,13 @@ score, no diagnosis, no screening questionnaires. If your words sound
 like crisis, Basalt steps aside and puts real crisis lines one tap away
 (Lifeline 13 11 14 in Australia; local numbers by region).
 
+WHAT IT DOES AND DOESN'T DO
+Does: builds your programme and meal plan from your own numbers — your
+equipment, your week, your history; shows the maths behind every target;
+corrects itself weekly against your trend weight. Doesn't: see your form,
+tell muscle from fat on the scale, diagnose anything, or replace a
+professional for injuries, eating disorders or medical conditions.
+
 YOUR DATA IS YOURS
 Everything exports (JSON, CSV, printable doctor report). Account deletion
 is in-app, immediate and total — every row, then the sign-in record

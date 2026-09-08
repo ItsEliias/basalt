@@ -718,3 +718,141 @@ Found and owed to this session:
 Deferred to the post-Phase-8 session with cause (Phase 8 replaces
 onboarding and this build): onboarding e2e + burner-account deletion,
 walk lock-screen notification, widget placement, store screenshots.
+
+## Phase 8 — the PT intake, split generator, and what a coach actually does
+
+Suite 1,195 → **1,263** (68 new tests across nutrition, training, extras, analytics and the app). Everything a closed
+tester who never sees a PT gets: an intake, a programme built for their
+equipment and week, starting weights, progression, a meal plan for their
+diet, and a weekly check-in — every number with its reason.
+
+### 8-0 — Phase 6 refinements
+Goal-based points inside the published ranges (cut: protein 2.1 g/kg,
+fat 22.5%; maintain 1.8/27.5; gain 1.7/27.5 with carbs taking the
+surplus) — "because your goal is X" on the applied target, still
+overridable, ranges never move. Activity factor derived from ≥14
+step-days over 3 weeks (published MET model: 3.5 strength / 3.3 walks /
+steps at 0.0004 kcal·step·kg with walk cadence subtracted, ±20%) — the
+plan states which source is in use. Weekly hard sets (RIR ≤ 3; unlogged
+counts as hard) on the Train summary with the 10–20 band and a two-week
+outside-the-band rule proposing one set up or down, citing both weeks.
+
+### 8a — PT intake
+The 9-step onboarding grew to 12: experience (drives rep ranges, loads
+and explanation depth) and schedule (days 1–6, minutes 30–75, weekdays)
+are new; equipment now asks the WEIGHTS (a heaviest pair makes load
+selection possible); limitations gains wrist/hip chips + a free-text
+note + the one medical line; diet gains dislikes, meals/day and cooking
+time; basics gains optional waist; detail level closes the flow (8h).
+Everything lands in one additive `pt_intake` jsonb; existing users get a
+one-time dismissable "Finish your profile" (also the editor, from
+Settings › Profile). Decision: the existing intake was richer than the
+spec's eight screens, so it was extended, not replaced — nothing the
+spec asks for is missing.
+
+### 8b — Catalog
+123 exercises as pure data: pattern, muscles, REQUIRED equipment,
+difficulty, unilateral/compound, 1–3 resolving substitutions, and a
+two-sentence cue (do + avoid). Coverage pinned: every movement pattern
+doable at gym / dumbbell-only / kettlebell-only / bands / bodyweight.
+Cody's 15 sheet descriptions embedded verbatim. Demo = web search.
+
+### 8c — The generator (rules table)
+
+| Rule | Value |
+|---|---|
+| Split by days | 1–2 FB · 3 FB×3 · 4 UL×2 · 5 PPL+UL (Cody's Gym-1 shape) · 6 PPL×2 |
+| Selection | equipment-owned ∧ limitation-capped (published EXCLUSION_MAP) → subs → honest gap note |
+| Sets × reps | hypertrophy 3–4×8–12 · strength (3+ yrs mains) 4×4–6 · new lifters 2–3×10–15 first 4 wks |
+| RIR by week | 3 → 2 → 1 → deload |
+| Starting weight | history > the kettlebell you own > 50/40/30% of heaviest pair > bar + 0–60% BW by lift & experience; week 1 = calibration |
+| Progression | double progression (+2.5 kg / next dumbbell at top-of-range RIR ≤ 2); reps for bodyweight |
+| Volume check | iterative into 10–20; adds accessory-only (never the new-lifter block), drops accessory→secondary; unfixable remainder STATED |
+| Deload | new/under-1y 6 wks · 1–3y 5 · 3+ 4 — or when readiness proposes |
+| Cardio | steps 8,000/day; cut adds 2 zone-2 walks of 40 min into the week |
+| Session time | sets × (40 s + rest 150/75 s) + 5 min, trimmed accessories-first, trims named |
+
+Worked examples (all pinned verbatim in `generate.test.ts`):
+1. **Bands+bodyweight, 3×/wk, new, cut** → FB×3, every slot filled from
+   bands/bw, 2–3×10–15, no loads (nothing to load), 2 zone-2 walks,
+   sessions ≤ 45 min.
+2. **Dumbbells to 20 kg + bench, 4×/wk, 1–3 y, gain** → UL×2, DB loads
+   at published fractions (≤ 20 kg, 2.5-steps), mains 4×8–12, honest gap
+   notes where nothing fits.
+3. **Full gym, 5×/wk, 3+ y, maintain** → PPL+UL, mains 4×4–6, barbell
+   starts at bar + %BW rounded to 2.5, deload every 4th, volume inside
+   the band or stated by name (the one-region-'back' PPL pile-up is
+   stated, not silently broken).
+
+Output = ordinary editable templates + an ordinary programme (swap
+through substitutions before keeping; nothing special-cased after).
+Cody's imported splits flow through the same template + progression
+machinery the moment his import runs.
+
+### 8d — In-session (+ the session's two bugs fixed)
+Meditation timer rebuilt on scheduled one-shot bells (the health-FGS
+crash from §28 is gone — no service at all); the guided timer was
+already permission-guarded (§28's "latent" call corrected); Settings
+header version now reads from config. New: rest-done one-shot
+notification; RIR explainer on the sets header; pain flags 0–3 on the
+last set (additive column) with next-session substitution proposals and
+the 3-in-14-days "worth getting that looked at" line; missed planned
+session → shift-the-week proposal. Plate calculator + published warm-up
+ramp already shipped (55/70/85 × 5/3/1 kept over the spec's 50/70/85 —
+an already-published scheme; style, not substance).
+
+### 8e — Meal plan completeness
+Recipe flags (dislikes/conflicts/slow-for-quick) annotate the picker —
+never hide; hold a planned meal for swap (3 closest by kcal/serve),
+ate-out (range estimate: recipe ±25% or slot default ±35%, published,
+meal budgets rebalance), remove; batch-cook fills the week's lunches +
+dinners from 2–3 picks; fibre adherence computed from planned recipes
+with sugar/sodium absence STATED (recipes don't carry them);
+aisle-grouped deduped grocery list already shipped in V3;
+repeat-yesterday already lives on Capture.
+
+### 8f — The complete check-in
+Facts first (sessions with miss reasons — illness never counts against
+adherence; % of planned meals logged as planned; RIR trend direction;
+waist if entered; pain count), then ONE proposal by the published
+priority: safety → adherence (sessions, then meals) → energy (Phase 6
+rules unchanged) → volume. Never more than one ask per week.
+
+### 8g — The honest promise
+One screen (onboarding step 1 + Settings › Account): three does, four
+doesn'ts, plain words. The same substance in the store listing and the
+tester release notes, pinned together by test.
+
+### 8h — Detail level
+`simple | standard | full` — a core profile setting + one onboarding
+screen after the theme picker with live previews from the theme picker's
+own component. THE LAW (spec §11): shown, never computed — conformance
+test pins per-level number sets as equal-valued subsets; lint-as-test
+forbids engine calls inside `<Detail>`. Wired: Today (hero rounded to 10
+in Simple, one-line macro summary, range/caps/micros behind MORE),
+Recover (readiness as Rested/OK/Tired with the number one tap away),
+Trends (correlations behind MORE in Simple), PlanCard (Full prints BMR ·
+TDEE · rate inline). Remaining Simple/Full sweeps (Train checklist view,
+calibration-only RIR asking in Simple) are decision-logged as the next
+detail pass — the axis, law, tests and the highest-traffic surfaces are
+in.
+
+### Decisions made without you (Phase 8)
+- Existing onboarding extended rather than replaced (superset of the
+  8-screen spec).
+- Plan-rate knob stays device-local; targets it writes sync as versions.
+- History→starting-weight matching by catalog id begins life empty; the
+  calibration week does the calibrating until logged names map.
+- Generated-programme edits live in the saved templates; regenerating
+  creates new templates and leaves the old in your library.
+- Warm-up ramp kept at the already-published 55/70/85.
+- Defaults-vs-main note for the next gate run: Phase 8's expected diffs
+  are the 12-step onboarding (replacing 11), the PT-intake/Finish-profile
+  flow, the hard-sets card on Train, the Build-my-programme row, the
+  planner's new hold-menu, and the promise link — all core by the
+  phase's own order. The Detail axis defaults to standard = today's app.
+
+Device session (the stop after this build): screenshots of the intake,
+a generated programme, a session with the rest timer + plate calculator,
+the promise screen, and Today at all three detail levels; plus the
+carried-over items from §28.9.

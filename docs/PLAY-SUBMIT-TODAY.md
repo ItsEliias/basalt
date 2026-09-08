@@ -73,6 +73,20 @@ banners up.
    > and safety rails, a Mind check-in (words, not faces), rich walk
    > lock-screen notification, 90-day doctor report, rings layout — and
    > an always-on crisis path that no setting can turn off.
+   >
+   > The promise, verbatim from the app: Basalt builds your programme
+   > and meal plan from your own numbers, shows the maths behind every
+   > target, and corrects weekly against your trend weight. It doesn't
+   > see your form, tell muscle from fat on the scale, diagnose
+   > anything, or replace a professional for injuries, eating disorders
+   > or medical conditions.
+   >
+   > The promise, verbatim from the app: Basalt builds your programme
+   > and meal plan from your own numbers, shows the maths behind every
+   > target, and corrects weekly against your trend weight. It doesn't
+   > see your form, tell muscle from fat on the scale, diagnose
+   > anything, or replace a professional for injuries, eating disorders
+   > or medical conditions.
 4. Testers: create an email list, add testers, save; copy the opt-in URL
    into the tester email together with the **Instructions for testers**
    block from `store-assets/listing.md` — including the Send-feedback line

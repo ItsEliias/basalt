@@ -43,7 +43,7 @@ const PREVIEW_H = 620;
 const SCALE = 0.19;
 
 /** The miniature Today — real components, real tokens, provided data. */
-function TodayMiniPreview({ id, data }: { id: ThemeId; data: PreviewData }) {
+export function TodayMiniPreview({ id, data }: { id: ThemeId; data: PreviewData }) {
   const { theme } = useTheme();
   const { meter, energyFrac, proteinFrac, carbsFrac, heroLabel } = previewPlan(id, data);
   return (

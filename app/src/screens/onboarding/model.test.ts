@@ -35,8 +35,8 @@ describe('conditional flow — gym skips the equipment step', () => {
     expect(nextStep(TOTAL_STEPS, initialState)).toBe(TOTAL_STEPS);
     expect(prevStep(1, initialState)).toBe(1);
   });
-  it('the theme step (11) follows life for everyone; extras steps follow it', () => {
-    expect(CORE_STEPS).toBe(11);
+  it('the theme step (11) then detail (12) follow life; extras steps follow them', () => {
+    expect(CORE_STEPS).toBe(12);
     expect(TOTAL_STEPS).toBe(CORE_STEPS + EXTRA_SCREENS.length);
     expect(EXTRA_SCREENS.length).toBeGreaterThanOrEqual(1);
     expect(nextStep(10, { ...initialState, place: 'gym' })).toBe(11);
