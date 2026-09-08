@@ -60,3 +60,51 @@ export function volumeLine(v: RegionVolume): string {
   const n = Number.isInteger(v.sets) ? String(v.sets) : v.sets.toFixed(1);
   return `${n} of ${v.bandLow}–${v.bandHigh} sets · ${v.position === 'inside' ? 'inside the band' : `${v.position} the band`}`;
 }
+
+// ── Hard sets + the two-week rule (V4 Phase 8-0) ───────────────────────
+
+/**
+ * A hard set is one taken to RIR ≤ 3. Unknown RIR counts as hard — most
+ * logged working sets are, and under-counting would nag people who
+ * simply don't log RIR.
+ */
+export function isHardSet(rir: number | null | undefined): boolean {
+  return rir === null || rir === undefined || rir <= 3;
+}
+
+export type VolumeProposal = {
+  region: BodyRegion;
+  kind: 'add-set' | 'drop-set';
+  reason: string;
+};
+
+/**
+ * One proposal per region OUTSIDE the band for two consecutive weeks —
+ * a single odd week proposes nothing. Add a set when under, drop one
+ * when over; the reason cites both weeks' numbers.
+ */
+export function volumeProposals(
+  thisWeek: RegionVolume[],
+  lastWeek: RegionVolume[],
+): VolumeProposal[] {
+  const last = new Map(lastWeek.map((v) => [v.region, v]));
+  const out: VolumeProposal[] = [];
+  for (const v of thisWeek) {
+    const prev = last.get(v.region);
+    if (!prev || v.position === 'inside' || prev.position !== v.position) continue;
+    if (v.position === 'below') {
+      out.push({
+        region: v.region,
+        kind: 'add-set',
+        reason: `${v.region} sat under ${v.bandLow} hard sets two weeks running (${prev.sets}, then ${v.sets}) — worth adding a set to a ${v.region} movement.`,
+      });
+    } else {
+      out.push({
+        region: v.region,
+        kind: 'drop-set',
+        reason: `${v.region} sat over ${v.bandHigh} hard sets two weeks running (${prev.sets}, then ${v.sets}) — worth dropping a set; more isn't more past the band.`,
+      });
+    }
+  }
+  return out;
+}

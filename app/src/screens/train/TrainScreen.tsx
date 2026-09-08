@@ -23,6 +23,7 @@ import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { ConfettiBurst } from '@basalt/extras';
 import { RacePlanCard } from './RacePlanCard';
 import { ProgrammeCard } from './ProgrammeCard';
+import { HardSetsCard } from './HardSetsCard';
 import { AdaptSheet } from './AdaptSheet';
 import { loadDeloadSignals } from '../../lib/periodizationData';
 import { timerServiceFailed } from '../../lib/timerService';
@@ -237,6 +238,8 @@ function SessionTab() {
             </>
           )}
         </Card>
+
+        <HardSetsCard />
 
         {/* ── Race plan — one knob, Riegel model, tick-box weeks ────── */}
         <RacePlanCard />

@@ -3,8 +3,11 @@ import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Card, EmptyState, ReceiptHeader, SrcNote, mono, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
-  PLAN_DISCLAIMER, computePlan, trendWeightKg, type BiologicalSex, type NutritionPlan, type PlanRange,
+  ACTIVITY_FACTOR_EXPLAINER, PLAN_DISCLAIMER, computePlan, goalFrom, trendWeightKg,
+  type BiologicalSex, type DerivedFactor, type NutritionPlan, type PlanRange,
 } from '@basalt/nutrition';
+import { calculateBMR } from '@basalt/nutrition';
+import { loadDerivedActivityFactor } from '../../lib/activityFactorData';
 import { listWeightEntries, saveTargets, type ProfileRecord, type TargetsRecord } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../state/appStore';
@@ -44,6 +47,7 @@ export function PlanCard() {
   const [ratePct, setRatePct] = useState(0);
   const [weightUsed, setWeightUsed] = useState<{ kg: number; label: string } | null>(null);
   const [editing, setEditing] = useState<null | { field: 'calories' | 'proteinG' | 'carbsG' | 'fatG'; value: string }>(null);
+  const [derived, setDerived] = useState<DerivedFactor | null>(null);
 
   useEffect(() => {
     void AsyncStorage.getItem(PLAN_RATE_KEY).then((raw) => {
@@ -74,6 +78,14 @@ export function PlanCard() {
   const sex = (profile.biologicalSex ?? 'prefer_not_to_say') as BiologicalSex;
   const ready = weightUsed && profile.heightCm && age !== null && profile.activityLevel;
 
+  const goal = goalFrom(ratePct, profile.goalTypes ?? []);
+  useEffect(() => {
+    if (!weightUsed || !profile.heightCm || age === null) return;
+    const bmr = calculateBMR(sex, weightUsed.kg, profile.heightCm, age);
+    void loadDerivedActivityFactor(supabase, bmr, weightUsed.kg).then(setDerived);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weightUsed?.kg]);
+
   const plan: NutritionPlan | null = ready
     ? computePlan({
         sex,
@@ -82,6 +94,8 @@ export function PlanCard() {
         age: age!,
         activityLevel: profile.activityLevel!,
         ratePctPerWeek: ratePct,
+        goal,
+        derivedActivityFactor: derived?.factor ?? null,
       })
     : null;
 
@@ -92,19 +106,18 @@ export function PlanCard() {
 
   const applyPlan = async () => {
     if (!plan || plan.gated) return;
-    const mid = (r: PlanRange) => Math.round((r.low + r.high) / 2);
     const saved = await saveTargets(supabase, {
-      calories: mid(plan.energy),
-      proteinG: mid(plan.proteinG),
-      carbsG: mid(plan.carbsG),
-      fatG: mid(plan.fatG),
+      calories: plan.points.energyKcal,
+      proteinG: plan.points.proteinG,
+      carbsG: plan.points.carbsG,
+      fatG: plan.points.fatG,
       fiberG: plan.fiberG,
       sugarCapG: plan.sugarCapG,
       sodiumCapMg: plan.sodiumCapMg,
       waterMl: plan.waterMl,
       steps: targets?.steps ?? null,
       sleepMin: targets?.sleepMin ?? null,
-      reason: `Plan midpoints — Mifflin-St Jeor ±10% × activity, ${ratePct === 0 ? 'maintain' : `${ratePct > 0 ? '+' : ''}${ratePct}%/wk`}, protein 1.6–2.2 g/kg, fat 20–35%`,
+      reason: `Plan points ${plan.points.why} — Mifflin-St Jeor ±10% × activity (${plan.activitySource}), ${ratePct === 0 ? 'maintain' : `${ratePct > 0 ? '+' : ''}${ratePct}%/wk`}`,
     });
     if (saved.ok) {
       await refreshCore();
@@ -183,6 +196,11 @@ export function PlanCard() {
             <Text style={[styles.rail, { color: theme.text.fat }]}>{plan.rate.capReason}</Text>
           ) : null}
           {row('Energy', fmtRange(plan.energy, 'kcal'), 'calories', targets?.calories, ' kcal')}
+          <Text style={[styles.rail, { color: theme.text.faint }]}>
+            {derived
+              ? `Activity factor ${derived.low}–${derived.high} derived from your last 3 weeks (${derived.activityKcalPerDay} kcal/day of movement) — in use. ${ACTIVITY_FACTOR_EXPLAINER}`
+              : 'Activity factor from your self-reported level — switches to your own data after 14 days of steps.'}
+          </Text>
           {plan.floor.applied ? <Text style={[styles.rail, { color: theme.text.fat }]}>{plan.floor.reason}</Text> : null}
           {row('Protein', fmtRange(plan.proteinG, 'g'), 'proteinG', targets?.proteinG, ' g')}
           {row('Fat', fmtRange(plan.fatG, 'g'), 'fatG', targets?.fatG, ' g')}
@@ -210,7 +228,9 @@ export function PlanCard() {
             </View>
           ) : null}
           <Pressable onPress={() => void applyPlan()} hitSlop={8} accessibilityRole="button">
-            <Text style={[styles.apply, { color: theme.text.carbs }]}>APPLY MIDPOINTS AS TARGETS →</Text>
+            <Text style={[styles.apply, { color: theme.text.carbs }]}>
+              {`APPLY ${plan.points.energyKcal.toLocaleString('en-US')} KCAL · P ${plan.points.proteinG} · F ${plan.points.fatG} · C ${plan.points.carbsG} — ${plan.points.why.toUpperCase()} →`}
+            </Text>
           </Pressable>
           <SrcNote>
             {`Weight: ${weightUsed.kg} kg (${weightUsed.label}) · Mifflin-St Jeor ±10% × activity · protein 1.6–2.2 g/kg · fat 20–35% · carbs the remainder · fibre 14 g/1,000 kcal · sugar <10% · sodium <2,300 mg · water by weight · tap a row for a custom value — the range stays. ${PLAN_DISCLAIMER}`}
