@@ -245,15 +245,60 @@ Shots: `docs/report-assets/release-0.1.0/`.
 - [ ] Delete-account full run (§26) — needs a burner account; deletion is
       Edge-deployed (v13) + pinned by 8 deletion-coverage tests
 
-## §28 — 0.2.0 pre-tester device session (V4, pending — the hard stop)
+## §28 — 0.2.0 pre-tester device session (RUN 2026-09-08, Samsung S22 Ultra, Android 16)
 
-The full checklist lives in `docs/BASALT-PRE-TESTERS-PROMPT.md` §2 and is
-not duplicated here. Record results + screenshot paths under this
-section when the session runs: (1) defaults-vs-main gate with the five
-expected diffs listed there, (2) all-off informational run, (3)
-Extra-by-Extra smoke, (4) on-device crisis-path checks from every text
-entry point with Extras on AND off, (5) onboarding end-to-end incl. the
-two multi-select offers, (6) rich walk notification + pause on the lock
-screen, (7) both home-screen widgets placed, (8) meditation foreground
-service with the screen off (also closes the §27 FGS gap on a physical
-phone).
+Protocol: v4 debug dev-client + Metro switching between main@8323e32 and
+v4 HEAD (same native binary both sides — the purest JS-diff); seeded QA
+account regenerated first; capture via `scratchpad/gateshots.sh`
+(tab-bar-region tap matching, doubled taps, LogBox-banner dismissal —
+this phone eats first-taps and the dev banner overlaps the tab bar).
+
+1. **Defaults-vs-main gate: PASS.** 12 screen pairs in
+   `docs/report-assets/v4-gate-{baseline,defaults}/`. train.png and
+   trends.png pixel-identical (0.34% = status-bar only). Every other diff
+   maps to the expected list: intake-range line under the Today hero;
+   Log loses Planner, gains PLATE mode; Recover swaps the photos/cycle
+   cards for the Mind card; Settings swaps the fasting toggle for the
+   Nutrition-plan card + Extras card + rings layout chip. Residual noise
+   explained: frequent-at-this-hour and recovery windows follow real
+   clock time between runs.
+2. **All-off run (informational): recorded** in
+   `docs/report-assets/v4-alloff/`. today-scroll/train/trends identical
+   to main (0.04%); log.png 12.2% = capture modes hidden, exactly the
+   pre-approved expected diff.
+3. **Crisis path: FULL PASS on the release build.** All three
+   self-expression entry points fire the crisis screen — Mind note
+   (wellbeing Extras OFF), coach question and journal entry (Extras ON)
+   — with correct AU numbers from the SIM region (Lifeline 13 11 14
+   call + 0477 text, 000, findahelpline.com), and the note/entry still
+   saves (verified on-screen after dismissal). Shot:
+   `docs/report-assets/v4-device-session/crisis-sheet-mind-note.png`.
+4. **Release build (universal APK from the AAB)**: cold-boots on Hermes
+   with no Metro; sign-in, seeded Today with the range line, New-in-
+   Basalt flow, Settings switches, journal save, streaks card with its
+   verbatim published rules on Trends — all green. Both widget providers
+   (BasaltToday, BasaltReadiness) registered with the system.
+5. **BUG (P1, fix before next build): health-type foreground services
+   crash on targetSDK 36.** Starting the meditation timer killed the app:
+   `SecurityException: Starting FGS with type health … requires
+   FOREGROUND_SERVICE_HEALTH (declared ✓) AND one granted runtime
+   permission of [ACTIVITY_RECOGNITION, health READ_*]` — none granted on
+   a fresh install without Health Connect. `timerService.ts` (guided set
+   timer, V3) starts the same FGS type and has the same latent crash —
+   this is what §27 couldn't verify on the AVD. Fix queued in Phase 8:
+   meditation → scheduled one-shot bell notifications (no service);
+   guided timer → FGS only when a qualifying permission is granted,
+   plain ongoing notification otherwise.
+6. **BUG (P2): Settings header reads "V0.1" on the 0.2.0 build** —
+   version string not wired to the build. Fix in Phase 8 wrap.
+7. **Fixed during the session** (commit 96b7c03): the 7-row More-tools
+   offer pushed its buttons off-screen with no scroll (CTA-reachability
+   law) — grouped offer checklists now scroll with the buttons pinned.
+8. **Cosmetic findings**: 6 capture modes wrap the BARCODE chip onto two
+   lines; the plan-rate chips wrap raggedly on the Nutrition-plan card.
+9. **Deferred to the post-Phase-8 session, with cause** (this build is
+   replaced by Phase 8, which rewrites onboarding and carries the FGS
+   fix): onboarding end-to-end with a throwaway account (+ §26
+   delete-account run), rich walk notification + pause on the lock
+   screen, physical widget placement, hydration notification firing,
+   store screenshots.

@@ -694,3 +694,27 @@ Decisions made without you:
    `ai-daily-summary` / `pebble-coach` (both deployed; they 503/501
    politely without their secrets).
 4. The Supabase leaked-password toggle (shared-project owner call).
+
+## Device session — 2026-09-08 (the hard stop, run)
+
+**THE GATE PASSED.** Fresh defaults vs pre-branch main on a physical
+S22 Ultra: two screens pixel-identical, every other diff on the expected
+list, both runs archived in `docs/report-assets/`. The all-off run is
+recorded (capture modes hidden — pre-approved). The crisis path passed
+on the RELEASE build from every text entry point, Extras on and off,
+with the entry still saving and real AU numbers. Full detail:
+DEVICE-TEST-PLAN §28.
+
+Found and owed to this session:
+- **P1 — health-type FGS crashes on targetSDK 36** (meditation timer now,
+  the V3 guided set timer latently): needs a granted health/activity
+  runtime permission we can't assume. Fix lands in Phase 8 (meditation →
+  scheduled bells, no service; guided timer → permission-checked
+  fallback). This is precisely the check §27 said an AVD could not make.
+- **P2 — Settings header says V0.1 on the 0.2.0 build.**
+- Fixed in-session: grouped Extras offers now scroll (CTA-reachability).
+- Cosmetic: capture-mode chip wrap at 6 modes; plan-rate chip wrap.
+
+Deferred to the post-Phase-8 session with cause (Phase 8 replaces
+onboarding and this build): onboarding e2e + burner-account deletion,
+walk lock-screen notification, widget placement, store screenshots.
