@@ -59,7 +59,7 @@ export function Pebble({ size = 40, expression = 'neutral' }: {
 }
 
 /** Blinks every few seconds; otherwise neutral. The only two expressions. */
-function BlinkingPebble({ size }: { size: number }) {
+export function BlinkingPebble({ size }: { size: number }) {
   const [blink, setBlink] = useState(false);
   useEffect(() => {
     let closeTimer: ReturnType<typeof setTimeout>;

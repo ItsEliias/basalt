@@ -27,7 +27,7 @@ const CRISIS_TEST_PHRASES = [
 // surface with a self-expression TextInput → add it here, or this list's
 // completeness scan below fails.
 const TEXT_ENTRY_POINTS = [
-  'src/components/CoachCard.tsx',
+  'src/components/PebbleTodayCard.tsx',
   'src/screens/recover/MindCard.tsx',
   'src/components/JournalCard.tsx',
 ];
