@@ -38,3 +38,4 @@ export * from './mobility';
 export * from './generator/catalog';
 export * from './generator/templates';
 export * from './generator/generate';
+export * from './pain';

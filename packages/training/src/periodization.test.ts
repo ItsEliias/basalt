@@ -129,7 +129,7 @@ describe('stalledMainLifts', () => {
 });
 
 describe('plannedRestDays — the program feeds the streak rule', () => {
-  const program: Program = { id: 'p1', startedOn: '2026-08-03', trainingDays: [1, 3, 5], active: true }; // Mon/Wed/Fri
+  const program: Program = { id: 'p1', startedOn: '2026-08-03', trainingDays: [1, 3, 5], active: true, templateId: null, weeks: null, ratePct: null }; // Mon/Wed/Fri
 
   it('non-training weekdays inside the window are planned rest', () => {
     const rest = plannedRestDays(program, new Date(2026, 7, 3), new Date(2026, 7, 9));

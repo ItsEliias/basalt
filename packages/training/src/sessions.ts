@@ -113,6 +113,7 @@ export async function logSet(
     rpe: input.rpe ?? null,
     rest_s: input.restS ?? null,
     comment: input.comment ?? null,
+    pain: input.pain ?? null,
   };
   if (input.completedAt) payload.completed_at = input.completedAt;
 
@@ -275,6 +276,26 @@ export async function setSupersetGroup(
 /** Remove an exercise (and its cascade of sets) from a session. */
 export async function removeSessionExercise(client: SupabaseClient, sessionExerciseId: string): Promise<Result<void>> {
   const { error } = await client.from('basalt_session_exercises').delete().eq('id', sessionExerciseId);
+  if (error) return err(error.message);
+  return ok(undefined);
+}
+
+/** Flag pain (0–3) on the most recent set of a session exercise. */
+export async function flagPainOnLastSet(
+  client: SupabaseClient,
+  sessionExerciseId: string,
+  pain: 0 | 1 | 2 | 3,
+): Promise<Result<void>> {
+  const last = await client
+    .from('basalt_set_entries')
+    .select('id')
+    .eq('session_exercise_id', sessionExerciseId)
+    .order('set_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (last.error) return err(last.error.message);
+  if (!last.data) return err('No set logged yet to flag.');
+  const { error } = await client.from('basalt_set_entries').update({ pain }).eq('id', last.data.id);
   if (error) return err(error.message);
   return ok(undefined);
 }

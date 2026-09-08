@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
-import { listRecentSessions, getSessionDetail, sessionVolumeKg } from '@basalt/training';
+import { listRecentSessions, getSessionDetail, sessionVolumeKg, getActiveProgram } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
 import { todayISO } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
@@ -23,7 +23,7 @@ import { friendsLoggedToday, publishToday } from '../../lib/socialData';
 import { getPebbleSettings, dismissedToday, dismissForToday } from '../../lib/pebble';
 import {
   PEBBLE_DEFAULTS, pebbleVisible, pickProposal,
-  macroShortfallProposal, readinessSwapProposal, sleepDebtProposal, stressSwapProposal,
+  macroShortfallProposal, missedSessionProposal, readinessSwapProposal, sleepDebtProposal, stressSwapProposal,
   type PebbleSettings,
 } from '../../lib/pebbleModel';
 import { Image } from 'react-native';
@@ -144,6 +144,19 @@ export function TodayScreen({ onOpenTab }: {
 
   const [pebbleSettings, setPebbleSettings] = useState<PebbleSettings>(PEBBLE_DEFAULTS);
   const [stressWellbeing, setStressWellbeing] = useState<{ text: string } | null>(null);
+  const [missedInput, setMissedInput] = useState({ yesterdayWasPlanned: false, sessionYesterday: false });
+  useEffect(() => {
+    void (async () => {
+      const prog = await getActiveProgram(supabase);
+      if (!prog.ok || !prog.data) return;
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      const planned = prog.data.trainingDays.includes(y.getDay());
+      const recent = await listRecentSessions(supabase, 10);
+      const had = (recent.ok ? recent.data : []).some((sess) => sess.startedAt.slice(0, 10) === y.toISOString().slice(0, 10));
+      setMissedInput({ yesterdayWasPlanned: planned, sessionYesterday: had });
+    })();
+  }, [todayVersion]);
   useEffect(() => {
     void listCheckins(supabase, 7).then((r) => {
       if (r.ok) setStressWellbeing(stressProposal(r.data, todayISO()));
@@ -278,6 +291,7 @@ export function TodayScreen({ onOpenTab }: {
     ? pickProposal([
         readinessSwapProposal({ score: readinessScore, band: null, hasSessionToday: data.sessions.length > 0 }),
         stressSwapProposal(stressWellbeing),
+        missedSessionProposal(missedInput),
         hideNumbers ? null : macroShortfallProposal({
           proteinG: data.totals.protein,
           proteinTargetG: targets.proteinG,

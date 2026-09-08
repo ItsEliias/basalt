@@ -13,6 +13,7 @@ import {
 } from '@basalt/training';
 import { supabase } from '../lib/supabase';
 import { playSound } from '../lib/sounds';
+import { scheduleRestDone, cancelRestDone } from '../lib/restNotification';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // The active training session — lives in a store (not screen state) so
@@ -192,6 +193,7 @@ async function historyFor(exerciseId: string): Promise<{ bestE1rm: number | null
     id: r.id, sessionExerciseId: r.session_exercise_id, userId: r.user_id,
     setNumber: r.set_number, setType: r.set_type ?? 'normal', reps: r.reps ?? null,
     weightKg: r.weight_kg == null ? null : Number(r.weight_kg), durationS: r.duration_s ?? null,
+    pain: r.pain ?? null,
     rir: r.rir == null ? null : Number(r.rir), rpe: r.rpe == null ? null : Number(r.rpe),
     restS: r.rest_s ?? null, comment: r.comment ?? null, completedAt: r.completed_at,
   }));
@@ -276,6 +278,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     set({ busy: true });
     await endSession(supabase, id, rpe !== null ? { sessionRpe: rpe } : {});
     set({ sessionId: null, startedAt: null, exercises: [], rest: null, busy: false });
+    void cancelRestDone();
   },
 
   addExercise: async (exercise, timed, target) => {
@@ -418,10 +421,14 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
 
     // Start the per-exercise rest timer.
     set({ rest: { sessionExerciseId: id, remaining: ex.restSeconds } });
+    void scheduleRestDone(ex.restSeconds);
     ensureTicking(get);
   },
 
-  skipRest: () => set({ rest: null }),
+  skipRest: () => {
+    set({ rest: null });
+    void cancelRestDone();
+  },
 
   setRestSeconds: (id, seconds) => {
     set((s) => ({

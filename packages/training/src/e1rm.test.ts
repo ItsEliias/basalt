@@ -6,7 +6,7 @@ function set(partial: Partial<SetEntry>): SetEntry {
   return {
     id: 's', sessionExerciseId: 'se', userId: 'u', setNumber: 1, setType: 'normal',
     reps: null, weightKg: null, durationS: null, rir: null, rpe: null, restS: null,
-    comment: null, completedAt: '2026-08-20T10:00:00Z',
+    comment: null, pain: null, completedAt: '2026-08-20T10:00:00Z',
     ...partial,
   };
 }

@@ -1,21 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import notifee, { AndroidImportance, AndroidForegroundServiceType } from '@notifee/react-native';
+import * as Notifications from 'expo-notifications';
 import { createAudioPlayer } from 'expo-audio';
 import { Card, ReceiptHeader, ReceiptRow, SrcNote, mono, mmss, useTheme, ScaledText as Text } from '@basalt/ui';
-import { acquireForegroundService, releaseForegroundService } from '../../lib/foregroundServiceCoordinator';
 import { writeThroughOutbox } from '../../lib/outbox';
 import { supabase } from '../../lib/supabase';
 
-// Meditation timer (meditation Extra) — a quiet countdown with an interval
-// bell every five minutes, held alive by a foreground service so a locked
-// phone finishes the sit. Minutes land in the ledger as mindfulness
-// sessions; that is the entire feature.
+// Meditation timer (meditation Extra) — a quiet countdown with an
+// interval bell every five minutes. Redesigned after the 2026-09-08
+// device session: a health-type foreground service crashes on targetSDK
+// 36 without granted health permissions, so the bells are SCHEDULED
+// one-shot notifications instead (AlarmManager-backed — they fire with
+// the phone locked, no service, no extra permission beyond notifications,
+// which the schedule call asks for). Minutes land in the ledger as
+// mindfulness sessions; that is the entire feature.
 
 const CHANNEL_ID = 'basalt.meditation';
-const NOTIF_ID = 'basalt.meditation.running';
+const BELL_ID_PREFIX = 'basalt.meditation.bell.';
 const DURATIONS_MIN = [5, 10, 20] as const;
-const BELL_EVERY_SEC = 300;
+const BELL_EVERY_MIN = 5;
 
 function bell(): void {
   try {
@@ -26,6 +29,41 @@ function bell(): void {
   } catch { /* a missing bell is not an error */ }
 }
 
+async function cancelBells(): Promise<void> {
+  for (let i = 0; i < 8; i++) {
+    await Notifications.cancelScheduledNotificationAsync(`${BELL_ID_PREFIX}${i}`).catch(() => {});
+  }
+}
+
+async function scheduleBells(totalMin: number): Promise<boolean> {
+  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+    name: 'Meditation timer',
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
+  const perm = await Notifications.requestPermissionsAsync();
+  if (!perm.granted) return false;
+  const marks: number[] = [];
+  for (let m = BELL_EVERY_MIN; m < totalMin; m += BELL_EVERY_MIN) marks.push(m);
+  marks.push(totalMin);
+  await Promise.all(
+    marks.map((m, i) =>
+      Notifications.scheduleNotificationAsync({
+        identifier: `${BELL_ID_PREFIX}${i}`,
+        content: {
+          title: m === totalMin ? 'Meditation — done' : 'Meditation',
+          body: m === totalMin ? `${totalMin} minutes complete.` : `${m} of ${totalMin} minutes.`,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: new Date(Date.now() + m * 60_000),
+          channelId: CHANNEL_ID,
+        },
+      }),
+    ),
+  );
+  return true;
+}
+
 export function MeditationCard() {
   const { theme } = useTheme();
   const [totalSec, setTotalSec] = useState<number | null>(null);
@@ -34,13 +72,18 @@ export function MeditationCard() {
 
   useEffect(() => {
     if (totalSec === null) return;
-    const iv = setInterval(() => setElapsed((e) => e + 1), 1000);
+    const iv = setInterval(() => {
+      // Wall-clock elapsed, so a backgrounded JS timer can't drift the sit.
+      if (startedAtRef.current) {
+        setElapsed(Math.floor((Date.now() - Date.parse(startedAtRef.current)) / 1000));
+      }
+    }, 1000);
     return () => clearInterval(iv);
   }, [totalSec]);
 
   useEffect(() => {
     if (totalSec === null) return;
-    if (elapsed > 0 && elapsed % BELL_EVERY_SEC === 0 && elapsed < totalSec) bell();
+    if (elapsed > 0 && elapsed % (BELL_EVERY_MIN * 60) === 0 && elapsed < totalSec) bell();
     if (elapsed >= totalSec) void stop(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed]);
@@ -49,25 +92,8 @@ export function MeditationCard() {
     startedAtRef.current = new Date().toISOString();
     setElapsed(0);
     setTotalSec(minutes * 60);
-    try {
-      await notifee.createChannel({ id: CHANNEL_ID, name: 'Meditation timer', importance: AndroidImportance.LOW });
-      await notifee.requestPermission();
-      acquireForegroundService();
-      await notifee.displayNotification({
-        id: NOTIF_ID,
-        title: 'Basalt — meditation running',
-        body: `${minutes} minutes · a soft bell every five`,
-        android: {
-          channelId: CHANNEL_ID,
-          asForegroundService: true,
-          foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_HEALTH],
-          ongoing: true,
-          onlyAlertOnce: true,
-          pressAction: { id: 'default' },
-          smallIcon: 'ic_launcher',
-        },
-      });
-    } catch { /* the in-app timer still runs without the notification */ }
+    // Bells are scheduled up front — the phone can lock; they still ring.
+    await scheduleBells(minutes).catch(() => {});
   };
 
   const stop = async (completed: boolean) => {
@@ -76,10 +102,7 @@ export function MeditationCard() {
     setTotalSec(null);
     setElapsed(0);
     startedAtRef.current = null;
-    try {
-      await notifee.cancelNotification(NOTIF_ID);
-      await releaseForegroundService();
-    } catch { /* already gone */ }
+    await cancelBells();
     if (completed) bell();
     // Same floor as every practice timer: under 30 s is a false start.
     if (!startedAt || (!completed && seconds < 30)) return;
@@ -105,8 +128,10 @@ export function MeditationCard() {
       <ReceiptHeader label="Meditation timer" summary={totalSec !== null ? 'running' : undefined} />
       {totalSec !== null ? (
         <>
-          <Text style={[styles.clock, { color: theme.text.ink }]}>{mmss(totalSec - elapsed)}</Text>
-          <Text style={[styles.meta, { color: theme.text.mute }]}>A soft bell every five minutes. The screen can lock.</Text>
+          <Text style={[styles.clock, { color: theme.text.ink }]}>{mmss(Math.max(0, totalSec - elapsed))}</Text>
+          <Text style={[styles.meta, { color: theme.text.mute }]}>
+            Bells are scheduled — the screen can lock and they still ring.
+          </Text>
           <Pressable onPress={() => void stop(false)} hitSlop={10} accessibilityRole="button">
             <Text style={[styles.btn, { color: theme.text.faint }]}>END SIT — MINUTES STILL COUNT PAST 30 S</Text>
           </Pressable>
@@ -124,7 +149,7 @@ export function MeditationCard() {
           </Pressable>
         ))
       )}
-      <SrcNote>Minutes land in your ledger as mindfulness sessions — no streaks, no scores, nothing else · runs as a foreground service so a locked phone finishes the sit</SrcNote>
+      <SrcNote>Minutes land in your ledger as mindfulness sessions — no streaks, no scores, nothing else · bells ride scheduled notifications, so a locked phone finishes the sit</SrcNote>
     </Card>
   );
 }

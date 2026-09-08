@@ -7,6 +7,7 @@ import { useFonts } from 'expo-font';
 import { ThemeProvider, useTheme, BlurTargetProvider, THEMES, DEFAULT_THEME, color, mono, GroundGlow, ScaledText as Text, relativeLuminance } from '@basalt/ui';
 import { useAppStore } from './src/state/appStore';
 import { expressiveFontsReady, loadExpressiveFonts } from './src/lib/expressiveFonts';
+import Constants from 'expo-constants';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
 import { FadeIn } from './src/components/FadeIn';
@@ -118,7 +119,7 @@ function MainShell() {
 
   const today = new Date();
   const context = view === 'settings'
-    ? 'v0.1'
+    ? `v${Constants.expoConfig?.version ?? '?'}`
     : today.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
