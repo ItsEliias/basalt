@@ -24,6 +24,7 @@ import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { ConfettiBurst } from '@basalt/extras';
 import { RacePlanCard } from './RacePlanCard';
 import { ProgrammeCard } from './ProgrammeCard';
+import { GenerateProgrammeSheet } from './GenerateProgrammeSheet';
 import { HardSetsCard } from './HardSetsCard';
 import { AdaptSheet } from './AdaptSheet';
 import { loadDeloadSignals } from '../../lib/periodizationData';
@@ -101,6 +102,7 @@ function SessionTab() {
   const [programDays, setProgramDays] = useState<number[]>([1, 3, 5]);
   const [deload, setDeload] = useState<{ advised: boolean; reasons: string[] } | null>(null);
   const [pain, setPain] = useState<PainSummary | null>(null);
+  const [genOpen, setGenOpen] = useState(false);
   const refreshProgram = () =>
     void getActiveProgram(supabase).then((r) => {
       if (!r.ok) return;
@@ -244,6 +246,13 @@ function SessionTab() {
                 disabled={programDays.length === 0}
                 onPress={() => void startProgram(supabase, programDays).then(refreshProgram)}
               />
+              {/* The split generator is CORE (Phase 8c) — reachable with
+                  every Extra off; the programmes Extra adds templates and
+                  check-ins on top, never the generator itself. */}
+              <Pressable onPress={() => setGenOpen(true)} hitSlop={8}>
+                <Text style={[styles.addSet, { color: theme.text.carbs }]}>BUILD MY PROGRAMME FROM MY INTAKE →</Text>
+              </Pressable>
+              <GenerateProgrammeSheet open={genOpen} onClose={() => setGenOpen(false)} onKept={() => { setGenOpen(false); refreshProgram(); }} />
             </>
           )}
         </Card>
