@@ -75,3 +75,14 @@ export function BlurTargetProvider({
 export function useBlurTarget(): RefObject<View | null> | null {
   return useContext(BlurTargetContext);
 }
+
+// Screen scroll containers must be TRANSPARENT on themes with an ambient
+// ground (Depth), so the glow the app root paints shows THROUGH the content
+// instead of being occluded by an opaque per-screen background — otherwise
+// the colour survives only in the header strip. Provably a no-op for every
+// other theme: the root already paints `surfaces.bg`, so a transparent
+// screen over it is pixel-identical to the screen painting `surfaces.bg`
+// itself. Glass cards then blur/tint over the visible ground.
+export function screenBg(theme: Theme): string {
+  return theme.shape.groundGlow ? 'transparent' : theme.surfaces.bg;
+}

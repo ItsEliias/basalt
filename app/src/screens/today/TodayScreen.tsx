@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
+import { Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState, Rule, MacroRow, CapRow, SegmentedStack, HeroRings, HeroDial, RingKey, ReceiptHeader, ReceiptRow, MealTag, TileGrid, StatTile, EmptyTile, WaterTicks, TickCaption, MicroRow, TileGridThemed, Tile, mono, groupInt, useTheme, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text , screenBg} from '@basalt/ui';
 import { getFoodEntriesForDay, getDailyTotals, getWaterForDay, addWater, undoLastWater, hydrationGoalMl, deleteFoodEntry, type FoodEntryRow, type DailyTotals } from '@basalt/nutrition';
 import { listRecentSessions, getSessionDetail, sessionVolumeKg, getActiveProgram } from '@basalt/training';
 import { healthService } from '@basalt/health-connect';
@@ -375,7 +375,7 @@ export function TodayScreen({ onOpenTab }: {
   if (layout === 'tiles') {
     return (
       <ScrollView
-        style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
+        style={[styles.scroll, { backgroundColor: screenBg(theme) }]}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
       >
@@ -407,7 +407,7 @@ export function TodayScreen({ onOpenTab }: {
 
   return (
     <ScrollView
-      style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]}
+      style={[styles.scroll, { backgroundColor: screenBg(theme) }]}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPull} tintColor={theme.text.mute} />}
     >

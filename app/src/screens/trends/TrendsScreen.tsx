@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays, mono, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CalGrid, CalDays, mono, useTheme, ScaledText as Text , screenBg} from '@basalt/ui';
 import {
   activeDaysFor, currentAndLongest, monthCells, loadWeekReview, loadDailySeries, computeCorrelations,
   loadMonthlyBehavior, type MonthlyBehaviorReport,
@@ -217,7 +217,7 @@ export function TrendsScreen() {
     : 0;
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
       {/* ── Week in review — composed, never cheered ───────────────── */}
       <Card>
         <ReceiptHeader label="Week in review" summary={review?.rangeLabel} />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav, ObInput, mono, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, SubNav, ObInput, mono, groupInt, useTheme, ScaledText as Text , screenBg} from '@basalt/ui';
 import { RecipesTab } from './RecipesTab';
 import { PlannerTab } from './PlannerTab';
 import {
@@ -513,7 +513,7 @@ function CaptureTab() {
 
   return (
     <View style={{ flex: 1 }}>
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* ── Mode row + viewfinder ──────────────────────────────────── */}
       <View style={[styles.vf, { borderColor: theme.surfaces.border }]}>
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Stepper, ChipRow, ObInput, ObChipLabel, NewRow, approxValue, groupInt, mono, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Stepper, ChipRow, ObInput, ObChipLabel, NewRow, approxValue, groupInt, mono, useTheme, ScaledText as Text , screenBg} from '@basalt/ui';
 import {
   importRecipeFromUrl, draftFromImport, saveRecipe, listRecipes, getRecipeDetail, deleteRecipe,
   confirmRecipeMacros, logRecipeServing, addToGroceryList, ingredientConflicts,
@@ -237,7 +237,7 @@ export function RecipesTab() {
   // ── Import draft editor ─────────────────────────────────────────────
   if (draft) {
     return (
-      <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card>
           <ReceiptHeader label="Imported — edit before save" summary="~ until you confirm macros" />
           {draft.sourceImageUrl ? (
@@ -278,7 +278,7 @@ export function RecipesTab() {
     const conflicts = ingredientConflicts(detail.ingredients.map((i) => i.name), dietaryFlags);
     const uncheckedCount = detail.ingredients.length - checked.size;
     return (
-      <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+      <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
         <Pressable onPress={() => setDetail(null)}>
           <Text style={[styles.back, { color: theme.text.mute }]}>← RECIPES</Text>
         </Pressable>
@@ -386,7 +386,7 @@ export function RecipesTab() {
   // ── List view ───────────────────────────────────────────────────────
   const filtered = (recipes ?? []).filter((r) => r.title.toLowerCase().includes(query.toLowerCase()));
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <SearchBar placeholder={`Search ${recipes?.length ?? 0} saved recipes…`} value={query} onChangeText={setQuery} />
       <View style={styles.importRow}>
         <ObInput

@@ -3,7 +3,7 @@ import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, View 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup, kgText, groupInt, THEME_IDS, THEMES, type ThemeId, mono, useTheme, Pebble, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, ObInput, ObChipLabel, ChipRow, ChipGroup, kgText, groupInt, THEME_IDS, THEMES, type ThemeId, mono, useTheme, Pebble, ScaledText as Text , screenBg} from '@basalt/ui';
 import { saveProfile, type ProfileRecord } from '@basalt/core-data';
 import { ImportSheet } from './ImportSheet';
 import { ThemePickerModal } from './ThemePicker';
@@ -304,7 +304,7 @@ export function SettingsScreen() {
     SETTINGS_SECTIONS.find((s) => s.key === key)?.name ?? '';
 
   return (
-    <ScrollView key={section ?? 'home'} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView key={section ?? 'home'} style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
       {section === null ? (
         <>
           <Card>

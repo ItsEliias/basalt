@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav, TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow, mono, kgText, hoursMinutes, groupInt, mmss, ChipGroup, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, KV, HeroNumeral, SubNav, TileGrid, StatTile, EmptyTile, Sparkline, StageBar, StageKey, TimeScale, CTA, ChipRow, mono, kgText, hoursMinutes, groupInt, mmss, ChipGroup, useTheme, ScaledText as Text , screenBg} from '@basalt/ui';
 import { healthService, labelForPackage, type SleepSessionSummary } from '@basalt/health-connect';
 import { listWeightEntries, type WeightEntry } from '@basalt/core-data';
 import { supabase } from '../../lib/supabase';
@@ -198,7 +198,7 @@ function VitalsTab() {
   }, [widgetsOn, ready?.score, ready?.note]);
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
       {/* ── Readiness — published formula, math one tap away ───────── */}
       <Card>
         <ReceiptHeader label="Readiness" summary={ready?.score !== null && ready ? 'tap for the math' : undefined} />
@@ -615,7 +615,7 @@ function MindTab() {
   };
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
       <Card>
         <KV label={protocol.name} right={protocol.phases.filter((p) => p > 0).join(' · ')} />
         <View style={styles.pacer}>

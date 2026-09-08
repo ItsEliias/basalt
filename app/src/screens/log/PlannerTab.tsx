@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, MealTag, CTA, ChipRow, groupInt, mono, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, MealTag, CTA, ChipRow, groupInt, mono, useTheme, ScaledText as Text , screenBg} from '@basalt/ui';
 import {
   listMealPlans, addMealPlan, deleteMealPlan, listRecipes, getRecipeDetail, logRecipeServing,
   listGroceryItems, setGroceryChecked, clearCheckedGroceries, groupByAisle, fmtQty,
@@ -90,7 +90,7 @@ export function PlannerTab() {
   const checkedCount = grocery.filter((g) => g.checked).length;
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
       {/* ── This week ──────────────────────────────────────────────── */}
       <Card>
         <ReceiptHeader

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, ChipGroup, BodyFigure, ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav, GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput, mono, mmss, groupInt, useTheme, ScaledText as Text } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, SearchBar, CTA, Chip, ChipRow, ChipGroup, BodyFigure, ExerciseHead, PrevNote, SetsHeader, SetRow, RestTimerBar, SupersetTag, SubNav, GuidedTimerDisplay, GuidedTimerConfig, Stepper, TileGrid, StatTile, ObInput, mono, mmss, groupInt, useTheme, ScaledText as Text , screenBg} from '@basalt/ui';
 import {
   getExercises, listRecentSessions, prevSummary, sessionVolumeKg,
   platesFor, platesText, biasOrder, suggestionText, warmupSets, regionsFor, intensityFor,
@@ -143,7 +143,7 @@ function SessionTab() {
   if (!session.sessionId) {
     return (
       <>
-      <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+      <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
         <Card>
           <ReceiptHeader label="Session" />
           <EmptyState>
@@ -318,7 +318,7 @@ function SessionTab() {
           <ConfettiBurst key={confettiKey} />
         </ExtraSlot>
       ) : null}
-      <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <View style={session.exercises.length === 0 ? { opacity: 0.4 } : null}>
             <Chip label="Adapt" onPress={session.exercises.length === 0 ? undefined : () => setAdaptOpen(true)} />

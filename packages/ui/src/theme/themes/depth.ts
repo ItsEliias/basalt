@@ -63,11 +63,17 @@ export const depth: Theme = {
     meterHeight: 11,
     meterRadius: 99,
     align: 'left',
-    // reference/themes-today.html: .depth .scr background — two radial
-    // gradients (indigo top-left, green top-right) over the #0B0F1A base.
+    // reference/themes-today.html: .depth .scr background — indigo top-left
+    // + green top-right radial gradients over the #0B0F1A base. The
+    // reference mockup is one screen tall, so those top gradients bathe all
+    // its visible content; a real phone is taller and scrolls, so the two
+    // top blobs are enlarged and a dim indigo lower blob carries the ambient
+    // ground down the whole viewport (the screens are transparent so it
+    // shows through — see theme/provider.tsx screenBg).
     groundGlow: [
-      { cx: 0.25, cy: 0.0, rx: 0.70, ry: 0.40, color: 'rgba(94,114,228,0.5)' },
-      { cx: 0.9, cy: 0.06, rx: 0.6, ry: 0.34, color: 'rgba(62,155,120,0.34)' },
+      { cx: 0.22, cy: 0.02, rx: 0.85, ry: 0.52, color: 'rgba(94,114,228,0.55)' },
+      { cx: 0.94, cy: 0.10, rx: 0.72, ry: 0.46, color: 'rgba(62,155,120,0.38)' },
+      { cx: 0.62, cy: 0.92, rx: 0.95, ry: 0.55, color: 'rgba(108,99,214,0.26)' },
     ],
     // reference/themes-today.html: .depth .grp,.hero,.tile background/border.
     glassFill: 'rgba(255,255,255,0.06)',

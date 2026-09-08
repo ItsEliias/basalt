@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Location from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
-import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, mono, mmss, paceText, groupInt, useTheme, ScaledText as Text, ObInput } from '@basalt/ui';
+import { Card, EmptyState, SrcNote, ReceiptHeader, ReceiptRow, CTA, mono, mmss, paceText, groupInt, useTheme, ScaledText as Text, ObInput , screenBg} from '@basalt/ui';
 import {
   acceptFix, routeDistanceM, summarizeWalk, computeSplits, saveWalk, listRecentWalks,
   type GpsFix, type Split, type WalkRow,
@@ -392,7 +392,7 @@ export function OutdoorTab() {
 
   return (
     <View style={styles.root}>
-    <ScrollView style={[styles.scroll, { backgroundColor: theme.surfaces.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.scroll, { backgroundColor: screenBg(theme) }]} contentContainerStyle={styles.content}>
       {tracking ? <KeepAwakeWhileTracking /> : null}
 
       {/* ── Recorder ───────────────────────────────────────────────── */}
