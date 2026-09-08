@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Card, KV, HeroNumeral, HeroRings, HeroDial, RingKey, MacroRow, CapRow, SegmentedStack,
   ThemeProvider, useTheme, THEMES, THEME_IDS, type ThemeId, groupInt, mono,
-  ScaledText as Text,
+  GroundGlow, ScaledText as Text,
 } from '@basalt/ui';
 import { getDailyTotals, getFoodEntriesForDay } from '@basalt/nutrition';
 import { supabase } from '../../lib/supabase';
@@ -36,11 +36,12 @@ try {
 /** In-memory preview bitmap cache; keyed by theme + the numbers shown. */
 const shotCache = new Map<string, string>();
 
-const FRAME_W = 60;
-const FRAME_H = 118;
+// V4.1 follow-up: 60×118 at 0.19 was too small to judge a theme by.
+const FRAME_W = 94;
+const FRAME_H = 192;
 const PREVIEW_W = 304;
 const PREVIEW_H = 620;
-const SCALE = 0.19;
+const SCALE = 0.31;
 
 /** The miniature Today — real components, real tokens, provided data. */
 export function TodayMiniPreview({ id, data }: { id: ThemeId; data: PreviewData }) {
@@ -48,6 +49,9 @@ export function TodayMiniPreview({ id, data }: { id: ThemeId; data: PreviewData 
   const { meter, energyFrac, proteinFrac, carbsFrac, heroLabel } = previewPlan(id, data);
   return (
     <View style={[styles.previewRoot, { backgroundColor: theme.surfaces.bg }]}>
+      {/* Depth's signature ambient ground — without it the preview reads
+          as a generic dark theme. A no-op for themes without groundGlow. */}
+      <GroundGlow />
       <View style={styles.previewHead}>
         <Text style={[styles.previewTitle, { color: theme.text.ink }]} allowFontScaling={false}>Today</Text>
         <Text style={[styles.previewDate, { color: theme.text.faint }]} allowFontScaling={false}>
@@ -137,7 +141,7 @@ function ThemeRow({
   const t = THEMES[id];
   const ticked = isTicked(state, id);
   const frameRef = useRef<View>(null);
-  const key = previewCacheKey(id, data);
+  const key = `${previewCacheKey(id, data)}@${FRAME_W}`;  // size-busting: stale small bitmaps must not survive a frame resize
   const [shotUri, setShotUri] = useState<string | null>(shotCache.get(key) ?? null);
 
   // Capture once after first live render; later visits show the bitmap.
