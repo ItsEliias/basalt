@@ -74,4 +74,5 @@ export const soft: Theme = {
     nav: 'label',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 140, base: 280, slow: 340 }, easing: 'ease-in-out', spring: { damping: 18, stiffness: 160 } },
 };

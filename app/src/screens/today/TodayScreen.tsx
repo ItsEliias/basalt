@@ -12,6 +12,7 @@ import { groupEntriesByMeal, heroModel, ledgerHeroMode, entryMeta, sessionMeta, 
 } from './model';
 import { loadReadiness, listCheckins, stressProposal } from '@basalt/analytics';
 import { openSettingsSection } from '../../lib/settingsNav';
+import { FadeRise } from '@basalt/ui';
 import { ExtraSlot, useExtra } from '../../components/ExtrasProvider';
 import { SupplementsCard } from '../../components/SupplementsCard';
 import { IntakeRangeNote } from '../../components/IntakeRangeNote';
@@ -483,7 +484,12 @@ export function TodayScreen({ onOpenTab }: {
           <>
             <KV label="Energy remaining" right={<Text style={[styles.targetRatio, { color: theme.text.ink2 }]}><Text style={[styles.targetOf, { color: theme.text.faint }]}>target</Text> {hero.targetText}</Text>} />
             <Pressable onPress={() => setWhyOpen(true)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Why this number">
-              <HeroNumeral value={groupInt(heroDisplay(hero.remaining, detail))} unit={hero.over ? 'kcal over' : 'kcal'} />
+              <HeroNumeral
+                value={groupInt(heroDisplay(hero.remaining, detail))}
+                countTo={heroDisplay(hero.remaining, detail)}
+                format={(n) => groupInt(Math.round(n))}
+                unit={hero.over ? 'kcal over' : 'kcal'}
+              />
             </Pressable>
             <Text style={[styles.heroSub, { color: theme.text.mute }]}>{hero.subParts.join(' · ')}</Text>
             {data ? (
@@ -619,7 +625,8 @@ export function TodayScreen({ onOpenTab }: {
               <View key={s.meal}>
                 <MealTag>{`${s.label}${s.time ? ` — ${s.time}` : ''}`}</MealTag>
                 {s.entries.map((e, i) => (
-                  <Pressable key={e.id} onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)} hitSlop={8}>
+                  <FadeRise key={e.id} index={i}>
+                  <Pressable onLongPress={() => void deleteFoodEntry(supabase, e.id).then(refresh)} hitSlop={8}>
                     <ReceiptRow
                       name={e.foodName}
                       thumb={
@@ -634,6 +641,7 @@ export function TodayScreen({ onOpenTab }: {
                       last={i === s.entries.length - 1}
                     />
                   </Pressable>
+                  </FadeRise>
                 ))}
               </View>
             ))}

@@ -71,4 +71,5 @@ export const atelier: Theme = {
     nav: 'label',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 100, base: 180, slow: 220 }, easing: 'ease-out' },
 };

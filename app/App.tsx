@@ -10,7 +10,8 @@ import { expressiveFontsReady, loadExpressiveFonts } from './src/lib/expressiveF
 import Constants from 'expo-constants';
 import { AppHeader } from './src/components/AppHeader';
 import { TabBar, type TabKey } from './src/components/TabBar';
-import { FadeIn } from './src/components/FadeIn';
+import { Crossfade } from '@basalt/ui';
+import { SplashColumns } from './src/motion/SplashColumns';
 import { QuickLogSheet, type QuickAction } from './src/components/QuickLogSheet';
 import * as Haptics from 'expo-haptics';
 import { addWater } from '@basalt/nutrition';
@@ -159,7 +160,7 @@ function MainShell() {
           onPressGear={() => setSettingsOpen(!settingsOpen)}
         />
         <View style={{ flex: 1 }}>
-          <FadeIn viewKey={view}>{body[view]}</FadeIn>
+          <Crossfade viewKey={view}>{body[view]}</Crossfade>
         </View>
         <TabBar
           active={tab}
@@ -307,9 +308,19 @@ export default function App() {
           <Gate />
           <NewInBasalt />
         </ExtrasProvider>
+        <SplashGate />
       </ThemeProvider>
     </SafeAreaProvider>
   );
+}
+
+/** V4.1 §5b — the column-wave splash rides OVER the booting app, so it
+ *  never delays content: the app renders beneath and the splash lifts at
+ *  ≤ 1.2 s or on tap, whichever comes first. */
+function SplashGate() {
+  const [done, setDone] = useState(false);
+  if (done) return null;
+  return <SplashColumns onDone={() => setDone(true)} />;
 }
 
 const styles = StyleSheet.create({

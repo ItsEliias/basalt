@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { Card, SrcNote, mono, useTheme, BlinkingPebble, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
+import { Breathe, Card, SpringPop, SrcNote, mono, useTheme, BlinkingPebble, PebbleSlot, type PebbleAction, type PebbleProposal, ScaledText as Text } from '@basalt/ui';
 import {
   COACH_SUBLABEL, coachLocalGuard, parseCoachReply, type CoachNumbers, type CoachReply,
 } from '@basalt/extras';
@@ -79,10 +79,12 @@ export function PebbleTodayCard({ proposal, onAction, mascot, numbers, onCoachAc
       <ExtraSlot id="pebble">
         <Card>
           {proposal ? (
-            <PebbleSlot proposal={proposal} onAction={onAction} mascot={mascot} />
+            <SpringPop popKey={proposal.id}>
+              <PebbleSlot proposal={proposal} onAction={onAction} mascot={mascot} />
+            </SpringPop>
           ) : (
             <View style={styles.idleRow}>
-              {mascot ?? <BlinkingPebble size={44} />}
+              <Breathe>{mascot ?? <BlinkingPebble size={44} />}</Breathe>
               <Text style={[styles.idleText, { color: theme.text.faint }]}>
                 {coachOn ? 'Nothing to propose right now — ask me something instead.' : 'Nothing to propose right now.'}
               </Text>

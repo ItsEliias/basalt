@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
-import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { CTA, EmptyState, KV, SrcNote, mono, useTheme, ScaledText as Text } from '@basalt/ui';
+import { CTA, CountUpText, EmptyState, SpringPop, SrcNote, mono, useMotion, useTheme, ScaledText as Text } from '@basalt/ui';
 import {
   addToPlate, removeFromPlate, setFactor, stepFactor, factorFromDrag,
   plateTotals, plateEntries, itemRadius, factorText,
@@ -36,8 +36,18 @@ function PlateItemCircle({ item, index, onFactor }: {
   ).current;
   const [sx, sy] = SLOTS[index] ?? [0, 0];
   const r = itemRadius(item.factor);
+  // The portion circle scales from its centre — a spring pulse marks each
+  // 0.25 step; reduced motion keeps the size change instant and silent.
+  const { spring, reduced } = useMotion();
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (reduced) { pulse.setValue(1); return; }
+    pulse.setValue(1.06);
+    Animated.spring(pulse, { toValue: 1, useNativeDriver: true, ...spring }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Math.round(item.factor * 4)]);
   return (
-    <View
+    <Animated.View
       {...pan.panHandlers}
       style={[
         styles.item,
@@ -49,6 +59,7 @@ function PlateItemCircle({ item, index, onFactor }: {
           borderRadius: r,
           backgroundColor: theme.surfaces.surface2,
           borderColor: theme.fill.accent,
+          transform: [{ scale: pulse }],
         },
       ]}
       accessibilityRole="adjustable"
@@ -60,21 +71,31 @@ function PlateItemCircle({ item, index, onFactor }: {
       <Text style={[styles.itemFactor, { color: theme.text.mute }]} allowFontScaling={false}>
         ×{factorText(item.factor)}
       </Text>
-    </View>
+    </Animated.View>
   );
 }
 
-export function PlateBuilder({ recentFoods, onCommit, busy }: {
+export function PlateBuilder({ recentFoods, onCommit, busy, onStep }: {
   /** The user's recent/favorite foods, host-loaded. */
   recentFoods: PlateFood[];
   /** Commits the scaled entries through the ordinary write path. */
   onCommit: (entries: PlateEntry[]) => void;
   busy?: boolean;
+  /** Fired once per 0.25 portion step — the host wires a light haptic. */
+  onStep?: () => void;
 }) {
   const { theme } = useTheme();
   const [items, setItems] = useState<PlateItem[]>([]);
   const totals = plateTotals(items);
-  const onFactor = (key: string, f: number) => setItems((it) => setFactor(it, key, f));
+  const lastStep = useRef(new Map<string, number>());
+  const onFactor = (key: string, f: number) => {
+    const step = Math.round(f * 4);
+    if (lastStep.current.get(key) !== step) {
+      lastStep.current.set(key, step);
+      onStep?.();
+    }
+    setItems((it) => setFactor(it, key, f));
+  };
 
   if (recentFoods.length === 0) {
     return <EmptyState>No recent foods yet — the plate builds from what you’ve logged before. Log a few meals any other way first.</EmptyState>;
@@ -88,7 +109,9 @@ export function PlateBuilder({ recentFoods, onCommit, busy }: {
           <Circle cx={PLATE_R} cy={PLATE_R} r={PLATE_R - 26} stroke={theme.surfaces.border} strokeWidth={1} fill="none" />
         </Svg>
         {items.map((item, i) => (
-          <PlateItemCircle key={item.food.key} item={item} index={i} onFactor={onFactor} />
+          <SpringPop key={item.food.key} popKey={item.food.key}>
+            <PlateItemCircle item={item} index={i} onFactor={onFactor} />
+          </SpringPop>
         ))}
       </View>
 
@@ -135,7 +158,13 @@ export function PlateBuilder({ recentFoods, onCommit, busy }: {
 
       {items.length > 0 ? (
         <>
-          <KV label="Plate total" right={`${totals.calories} kcal · P ${totals.protein} · C ${totals.carbs} · F ${totals.fat}`} />
+          <View style={styles.totalRow}>
+            <Text style={[styles.totalLabel, { color: theme.text.mute }]}>PLATE TOTAL</Text>
+            <CountUpText value={totals.calories} style={{ color: theme.text.ink, fontSize: 13 }} />
+            <Text style={[styles.totalMacros, { color: theme.text.ink2 }]}>
+              {` kcal · P ${totals.protein} · C ${totals.carbs} · F ${totals.fat}`}
+            </Text>
+          </View>
           <CTA
             label={busy ? 'Logging…' : `Log ${items.length} ${items.length === 1 ? 'entry' : 'entries'}`}
             disabled={!!busy}
@@ -149,6 +178,9 @@ export function PlateBuilder({ recentFoods, onCommit, busy }: {
 }
 
 const styles = StyleSheet.create({
+  totalRow: { flexDirection: 'row', alignItems: 'baseline', paddingTop: 10 },
+  totalLabel: { fontFamily: mono, fontSize: 10.5, letterSpacing: 1.26, flex: 1 },
+  totalMacros: { fontFamily: mono, fontSize: 12.5 },
   plateWrap: { width: PLATE_R * 2, height: PLATE_R * 2, alignSelf: 'center', marginVertical: 10 },
   item: { position: 'absolute', borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', padding: 4 },
   itemName: { fontSize: 11, textAlign: 'center', lineHeight: 13 },

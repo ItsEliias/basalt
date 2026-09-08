@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTheme, resolveTypeface } from '../theme';
+import { useCountUp } from '../motion/Motion';
 import { ScaledText as Text } from './scaledText';
 import type { TextStyle } from 'react-native';
 
@@ -19,6 +20,21 @@ function ringDash(r: number, fraction: number): { dasharray: number; dashoffset:
 export type HeroRing = { fraction: number; fill: string };
 
 /** Three nested rings (outer → inner), value + label centered. */
+/** One ring arc that DRAWS to its fraction — from zero on first appearance,
+ *  from its previous value on updates; instant under reduced motion. */
+function RingArc({ r, fill, fraction, stroke }: { r: number; fill: string; fraction: number; stroke: number }) {
+  const animated = useCountUp(fraction);
+  const { dasharray, dashoffset } = ringDash(r, animated);
+  return (
+    <Circle
+      cx={75} cy={75} r={r} fill="none"
+      stroke={fill} strokeWidth={stroke} strokeLinecap="round"
+      strokeDasharray={dasharray} strokeDashoffset={dashoffset}
+      transform="rotate(-90 75 75)"
+    />
+  );
+}
+
 export function HeroRings({
   rings, centerValue, centerLabel, size = 150,
 }: {
@@ -37,16 +53,9 @@ export function HeroRings({
       <Svg viewBox="0 0 150 150" width={size} height={size}>
         {rings.slice(0, 3).map((ring, i) => {
           const r = radii[i]!;
-          const { dasharray, dashoffset } = ringDash(r, ring.fraction);
           return [
             <Circle key={`t${i}`} cx={75} cy={75} r={r} fill="none" stroke={ring.fill} strokeOpacity={0.18} strokeWidth={stroke} />,
-            <Circle
-              key={`f${i}`}
-              cx={75} cy={75} r={r} fill="none"
-              stroke={ring.fill} strokeWidth={stroke} strokeLinecap="round"
-              strokeDasharray={dasharray} strokeDashoffset={dashoffset}
-              transform="rotate(-90 75 75)"
-            />,
+            <RingArc key={`f${i}`} r={r} fill={ring.fill} fraction={ring.fraction} stroke={stroke} />,
           ];
         })}
       </Svg>

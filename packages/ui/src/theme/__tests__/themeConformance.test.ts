@@ -175,3 +175,38 @@ describe('V4.1 §3 — selected state is a fill', () => {
     expect(chip).toContain('color: theme.fill.markOn');
   });
 });
+
+// ── V4.1 §5b — motion is a token, with physics limits ─────────────────
+describe('V4.1 §5b — motion tokens', () => {
+  const SNAP = ['minimal', 'atelier', 'brutalist'] as const;
+  const SPRING = ['clay', 'gummy', 'soft', 'sticker', 'candyRings'] as const;
+
+  it.each(ids)('%s: declares motion; fast ≤ base ≤ slow ≤ 400 ms', (id) => {
+    const m = THEMES[id]!.motion;
+    expect(m).toBeDefined();
+    expect(m.duration.fast).toBeLessThanOrEqual(m.duration.base);
+    expect(m.duration.base).toBeLessThanOrEqual(m.duration.slow);
+    expect(m.duration.slow, `${id}: nothing runs longer than 400 ms except the splash`).toBeLessThanOrEqual(400);
+  });
+
+  it('snap themes have no spring and settle ≤ 220 ms base', () => {
+    for (const id of SNAP) {
+      const m = THEMES[id]!.motion;
+      expect(m.spring, `${id} is a snap theme`).toBeUndefined();
+      expect(m.duration.base).toBeLessThanOrEqual(220);
+    }
+  });
+
+  it('bubbly themes declare a spring whose overshoot keeps a 0.9→1.0 pop-in ≤ 1.04 scale', () => {
+    for (const id of SPRING) {
+      const s = THEMES[id]!.motion.spring;
+      expect(s, `${id} is a spring theme`).toBeDefined();
+      // Mass-1 second-order system: damping ratio ζ = c / (2·√k);
+      // fractional overshoot = e^(−ζπ/√(1−ζ²)). A pop-in animates a 0.1
+      // scale delta, so overshoot ≤ 0.4 keeps peak scale ≤ 1.04.
+      const zeta = s!.damping / (2 * Math.sqrt(s!.stiffness));
+      const overshoot = zeta >= 1 ? 0 : Math.exp((-zeta * Math.PI) / Math.sqrt(1 - zeta * zeta));
+      expect(overshoot, `${id}: spring overshoot`).toBeLessThanOrEqual(0.4);
+    }
+  });
+});

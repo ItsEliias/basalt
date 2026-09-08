@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { space, type as typeScale } from '../tokens';
 import { monoTabular } from '../typography';
 import { useTheme, useBlurTarget, resolveTypeface, DENSITY_PAD, TEXT_SCALE_MULTIPLIER, type Theme } from '../theme';
+import { useCountUp } from '../motion/Motion';
 
 // Base primitives: Card, MicroLabel, KV, SrcNote, HeroNumeral, EmptyState.
 // Every component copies the prototype's exact metrics for Minimal — do not
@@ -272,8 +273,15 @@ export function SrcNote({ children, center, style }: { children: ReactNode; cent
  * its card at the largest system text sizes — the user's preference still
  * moves it, just with a ceiling.
  */
-export function HeroNumeral({ value, unit, style }: { value: string; unit?: string; style?: StyleProp<TextStyle> }) {
+export function HeroNumeral({ value, unit, style, countTo, format }: {
+  value: string; unit?: string; style?: StyleProp<TextStyle>;
+  /** When set, the numeral counts to this value (V4.1 §5b) — `format`
+   *  turns the animated number back into the display string. */
+  countTo?: number; format?: (n: number) => string;
+}) {
   const { theme } = useTheme();
+  const counted = useCountUp(countTo ?? 0);
+  const shown = countTo !== undefined && format ? format(counted) : value;
   return (
     <Text
       style={[
@@ -290,7 +298,7 @@ export function HeroNumeral({ value, unit, style }: { value: string; unit?: stri
       ]}
       maxFontSizeMultiplier={1.3}
     >
-      {value}
+      {shown}
       {unit ? (
         <Text
           style={[

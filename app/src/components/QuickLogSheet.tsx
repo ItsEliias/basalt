@@ -1,4 +1,5 @@
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { SheetRise } from '@basalt/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { mono, ScaledText as Text } from '@basalt/ui';
 import { useTheme } from '@basalt/ui';
@@ -39,7 +40,7 @@ export function QuickLogSheet({
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
+      <SheetRise style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + insets.bottom }]}>
         <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
         <View style={styles.grid}>
           {items.map((it) => (
@@ -57,7 +58,7 @@ export function QuickLogSheet({
           ))}
         </View>
         <Text style={[styles.hint, { color: theme.text.faint }]}>LOG ANYTHING FROM ANYWHERE · WATER +250 COMMITS INSTANTLY, NO SCREEN</Text>
-      </View>
+      </SheetRise>
     </Modal>
   );
 }

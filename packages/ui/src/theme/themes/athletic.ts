@@ -71,4 +71,5 @@ export const athletic: Theme = {
     nav: 'label',
     rowMinHeight: 48,
   },
+  motion: { duration: { fast: 110, base: 220, slow: 260 }, easing: 'ease-out' },
 };

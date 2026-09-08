@@ -559,7 +559,7 @@ function CaptureTab() {
 
         {mode === 'plate' ? (
           <ExtraSlot id="capturePlate">
-            <PlateBuilder recentFoods={plateFoods} onCommit={(e) => void commitPlate(e)} busy={plateBusy} />
+            <PlateBuilder recentFoods={plateFoods} onCommit={(e) => void commitPlate(e)} busy={plateBusy} onStep={() => void Haptics.selectionAsync()} />
           </ExtraSlot>
         ) : null}
 

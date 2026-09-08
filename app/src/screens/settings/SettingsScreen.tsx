@@ -58,6 +58,7 @@ import {
   nutritionSummary, notificationsSummary, accountSummary, aboutSummary,
 } from './settingsHomeModel';
 import { consumePendingSection } from '../../lib/settingsNav';
+import { SheetRise } from '@basalt/ui';
 
 // Settings — V4.1 §2: a HOME of eight section rows (name · current values ·
 // chevron), each opening its own screen. Nothing lives on the home except
@@ -862,10 +863,10 @@ function EditSheet({ open, onClose, children, bottomInset }: {
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + bottomInset }]}>
+      <SheetRise style={[styles.sheet, { backgroundColor: theme.surfaces.surface, borderTopColor: theme.surfaces.borderStrong }, { paddingBottom: 22 + bottomInset }]}>
         <View style={[styles.grab, { backgroundColor: theme.surfaces.borderStrong }]} />
         <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
-      </View>
+      </SheetRise>
     </Modal>
   );
 }
