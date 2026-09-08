@@ -73,7 +73,7 @@ export async function addSessionExercise(
     .insert({
       session_id: input.sessionId,
       user_id: u.data,
-      exercise_id: input.exerciseId ?? null,
+      exercise_id: input.exerciseId || null, // '' is not a uuid — name-only template/import exercises land unlinked
       exercise_name: input.exerciseName,
       order_index: input.orderIndex,
       superset_group: input.supersetGroup ?? null,

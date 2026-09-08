@@ -287,7 +287,7 @@ export const useSessionStore = create<SessionState & { _tick: (elapsedS?: number
     set({ busy: true });
     const added = await addSessionExercise(supabase, {
       sessionId: state.sessionId,
-      exerciseId: exercise.id,
+      exerciseId: exercise.id || null,
       exerciseName: exercise.name,
       orderIndex: state.exercises.length,
     });
