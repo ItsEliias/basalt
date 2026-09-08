@@ -362,3 +362,48 @@ burner account `readme.shot+p8@example.com` created in-app. Shots in
     rest-notification firing, walk notification + lock-screen pause,
     physical widget placement, hydration reminder firing, store
     screenshots refresh.
+
+### §28.11 — Third run (new cable): P1 uuid fix verified live; P2 dropped-notifications found + fixed
+
+Installed the rebuilt 0.2.0 universal APK (39886ce) over the QA account.
+A template with two NULL-`exercise_id` (name-only) exercises was planted
+via SQL — the exact DB shape generated templates produce.
+
+1. **P1 uuid fix VERIFIED ON DEVICE.** Session started from the planted
+   template: both name-only exercises rendered with target lines and set
+   grids, zero on-screen errors. Set commits landed in
+   `basalt_set_entries` (SQL-verified: 20 kg × 10 @ RIR 2 against
+   `exercise_id: null`).
+2. **Set commit, pain flag, rest timer — all live-verified** (closes
+   three §28.10.11 deferrals): ✓ commits write rows; PAIN? chip 2 →
+   `set_entries.pain = 2` in the DB ("flagged — next session will say
+   so" note shown); REST countdown ran with SKIP; the RIR explainer
+   dialog captured (`p8-session-rir-explainer.png`, retaken). Session
+   ended through the RPE sheet (rated 7). Activity-recognition +
+   notification permission prompts appeared at first set — granted; the
+   session-timer FGS ran ongoing with no crash (the §28.5 guard works
+   end-to-end).
+3. **BUG (P2) found + fixed (commit d8d4464): every scheduled
+   notification was silently dropped while the app process was alive.**
+   The rest-done one-shot never posted although `dumpsys alarm` showed
+   expo's alarms firing — the app never called
+   `Notifications.setNotificationHandler`, and expo routes notifications
+   through the JS handler whenever the process runs. The session FGS
+   keeps the process alive for the entire workout, so rest-done could
+   never fire; meditation bells (foreground by purpose) and hydration
+   reminders while the app is open were equally dead. Fix: module-scope
+   handler in App.tsx (banner + list + sound). Re-verification on the
+   rebuilt APK below.
+4. **Test hygiene:** the planted template's practice session was deleted
+   from the QA fixture afterwards (4 sets / 2 exercises / 1 session,
+   scoped to the test exercise names).
+5. **P2 fix RE-VERIFIED on the rebuilt APK (d8d4464).** Fresh session
+   from the planted template, set committed, app backgrounded before
+   rest end: the `basalt.rest.done` notification POSTED to the shade
+   (evidence: `p8-rest-done-notification.png` — it also catches the
+   ongoing "Basalt — session timer · Rest — about 1:40 left" bucketed
+   countdown and the rich steps notification "4,403 steps · 221 kcal"
+   working). Test session + planted template then deleted from the QA
+   fixture (1 set / 2 exercises / 1 session / 1 template + 2 rows).
+   Final 0.2.0 artifacts (AAB + universal APK) are now built from
+   d8d4464.
