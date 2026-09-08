@@ -149,3 +149,29 @@ describe('sizing invariants', () => {
     expect(contrastRatio(icons, bg)).toBeGreaterThanOrEqual(INVARIANTS.minTextContrast);
   });
 });
+
+// ── V4.1 §3 — selection is a fill, in every theme ─────────────────────
+// A selected segment/chip fills with `mark` and sets its label in `markOn`;
+// the unselected one sits on bare ground. The rule is a token rule so all
+// themes pass or fail together — no per-theme branches allowed.
+import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+
+describe('V4.1 §3 — selected state is a fill', () => {
+  it.each(ids)('%s: selected fill vs unselected ground ≥ 3:1, selected text ≥ 4.5:1', (id) => {
+    const t = THEMES[id]!;
+    for (const s of ['bg', 'surface', 'surface2'] as const) {
+      expect(contrastRatio(t.fill.mark, t.surfaces[s]),
+        `${id}: mark on ${s} — a selected segment must be visibly filled`).toBeGreaterThanOrEqual(3);
+    }
+    expect(contrastRatio(t.fill.markOn, t.fill.mark),
+      `${id}: markOn on mark`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('the Chip primitive takes its on-state from fill.mark/markOn (no border-only selection)', () => {
+    const src = readFileSync(resolvePath(__dirname, '../../components/controls.tsx'), 'utf8');
+    const chip = src.slice(src.indexOf('export function Chip'), src.indexOf('export function ChipRow'));
+    expect(chip).toContain('backgroundColor: theme.fill.mark');
+    expect(chip).toContain('color: theme.fill.markOn');
+  });
+});

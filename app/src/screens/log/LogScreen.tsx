@@ -630,11 +630,11 @@ function CaptureTab() {
             <Pressable
               key={m}
               onPress={() => setMode(m)}
-              style={[styles.modeSegBtn, mode === m && { backgroundColor: theme.surfaces.surface2 }]}
+              style={[styles.modeSegBtn, mode === m && { backgroundColor: theme.fill.mark }]}
               accessibilityRole="tab"
               accessibilityState={{ selected: mode === m }}
             >
-              <Text style={[styles.mode, { color: mode === m ? theme.text.ink : theme.text.faint }]}>{m.toUpperCase()}</Text>
+              <Text style={[styles.mode, { color: mode === m ? theme.fill.markOn : theme.text.mute }]}>{m.toUpperCase()}</Text>
             </Pressable>
           ))}
         </View>
