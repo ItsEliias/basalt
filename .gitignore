@@ -33,3 +33,8 @@ agentdb.rvf.lock
 .DS_Store
 supabase/.temp/
 app/android/baseline-main-8323e32.apk
+
+# Claude Code assistant/runbook config — internal, not for the public repo.
+# Kept locally (still read by the tooling); removed from tracking. Note: it
+# remains in prior git history — see below if a full scrub is wanted.
+CLAUDE.md
