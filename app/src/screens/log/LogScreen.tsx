@@ -912,7 +912,9 @@ const styles = StyleSheet.create({
   },
   modeSeg: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, marginTop: 4 },
   modeSegBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center' },
-  mode: { fontFamily: mono, fontSize: 11, letterSpacing: 1.24 },
+  // 10.5/0.3: six modes share 1080px — 1.24 tracking wrapped BARCODE onto
+  // two lines in every theme (V4.1 §4 sweep). 10.5 is the tab-label floor.
+  mode: { fontFamily: mono, fontSize: 10.5, letterSpacing: 0.3 },
   cameraWrap: { height: 260, borderRadius: 10, overflow: 'hidden', marginBottom: 12, justifyContent: 'flex-end' },
   cameraDenied: { paddingBottom: 12 },
   reticle: {

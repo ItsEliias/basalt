@@ -614,7 +614,7 @@ export function TodayScreen({ onOpenTab }: {
           summary={
             data && (data.entries.length > 0 || data.sessions.length > 0)
               ? hideNumbers
-                ? `${data.entries.length + data.sessions.length} entries`
+                ? `${data.entries.length + data.sessions.length} ${data.entries.length + data.sessions.length === 1 ? 'entry' : 'entries'}`
                 : `${data.entries.length + data.sessions.length} entries · ${groupInt(data.totals.calories)} kcal`
               : undefined
           }
