@@ -44,7 +44,7 @@ banners up.
 - Icon: `store-assets/icon-512.png` · Feature graphic:
   `store-assets/feature-graphic.png` · Phone screenshots:
   `store-assets/screenshots/01…06` in order.
-- Category: Health & Fitness. Contact email: itseliiasstudy@gmail.com.
+- Category: Health & Fitness. Contact email: itseliias@proton.me.
 
 ## 4 · Closed testing track
 

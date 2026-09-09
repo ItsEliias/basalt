@@ -2,7 +2,7 @@
 // feedback row. Facts only, no telemetry: everything in the body is visible
 // to the user in the draft before they choose to send it.
 
-export const FEEDBACK_EMAIL = 'itseliiasstudy@gmail.com';
+export const FEEDBACK_EMAIL = 'itseliias@proton.me';
 
 export type FeedbackInput = {
   /** App version (expo config), e.g. "0.1.0". */
