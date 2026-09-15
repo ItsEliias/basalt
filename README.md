@@ -194,3 +194,10 @@ project is documented in `docs/DECOMMISSION.md`.
 
 **Closed testing** (0.2.1). Feedback: Settings → About → Send feedback
 (opens your mail app — nothing is sent silently), or open an issue here.
+
+## Copyright
+
+Copyright © 2026 ItsEliias. All rights reserved. This repository is public
+for transparency but is **not** open source — see [LICENSE](LICENSE). No
+licence to use, copy, modify, or distribute is granted. "Basalt", the
+Basalt wordmark, and the columns logo are trademarks of ItsEliias.
