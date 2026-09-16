@@ -53,7 +53,7 @@ Verified against the current source tree (`app/src`, `packages/*/src`):
 - **Supabase JS** ^2.106.2 client
 - Native/Expo modules: `expo-camera`, `expo-image-manipulator`, `expo-speech-recognition`, `expo-notifications`, `expo-background-task`/`expo-task-manager`, `expo-file-system`, `expo-print`/`expo-sharing`, `expo-audio`
 - `react-native-vision-camera` 4.7.3 (patched via pnpm `patchedDependencies`), `react-native-ble-plx` (Bluetooth scale support), `react-native-health-connect` (Android Health Connect), `react-native-android-widget` (home-screen widgets), `@maplibre/maplibre-react-native` (route maps), `react-native-svg`
-- Ten Google Fonts families loaded via `@expo-google-fonts/*` to drive the eleven visual themes
+- Eleven Google Fonts families (Nunito, Barlow, Archivo, Manrope, Jost, IBM Plex Mono, Cormorant Garamond, Baloo 2, Lilita One, Poppins, Fredoka) loaded via `@expo-google-fonts/*` — the core set loads at startup, five expressive-theme typefaces (Baloo 2, Lilita One, Poppins, Fredoka, plus Nunito's black weight) lazy-load on theme switch to keep Minimal's first paint light
 - **Vitest** 4 for unit tests, TypeScript `tsc --noEmit` for type checking
 
 **Shared packages** (`packages/*`, pnpm workspace, all TypeScript + Vitest)
@@ -65,7 +65,7 @@ Verified against the current source tree (`app/src`, `packages/*/src`):
 - `ui` — design-token contract and themed components
 - `extras` — the feature registry described above
 
-**Backend** — **Supabase** (project `ezsrwwfieihelfekgclz`, shared with the Arise app; every Basalt table is `basalt_`-prefixed and isolated by `auth.uid() = user_id` row-level security). 37 SQL migrations under `supabase/migrations`. Nine Edge Functions (Deno) under `supabase/functions`: `ai-quick-add`, `ai-recipe-ideas`, `ai-daily-summary`, `ai-photo-food`, `pebble-coach`, `social-recipe-import`, `route-loop`, `oauth-exchange`, `delete-account`, `beacon`.
+**Backend** — **Supabase** (project `ezsrwwfieihelfekgclz`, shared with the Arise app; every Basalt table is `basalt_`-prefixed and isolated by `auth.uid() = user_id` row-level security). 37 SQL migrations under `supabase/migrations`. Ten Edge Functions (Deno) under `supabase/functions`: `ai-quick-add`, `ai-recipe-ideas`, `ai-daily-summary`, `ai-photo-food`, `pebble-coach`, `social-recipe-import`, `route-loop`, `oauth-exchange`, `delete-account`, `beacon`.
 
 **Package management** — pnpm 10.34.5 workspace (`app` + `packages/*`).
 
@@ -96,7 +96,7 @@ basalt/
 │
 ├── supabase/
 │   ├── migrations/          37 SQL migrations (basalt_-prefixed schema, RLS)
-│   └── functions/           9 Deno Edge Functions (all AI + privileged operations)
+│   └── functions/           10 Deno Edge Functions (all AI + privileged operations)
 │
 ├── docs/                    Binding product/design docs (see below) + phase reports
 ├── scripts/                 Seed data, formula-page generation, offline evals
@@ -108,10 +108,6 @@ basalt/
 Two documents are the binding contracts for anyone changing the app (see `CLAUDE.md` at repo root for the full list of product laws):
 - `docs/basalt-design-spec.md` — the UI/token contract.
 - `docs/basalt-app-prototype.html` — the pixel-level visual source of truth; wins over the spec if they disagree.
-
-## Screenshots
-
-<!-- SCREENSHOT_PLACEHOLDER -->
 
 ## Getting Started
 
@@ -186,7 +182,7 @@ Each package under `packages/*` also exposes its own `pnpm test` (`vitest run`),
 
 ## Status
 
-**Closed testing, version 0.2.1** — actively and rapidly developed: 297 commits between 2026-08-20 and 2026-09-15, roughly 50,000 lines of TypeScript, and over 1,000 Vitest test blocks across the workspace. It is past prototype stage — there is a built Android App Bundle/APK in `app/android/` and Play Store listing assets in `docs/store-assets/` (see `PLAY-SUBMISSION-REPORT.md`, `SUBMISSION-CHECKLIST.md`) — and currently sits in pre-launch/closed-testing on Android. The backend still shares a Supabase project with the (paused) Arise app pending a documented decommission/split (`docs/DECOMMISSION.md`). In-app feedback (Settings → About → Send feedback) opens the user's mail app to itseliias@proton.me — nothing is sent silently.
+**Closed testing, version 0.2.1** — actively and rapidly developed: 300 commits between 2026-08-20 and 2026-09-15, roughly 50,000 lines of TypeScript, and over 1,000 Vitest test blocks across the workspace. It is past prototype stage — there is a built Android App Bundle/APK in `app/android/` and Play Store listing assets in `docs/store-assets/` (see `PLAY-SUBMISSION-REPORT.md`, `SUBMISSION-CHECKLIST.md`) — and currently sits in pre-launch/closed-testing on Android. The backend still shares a Supabase project with the (paused) Arise app pending a documented decommission/split (`docs/DECOMMISSION.md`). In-app feedback (Settings → About → Send feedback) opens the user's mail app to itseliias@proton.me — nothing is sent silently.
 
 ## License
 
